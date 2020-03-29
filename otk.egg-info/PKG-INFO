@@ -1,0 +1,11 @@
+Metadata-Version: 1.2
+Name: otk
+Version: 0.1
+Summary: Fathom optics tools
+Home-page: https://github.com/fathomcomputing/fathom
+Author: Dane Austin
+Author-email: d@fathomcomputing.com
+License: UNKNOWN
+Description: UNKNOWN
+Platform: UNKNOWN
+Requires-Python: >=3.7
