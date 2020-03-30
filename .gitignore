@@ -6,3 +6,4 @@ __pycache__
 .idea
 *.ZDA
 settings.json
+*.egg-info
