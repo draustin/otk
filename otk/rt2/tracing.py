@@ -193,6 +193,9 @@ def is_isotropic(tensor):
     return np.all(tensor == np.diag((tensor[0, 0], )*n))
 
 class Element(ABC):
+    """An Element is a Surface with a single (non-necessarily uniform) Medium inside. I made this class Abstract for
+    future proofing. Features that might require a different implementation to SimpleElement are dynamically varying
+    media.'"""
     @property
     @abstractmethod
     def surface(self) -> Surface:

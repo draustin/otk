@@ -40,7 +40,44 @@ Inputs are start point and an object that start point is inside, or None. If sta
 
 ## Development
 
-#### 2020-03-04
+### 2020-03-29
+
+Regarding Assembly. TODO Making self.surface a simple union of the Element surfaces prevents a hierachical organization for e.g.
+bounding boxes and transformations. For example with a compound lens made of different material glasses, we must
+have different Elements (per current definition). But we might want these to transform together and have a common
+bounding volume for e.g. participation in bounding volume optimizations such as the priority queue algorithm. Want
+all this logic separate from the optics so it's available for the rendering too.
+
+Proposed re-architecture: the geometry of the Assembly is represented by a single surface plus a mapping from Surface
+to Element.  The catch is ray tracing when inside an Element. At present we only test against the Element rather than the
+whole scene. Premature optimization? Perhaps could create a DisjointUnion of child Surfaces with a last_child
+attribute. Its getsdb tests this child first, and if the point is inside, returns that without testing the others.
+Also has lazy (bool) attribute for debugging.
+
+The problem is position-dependent properties of an Element.
+
+The geometrical (i.e. ignoring optics) definition of an Element is different to a Surface.
+
+Problem with above: adjacent pieces of identical material with an interface between them. We don't model the microphysics of interfaces e.g. multilayers dielectrics. We take as given reflection and transmission vs wavelength, angle and polarization. So do need the concept of sphere trace inside an Element.
+
+Has position-dependent properties defined in the same coordinate system as its Surface.
+
+An Assembly has a root Surface and list of (Surface, Element) pairs.
+
+get_element(surface, x) returns the element occupying point x.
+
+property(surface, x) = property(surface) for primitives, property(which(surface, x), own_transform(surface, x)) for compound
+
+E.g. refractive index, transformation, interface.
+
+This will really complicate glsl and numba. Premature optimization? Top-level Elements only?
+
+---
+
+Proposed definition of Element: A region of space through which light passes without encountering an interface. Defined by a Surface. An Assembly is a set of Elements.
+
+
+### 2020-03-04
 
 Near-term feature list:
 
