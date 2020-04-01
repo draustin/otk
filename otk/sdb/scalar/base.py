@@ -5,7 +5,8 @@ from functools import singledispatch
 #from ..vector3 import *
 from ..geometry import *
 
-__all__ = ['getsdb', 'identify', 'spheretrace', 'getnormal', 'norm', 'normalize', 'dot', 'cross', 'norm_squared', 'getsag', 'containing']
+__all__ = ['getsdb', 'identify', 'spheretrace', 'getnormal', 'norm', 'normalize', 'dot', 'cross', 'norm_squared', 'getsag',
+    'traverse']
 
 def dot(a, b):
     return np.dot(a[:3], b[:3])
@@ -95,24 +96,22 @@ def _(self:UnionOp, isdbs: Sequence[ISDB]) -> int:
     return index0
 
 @singledispatch
-def containing(s:Surface, x:Sequence[float]):
+def traverse(s:Surface, x:Sequence[float]):
     raise NotImplementedError()
 
-@containing.register
+@traverse.register
 def _(s:Primitive, x:Sequence[float]):
     d = getsdb(s, x)
-    if getsdb(s, x) <= 0:
-        yield s
+    yield s, d
     return d
 
-@containing.register
+@traverse.register
 def _(self:UnionOp, x:Sequence[float]):
-    d = yield from containing(self.surfaces[0], x)
+    d = yield from traverse(self.surfaces[0], x)
     for child in self.surfaces[1:]:
-        d_child = yield from containing(child, x)
+        d_child = yield from traverse(child, x)
         d = min(d, d_child)
-    if d <= 0:
-        yield self
+    yield self, d
     return d
 
 @getsdb.register
@@ -132,14 +131,13 @@ def _(self:IntersectionOp, isdbs: Sequence[ISDB]) -> int:
             index0 = index
     return index0
 
-@containing.register
+@traverse.register
 def _(self:IntersectionOp, x:Sequence[float]):
-    d = yield from containing(self.surfaces[0], x)
+    d = yield from traverse(self.surfaces[0], x)
     for child in self.surfaces[1:]:
-        d_child = yield from containing(child, x)
+        d_child = yield from traverse(child, x)
         d = max(d, d_child)
-    if d <= 0:
-        yield self
+    yield self, d
     return d
 
 @getsdb.register
@@ -153,9 +151,9 @@ def _(self:AffineOp, p:Sequence[float]) -> int:
     d = getsdb(self.surfaces[0], np.dot(p, self.invm))
     return d*self.scale
 
-@containing.register
+@traverse.register
 def _(self:AffineOp, x:Sequence[float]):
-    d = yield from containing(self.surfaces[0], np.dot(x, self.invm))
+    d = yield from traverse(self.surfaces[0], np.dot(x, self.invm))
     return d*self.scale
 
 @getsdb.register
@@ -180,9 +178,9 @@ def _(s: FiniteRectangularArray, x: Sequence[float]) -> np.ndarray:
 def _(s:FiniteRectangularArray, x):
     return getsdb(s.surfaces[0], transform(s, x))
 
-@containing.register
+@traverse.register
 def _(s:FiniteRectangularArray, x):
-    return (yield from containing(s.ch))
+    return (yield from traverse(s.ch))
 
 def sum_weighted(w1, x1s, w2, x2s):
     a1 = w2/(w1 + w2)
