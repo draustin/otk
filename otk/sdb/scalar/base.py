@@ -5,7 +5,7 @@ from functools import singledispatch
 #from ..vector3 import *
 from ..geometry import *
 
-__all__ = ['getsdb', 'identify', 'spheretrace', 'getnormal', 'norm', 'normalize', 'dot', 'cross', 'norm_squared', 'getsag']
+__all__ = ['getsdb', 'identify', 'spheretrace', 'getnormal', 'norm', 'normalize', 'dot', 'cross', 'norm_squared', 'getsag', 'containing']
 
 def dot(a, b):
     return np.dot(a[:3], b[:3])
@@ -94,6 +94,27 @@ def _(self:UnionOp, isdbs: Sequence[ISDB]) -> int:
             index0 = index
     return index0
 
+@singledispatch
+def containing(s:Surface, x:Sequence[float]):
+    raise NotImplementedError()
+
+@containing.register
+def _(s:Primitive, x:Sequence[float]):
+    d = getsdb(s, x)
+    if getsdb(s, x) <= 0:
+        yield s
+    return d
+
+@containing.register
+def _(self:UnionOp, x:Sequence[float]):
+    d = yield from containing(self.surfaces[0], x)
+    for child in self.surfaces[1:]:
+        d_child = yield from containing(child, x)
+        d = min(d, d_child)
+    if d <= 0:
+        yield self
+    return d
+
 @getsdb.register
 def _(self:IntersectionOp, x):
     d = getsdb(self.surfaces[0], x)
@@ -111,6 +132,16 @@ def _(self:IntersectionOp, isdbs: Sequence[ISDB]) -> int:
             index0 = index
     return index0
 
+@containing.register
+def _(self:IntersectionOp, x:Sequence[float]):
+    d = yield from containing(self.surfaces[0], x)
+    for child in self.surfaces[1:]:
+        d_child = yield from containing(child, x)
+        d = max(d, d_child)
+    if d <= 0:
+        yield self
+    return d
+
 @getsdb.register
 def _(self:DifferenceOp, p) -> np.ndarray:
     d0 = getsdb(self.surfaces[0], p)
@@ -122,6 +153,11 @@ def _(self:AffineOp, p:Sequence[float]) -> int:
     d = getsdb(self.surfaces[0], np.dot(p, self.invm))
     return d*self.scale
 
+@containing.register
+def _(self:AffineOp, x:Sequence[float]):
+    d = yield from containing(self.surfaces[0], np.dot(x, self.invm))
+    return d*self.scale
+
 @getsdb.register
 def _(s:SegmentedRadial, x):
     rho = norm(x[:2] - s.vertex)
@@ -129,6 +165,24 @@ def _(s:SegmentedRadial, x):
         if rho <= r:
             return getsdb(ss, x)
     return getsdb(s.surfaces[-1], x)
+
+@singledispatch
+def transform(s: Surface, x:Sequence[float]) -> np.ndarray:
+    pass
+
+@transform.register
+def _(s: FiniteRectangularArray, x: Sequence[float]) -> np.ndarray:
+    index = np.clip(np.floor((x[:2] - s.corner)/s.pitch), 0, s.size - 1)
+    center = (index + 0.5)*s.pitch + s.corner
+    return np.r_[x[:2] - center, x[2:]]
+
+@getsdb.register
+def _(s:FiniteRectangularArray, x):
+    return getsdb(s.surfaces[0], transform(s, x))
+
+@containing.register
+def _(s:FiniteRectangularArray, x):
+    return (yield from containing(s.ch))
 
 def sum_weighted(w1, x1s, w2, x2s):
     a1 = w2/(w1 + w2)

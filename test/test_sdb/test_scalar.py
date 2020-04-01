@@ -11,6 +11,9 @@ def test_Sphere():
     s = Sphere(1.0, (1.0, 1.0, 1.0))
     assert getsdb(s, np.asarray((2.0, 2.0, 2.0))) == 3**0.5 - 1
 
+    assert list(containing(s, (1, 1, 3))) == []
+    assert list(containing(s, (1, 1, 1))) == [s]
+
 def test_InfiniteCylinder():
     s = InfiniteCylinder(1.0)
     d = getsdb(s, np.asarray((1.0, 1.0, 1.0, 1.0)))
@@ -21,20 +24,32 @@ def test_InfiniteCylinder():
     assert getsdb(s, np.asarray((2.0, 2.0, 1.0))) == 2**0.5 - 1
 
 def test_UnionOp():
-    s = UnionOp((Sphere(1.0), Sphere(1.0, (1.0, 0, 0))))
+    s0 = Sphere(1.0)
+    s1 = Sphere(1.0, (0.5, 0, 0))
+    s = UnionOp((s0, s1))
 
-    assert getsdb(s, np.asarray((3.0, 0.0, 0.0, 1.0))) == 1.0
+    assert getsdb(s, np.asarray((2.5, 0.0, 0.0, 1.0))) == 1.0
     assert getsdb(s, np.asarray((-2.0, 0.0, 0.0, 1.0))) == 1.0
+    assert list(containing(s, (-0.6, 0, 0))) == [s0]
+    assert list(containing(s, (0, 0, 0))) == [s0, s1]
 
 def test_IntersectionOp():
-    s = IntersectionOp((Sphere(1.0), InfiniteCylinder(0.5)))
+    s0 = Sphere(1.0)
+    s1 = InfiniteCylinder(0.5)
+    s = IntersectionOp((s0, s1))
     assert getsdb(s, np.asarray((0.0, 0.0, 3.0))) == 2.0
     assert getsdb(s, np.asarray((1, 0.0, 0.0))) == 0.5
+
+    assert list(containing(s, (0.6, 0, 0))) == [s0]
+    assert list(containing(s, (0, 0, 0))) == [s0, s1]
+    assert list(containing(s, (0, 0, 10))) == [s1]
 
 def test_DifferenceOp():
     s = DifferenceOp(Sphere(1.0), Sphere(0.5))
     assert getsdb(s, np.asarray((0.0, 0.0, 0.25, 1.0))) == 0.25
     assert getsdb(s, np.asarray((0.0, 0.0, 1.25, 1.0))) == 0.25
+
+def test
 
 def test_SphereTrace():
     surface = Sphere(1.0)
