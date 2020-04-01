@@ -164,23 +164,13 @@ def _(s:SegmentedRadial, x):
             return getsdb(ss, x)
     return getsdb(s.surfaces[-1], x)
 
-@singledispatch
-def transform(s: Surface, x:Sequence[float]) -> np.ndarray:
-    pass
-
-@transform.register
-def _(s: FiniteRectangularArray, x: Sequence[float]) -> np.ndarray:
-    index = np.clip(np.floor((x[:2] - s.corner)/s.pitch), 0, s.size - 1)
-    center = (index + 0.5)*s.pitch + s.corner
-    return np.r_[x[:2] - center, x[2:]]
-
 @getsdb.register
 def _(s:FiniteRectangularArray, x):
-    return getsdb(s.surfaces[0], transform(s, x))
+    return getsdb(s.surfaces[0], s.transform(x))
 
 @traverse.register
 def _(s:FiniteRectangularArray, x):
-    return (yield from traverse(s.ch))
+    return (yield from traverse(s.surfaces[0], s.transform(x)))
 
 def sum_weighted(w1, x1s, w2, x2s):
     a1 = w2/(w1 + w2)

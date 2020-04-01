@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+from typing import List
+from functools import singledispatch
 from abc import ABC, abstractmethod
 from typing import Sequence, Tuple, Callable, Union
 import numpy as np
@@ -14,6 +16,27 @@ class Surface:
     """
     def __init__(self, parent:'Surface'=None):
         self._parent = parent
+
+    def get_ancestors(self) -> List['Surface']:
+        """Return list of ancestors starting from self going to root."""
+        surface = self
+        surfaces = []
+        while surface is not None:
+            surfaces.append(surface)
+            surface = surface._parent
+        return surfaces
+
+    def get_parent_to_child(self, x: np.ndarray) -> np.ndarray:
+        raise np.eye(4)
+
+def get_root_to_child(self:Surface, x: np.ndarray) -> np.ndarray:
+    ancestors = self.get_ancestors()
+    m = np.eye(4)
+    for surface0 in ancestors[::-1]:
+        m0 = surface0.get_parent_to_child(x)
+        m = np.dot(m, m0)
+        x = np.dot(x, m0)
+    return m
 
 class Primitive(Surface):
     pass
@@ -229,6 +252,34 @@ class FiniteRectangularArray(Compound):
         self.size = size
         self.corner = corner
 
+    def get_center(self, x:Sequence[float]) -> np.ndarray:
+        """
+
+        Args:
+            x: Position 2-vector.
+
+        Returns:
+            Nearest center as position 2-vector.
+        """
+        index = np.clip(np.floor((x - self.corner)/self.pitch), 0, self.size - 1)
+        center = (index + 0.5)*self.pitch + self.corner
+        return center
+
+    def transform(self, x:Sequence[float]) -> np.ndarray:
+        """
+
+        Args:
+            x: Position 4-vector
+
+        Returns:
+            Transformed position 4-vector.
+        """
+        return np.r_[x[:2] - self.get_center(x[:2]), x[2:]]
+
+    def get_parent_to_child(self, x) -> np.ndarray:
+        center = self.get_center(x[:2])
+        return make_translation(-center[0], -center[1], 0)
+
 class BoundedParaboloid(Primitive):
     def __init__(self, roc: float, radius: float, side:bool, vertex:Sequence[float]=None, parent: Surface = None):
         """Paraboloid out to given radius, then flat.
@@ -285,6 +336,9 @@ class AffineOp(Compound):
         self.invm = np.linalg.inv(m)
         self.orthonormal = orthonormal
         self.scale = scale
+
+    def get_parent_to_child(self, x: np.ndarray) -> np.ndarray:
+        return self.invm
 
 # TODO change to piecewise function of rho with Lipschitz the maximum Lipschitz.
 class SegmentedRadial(Compound):
