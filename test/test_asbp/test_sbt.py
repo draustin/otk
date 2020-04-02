@@ -1,3 +1,4 @@
+import otk.h4t
 import otk.rt.lines
 import otk.rt.raytrace
 import numpy as np
@@ -16,7 +17,7 @@ def test_beam_tracing(qtbot):
     lens_surfaces = rt.make_spherical_lens_surfaces(roc, -roc, center_thickness, ri.FixedIndex(n))
     z_fp = center_thickness/2 + w
     beam = asbp.Beam(asbp.PlaneProfile.make_gaussian(lamb, 1, waist, 160e-6, 64, z_waist=-z_fp))
-    surface1 = rt.Surface(rt.PlanarProfile(), rt.make_translation(0, 0, z_fp))
+    surface1 = rt.Surface(rt.PlanarProfile(), otk.h4t.make_translation(0, 0, z_fp))
     surfaces = lens_surfaces + (surface1,)
     beam_segments = asbp.trace_surfaces(beam, surfaces, ['transmitted', 'transmitted', None])
 

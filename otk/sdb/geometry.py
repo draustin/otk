@@ -1,14 +1,14 @@
-from dataclasses import dataclass
 from typing import List
-from functools import singledispatch
 from abc import ABC, abstractmethod
-from typing import Sequence, Tuple, Callable, Union
+from typing import Sequence, Tuple
 import numpy as np
-from ..vector3 import *
+from ..h4t import make_translation
+
+from ..v4b import *
 
 __all__ = ['Surface', 'Sphere', 'Box', 'Torus', 'Ellipsoid', 'InfiniteCylinder', 'Plane', 'Sag', 'SagFunction', 'UnionOp', 'IntersectionOp',
     'DifferenceOp', 'AffineOp', 'Compound', 'Primitive', 'SphericalSag', 'Hemisphere', 'InfiniteRectangularPrism',
-    'FiniteRectangularArray', 'ToroidalSag', 'BoundedParaboloid', 'ZemaxConic', 'SegmentedRadial']
+    'FiniteRectangularArray', 'ToroidalSag', 'BoundedParaboloid', 'ZemaxConic', 'SegmentedRadial', 'get_root_to_local']
 
 class Surface:
     """
@@ -27,9 +27,9 @@ class Surface:
         return surfaces
 
     def get_parent_to_child(self, x: np.ndarray) -> np.ndarray:
-        raise np.eye(4)
+        return np.eye(4)
 
-def get_root_to_child(self:Surface, x: np.ndarray) -> np.ndarray:
+def get_root_to_local(self:Surface, x: np.ndarray) -> np.ndarray:
     ancestors = self.get_ancestors()
     m = np.eye(4)
     for surface0 in ancestors[::-1]:

@@ -6,15 +6,16 @@ from PyQt5 import QtWidgets
 from otk.sdb import lookat, projection
 from otk import zemax, trains
 from otk import ri
-from otk.rt2 import *
+from otk import rt2, sdb
 from otk.rt2 import qt
+from otk.rt2.scalar import Assembly, make_ray, get_points
 
 train_full = zemax.read_train(os.path.join(os.path.dirname(__file__), 'conic_telecentric_lens.zmx'), encoding='ascii')
 train = train_full.subset(2, -1)
 singlet_sequence = trains.SingletSequence.from_train(train)
 # For fun make it a square aperture.
-elements = make_elements(singlet_sequence, 'square')
-assembly = Assembly(elements, UniformIsotropic(ri.air))
+elements = rt2.make_elements(singlet_sequence, 'square')
+assembly = Assembly(sdb.UnionOp([e.surface for e in elements]), elements, rt2.UniformIsotropic(ri.air))
 
 lamb = 850e-9
 # Get paraxial focal length.

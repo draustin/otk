@@ -1,5 +1,5 @@
 import numpy as np
-from ..vector3 import *
+from ..v4b import *
 
 class Line:
     """A bundle of rays.

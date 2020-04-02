@@ -1,8 +1,8 @@
-"""3D geometry functions building on vector3.py."""
+"""3D geometry functions building on v4b.py."""
 import numpy as np
-from otk import vector3
+from . import v4b, v4
 
-from .vector3 import dot, normalize, to_xy
+from .v4b import dot, normalize, to_xy
 
 __all__ = ['refract_vector', 'reflect_vector', 'make_perpendicular']
 
@@ -129,15 +129,15 @@ def apply_bundle_fourier_transform(bundle0, n, f):
 
 def make_perpendicular(u, v):
     """Make unit vector perpendicular to a pair of unit vectors, handling degeneracy and broadcasting."""
-    w = vector3.cross(u, v)
-    m = vector3.dot(w)
+    w = v4b.cross(u, v)
+    m = v4b.dot(w)
     zero = np.isclose(m[...,0], 0, atol=1e-15)
 
     uzero = u[zero]
     if uzero.size > 0:
         # Degenerate case (u & v parallel). Calculate cross product of u with each unit vector.
-        uzerocs = [vector3.cross(uzero, chat) for chat in vector3.unit_vectors]
-        mzerocs = [vector3.dot(v) for v in uzerocs]
+        uzerocs = [v4b.cross(uzero, chat) for chat in v4.unit_vectors]
+        mzerocs = [v4b.dot(v) for v in uzerocs]
         mzeros = np.concatenate(mzerocs, -1)
         index = mzeros.argmax(-1)[..., None]
 

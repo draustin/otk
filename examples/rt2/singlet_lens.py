@@ -3,9 +3,9 @@ import itertools
 from PyQt5 import QtWidgets
 from otk.sdb import qt
 from otk import paraxial, ri
-from otk.sdb import *
-from otk.sdb.lens import *
-from otk.rt2 import *
+from otk import sdb
+from otk.sdb import lens
+import otk.rt2.scalar as rt2
 
 ne = ri.air
 n = ri.fused_silica
@@ -19,9 +19,9 @@ f_, h0, h1 = paraxial.calc_thick_spherical_lens(n(lamb), roc0, roc1, thickness, 
 assert np.isclose(f_, f)
 
 r = 20e-3
-surface = make_spherical_singlet(roc0, roc1, thickness, vertex0[:3], 'circle', r)
-element = SimpleElement(surface, n, lambda x: perfect_refractor)
-assembly = Assembly([element], UniformIsotropic(ne))
+surface = lens.make_spherical_singlet(roc0, roc1, thickness, vertex0[:3], 'circle', r)
+element = rt2.SimpleElement(surface, rt2.UniformIsotropic(n), rt2.perfect_refractor)
+assembly = rt2.Assembly(surface, [element], rt2.UniformIsotropic(ne))
 sphere_trace_kwargs = dict(epsilon=1e-9, t_max=1e9, max_steps=100)
 
 # Compute object and image points for 2f-2f imaging. zp is relative to vertex.
@@ -34,8 +34,8 @@ def get_rays(theta, phi) -> np.ndarray:
     vx = np.sin(theta)*np.cos(phi)
     vy = np.sin(theta)*np.sin(phi)
     vz = np.cos(theta)
-    incident_ray0 = make_ray(*object[:3], vx, vy, vz, 0, 1, 0, ne(lamb), 1, 0, lamb)
-    rays = get_points(assembly.nonseq_trace(incident_ray0, sphere_trace_kwargs).flatten(), 2*f)[:, :3]
+    incident_ray0 = rt2.make_ray(*object[:3], vx, vy, vz, 0, 1, 0, ne(lamb), 1, 0, lamb)
+    rays = rt2.get_points(assembly.nonseq_trace(incident_ray0, sphere_trace_kwargs).flatten(), 2*f)[:, :3]
     return rays
 
 num_theta = 6
@@ -45,14 +45,14 @@ thetas = np.arange(1, num_theta)/(num_theta - 1)*theta_max
 phis = np.arange(num_phi)/num_phi*2*np.pi
 rays_list = [get_rays(theta, phi) for theta, phi in itertools.product(thetas, phis)]
 
-ids = add_ids(assembly.surface)
+ids = sdb.add_ids(assembly.surface)
 properties = dict(edge_width = 0.51e-6, edge_color = (0, 0, 0), surface_color = (0.2, 0.4, 1))
-sdb_glsl = gen_getSDB_recursive(assembly.surface, ids, set()) + gen_getColor_recursive(assembly.surface, ids, {}, properties, set())
+sdb_glsl = sdb.gen_getSDB_recursive(assembly.surface, ids, set()) + sdb.gen_getColor_recursive(assembly.surface, ids, {}, properties, set())
 
 app = QtWidgets.QApplication([])
 w = qt.SphereTraceViewer(sdb_glsl)
 w.display_widget.half_width = 4*r
-w.display_widget.eye_to_world = lookat((0, 0, 5*f), (0, 0, 0))
+w.display_widget.eye_to_world = sdb.lookat((0, 0, 5*f), (0, 0, 0))
 w.display_widget.z_near = 0.01*f
 w.display_widget.z_far = 10*f
 w.log10epsilon.setValue(-7) # mysterious artefacts for smaller values

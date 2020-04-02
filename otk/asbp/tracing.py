@@ -3,6 +3,7 @@ import logging
 
 import numpy as np
 import mathx
+import otk.h4t
 
 from . import profiles
 from .. import rt
@@ -40,19 +41,19 @@ class ImmutableTransform:
         return other
 
     def translate(self, x, y, z, frame='global'):
-        return self.transform(rt.make_translation(x, y, z), frame)
+        return self.transform(otk.h4t.make_translation(x, y, z), frame)
 
     def scale(self, x, y, z, frame='global'):
-        return self.transform(rt.make_scaling(x, y, z), frame)
+        return self.transform(otk.h4t.make_scaling(x, y, z), frame)
 
     def rotate_y(self, theta, frame='global'):
         """Rotate around y axis.
 
         Positive theta is given by right hand rule (thumb points along y, rotation is fingers)."""
-        return self.transform(rt.make_y_rotation(theta), frame)
+        return self.transform(otk.h4t.make_y_rotation(theta), frame)
 
     def translate_z(self, z, frame='global'):
-        return self.transform(rt.make_translation(0, 0, z), frame)
+        return self.transform(otk.h4t.make_translation(0, 0, z), frame)
 
     def to_global(self, r):
         return rt.transform(r, self.matrix)
@@ -245,7 +246,7 @@ class Beam(ImmutableTransform):
         polarization_local = polarization.dot(self.inverse_matrix)
         profile = self.profile.reflect(rt.to_xyz(normal_local), n, scale_Er, polarization_local[:2])
         # Reflect about plane z_local = profile.z at rs_center. WTF?
-        matrix = rt.transform(rt.calc_mirror_matrix(rt.make_translation(0, 0, profile.z_center)), self.matrix)
+        matrix = rt.transform(rt.calc_mirror_matrix(otk.h4t.make_translation(0, 0, profile.z_center)), self.matrix)
         return Beam(profile, matrix)
 
     def make_interface_modes(self, surface_profile: rt.Profile, interface: rt.Interface):

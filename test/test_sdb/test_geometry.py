@@ -1,6 +1,7 @@
 import numpy as np
+from otk.h4t import make_translation
 from otk.sdb import *
-from otk.vector3 import *
+from otk.v4b import *
 
 def test_Plane():
     n = 1, 2, 3

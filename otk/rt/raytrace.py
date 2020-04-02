@@ -2,8 +2,8 @@ from dataclasses import dataclass
 from typing import Iterable, Tuple
 from typing import Sequence
 
-import otk.rt.lines
 import numpy as np
+from otk.h4t import make_rotation
 
 try:
     import gizeh
@@ -11,7 +11,7 @@ except ImportError:
     pass
 from . import interfaces
 from .surfaces import Surface
-from otk.vector3 import *
+from otk.v4b import *
 from .lines import Line
 
 @dataclass

@@ -1,11 +1,10 @@
-from dataclasses import dataclass
 import time
 from typing import Sequence, Iterable
 import numpy as np
 from OpenGL import GL
-from PyQt5.QtCore import QObject, QPoint
+from PyQt5.QtCore import QPoint
 from PyQt5 import QtWidgets, QtCore, QtGui
-from ..vector3 import *
+from otk.h4t import make_x_rotation, make_y_rotation, make_translation
 from . import *
 from . import opengl
 

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Sequence
 import numpy as np
-from ..vector3 import *
+from ..v4b import *
 from .scalar import spheretrace
 
 __all__ = ['orthographic', 'projection', 'lookat', 'ndc2ray', 'pix2norm', 'shade_distance', 'raster', 'Scene']

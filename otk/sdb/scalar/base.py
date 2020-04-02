@@ -2,26 +2,13 @@ import numpy as np
 from typing import Sequence
 from dataclasses import dataclass
 from functools import singledispatch
-#from ..vector3 import *
+from ...v4 import norm, normalize
+
 from ..geometry import *
 
-__all__ = ['getsdb', 'identify', 'spheretrace', 'getnormal', 'norm', 'normalize', 'dot', 'cross', 'norm_squared', 'getsag',
+__all__ = ['getsdb', 'identify', 'spheretrace', 'getnormal', 'getsag',
     'traverse']
 
-def dot(a, b):
-    return np.dot(a[:3], b[:3])
-
-def norm_squared(x):
-    return dot(x, x)
-
-def norm(x):
-    return dot(x, x)**0.5
-
-def normalize(x):
-    return x/norm(x)
-
-def cross(a, b):
-    return np.r_[np.cross(a[:3], b[:3]), 0]
 
 @dataclass
 class ISDB:
@@ -97,7 +84,7 @@ def _(self:UnionOp, isdbs: Sequence[ISDB]) -> int:
 
 @singledispatch
 def traverse(s:Surface, x:Sequence[float]):
-    raise NotImplementedError()
+    raise NotImplementedError(s)
 
 @traverse.register
 def _(s:Primitive, x:Sequence[float]):
@@ -163,6 +150,18 @@ def _(s:SegmentedRadial, x):
         if rho <= r:
             return getsdb(ss, x)
     return getsdb(s.surfaces[-1], x)
+
+@traverse.register
+def _(s:SegmentedRadial, x):
+    rho = norm(x[:2] - s.vertex)
+    d = None
+    for ss, r in zip(s.surfaces, s.radii):
+        ds = (yield from traverse(ss, x))
+        if rho <= r and d is None:
+            d = ds
+    if d is None:
+        d = ds
+    return d
 
 @getsdb.register
 def _(s:FiniteRectangularArray, x):

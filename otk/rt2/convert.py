@@ -50,7 +50,7 @@ def _(obj: trains.Singlet, shape:str='circle', vertex:Sequence[float]=None) -> S
 @make_element.register
 def  _(obj: trains.Singlet, shape:str='circle', vertex:Sequence[float]=None) -> Element:
     surface = make_surface(obj, shape, vertex)
-    return SimpleElement(surface, obj.n, lambda x: perfect_refractor)
+    return SimpleElement(surface, UniformIsotropic(obj.n), perfect_refractor)
 
 @singledispatch
 def make_elements(obj, *args, **kwargs) -> List[Element]:
