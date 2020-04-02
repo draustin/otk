@@ -1,30 +1,31 @@
 from typing import Iterable
 
+import otk.h4t
 import otk.rt.lines
 import scipy.optimize
 import numpy as np
 from .. import ri
 from . import profiles, boundaries, interfaces
-from .. import vector3
+from .. import v4b
 from .. import geo3
 from .lines import Line
 
 
 class MutableTransformable:
     def translate(self, x, y, z, frame='global'):
-        self.transform(vector3.make_translation(x, y, z), frame)
+        self.transform(otk.h4t.make_translation(x, y, z), frame)
 
     def scale(self, x, y, z, frame='global'):
-        self.transform(vector3.make_scaling(x, y, z), frame)
+        self.transform(otk.h4t.make_scaling(x, y, z), frame)
 
     def rotate_y(self, theta, frame='global'):
         """Rotate around y axis.
 
         Positive theta is given by right hand rule (thumb points along y, rotation is fingers)."""
-        self.transform(vector3.make_y_rotation(theta), frame)
+        self.transform(otk.h4t.make_y_rotation(theta), frame)
 
     def translate_z(self, z, frame='global'):
-        self.transform(vector3.make_translation(0, 0, z), frame)
+        self.transform(otk.h4t.make_translation(0, 0, z), frame)
 
     def transform(self, transformation:np.ndarray, frame='global'):
         raise NotImplementedError()
@@ -58,10 +59,10 @@ class MutableTransform(MutableTransformable):
         self.set_matrix(matrix)
 
     def to_global(self, r):
-        return vector3.transform(r, self.matrix)
+        return v4b.transform(r, self.matrix)
 
     def to_local(self, r):
-        return vector3.transform(r, self.inverse_matrix)
+        return v4b.transform(r, self.inverse_matrix)
 
 class CompoundMutableTransform(MutableTransformable):
     def __init__(self, elements: Iterable[MutableTransform]):
@@ -107,7 +108,7 @@ class Surface(MutableTransform):
 
     def __repr__(self):
         return 'Surface(%r, %r, %r, %r, %r, %r)'%(
-        self.profile, vector3.repr_transform(self.matrix), self.name, self.boundary, self.mask, self.interface)
+        self.profile, v4b.repr_transform(self.matrix), self.name, self.boundary, self.mask, self.interface)
 
     def intersect_global_curve(self, calc_point, d0):
         """Intersect parameterized curve with surface.
@@ -202,10 +203,10 @@ class Surface(MutableTransform):
         inverse_matrix = np.linalg.inv(matrix)
 
         # Create normalized vector which lies on the surface plane and the cross section plane.
-        vector = vector3.normalize(vector3.cross(self.matrix[2], matrix[2]))
+        vector = v4b.normalize(v4b.cross(self.matrix[2], matrix[2]))
 
         # Get a point on both planes.
-        origin = vector3.intersect_planes(self.matrix[2], self.matrix[3], matrix[2], matrix[3])
+        origin = v4b.intersect_planes(self.matrix[2], self.matrix[3], matrix[2], matrix[3])
 
         vector_local = self.to_local(vector)[:2]
         origin_local = self.to_local(origin)[:2]
@@ -213,8 +214,8 @@ class Surface(MutableTransform):
         d = np.linspace(*interval, num_points)
         x, y = origin_local[:, None] + vector_local[:, None]*d
         z = self.profile.calc_z(x, y)
-        points_local = vector3.stack_xyzw(x, y, z, 1)
-        points_projected = vector3.transform(points_local, np.matmul(self.matrix, inverse_matrix))
+        points_local = v4b.stack_xyzw(x, y, z, 1)
+        points_projected = v4b.transform(points_local, np.matmul(self.matrix, inverse_matrix))
         assert np.allclose(points_projected[..., 2], 0)
         return points_projected[..., :2]
 
@@ -257,7 +258,7 @@ class Surface(MutableTransform):
 #         self.calc_k_filter = None
 #
 #     def __repr__(self):
-#         matrix = vector3.repr_transform(self.matrix)
+#         matrix = v4b.repr_transform(self.matrix)
 #         s = 'OpticalSurface(%r, n_next=(%r, %r), %s, reflects=%r, %s, %r, %s, samples_beam=%r, %r)'
 #         return s%(self.profile, *self.n_nexts, matrix, self.reflects, self.name, self.boundary, self.boundary_mode,
 #                   self.samples_beam, self.calc_k_filter)
@@ -287,6 +288,6 @@ def make_spherical_lens_surfaces(roc1, roc2, thickness, n, n_out=ri.vacuum, boun
         2-tuple of OpticalSurface: The first has its vertex at (0, 0, -thickness/2) and the second on the other side.
     """
     interface = interfaces.FresnelInterface(n_out, n)
-    s1 = Surface(profiles.SphericalProfile(roc1), vector3.make_translation(0, 0, -thickness/2), '', boundary, None, interface)
-    s2 = Surface(profiles.SphericalProfile(roc2), vector3.make_translation(0, 0, thickness/2), '', boundary, None, interface.flip())
+    s1 = Surface(profiles.SphericalProfile(roc1), otk.h4t.make_translation(0, 0, -thickness/2), '', boundary, None, interface)
+    s2 = Surface(profiles.SphericalProfile(roc2), otk.h4t.make_translation(0, 0, thickness/2), '', boundary, None, interface.flip())
     return s1, s2

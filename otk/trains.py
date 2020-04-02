@@ -4,6 +4,7 @@ from functools import singledispatch
 from dataclasses import dataclass
 from typing import Sequence, Tuple, Mapping
 import numpy as np
+import otk.h4t
 import scipy.optimize
 import mathx
 from . import abcd, paraxial, math
@@ -309,7 +310,7 @@ class Train:
         surfaces = []
         z = self.spaces[0]
         for num, (interface, space, name) in enumerate(zip(self.interfaces, self.spaces[1:], names)):
-            matrix = rt.make_translation(0, 0, z)
+            matrix = otk.h4t.make_translation(0, 0, z)
             # profile = interface.make_profile()
             # if shape == 'circle':
             #     boundary = rt.CircleBoundary(interface.radius/2)
@@ -346,7 +347,7 @@ class Train:
             profile = interface.make_profile()
             if lattice is not None:
                 profile = rt.LatticeProfile(lattice, profile)
-            matrix = rt.make_translation(0, 0, z)
+            matrix = otk.h4t.make_translation(0, 0, z)
             surface = rt.Surface(profile, matrix, name, boundary, None, rt.FresnelInterface(interface.n1, interface.n2))
             surfaces.append(surface)
             z += space
@@ -512,7 +513,7 @@ class Train:
 
     def make_analysis_surfaces(self):
         lens_surfaces = self.make_surfaces()
-        image_surface = rt.Surface(rt.PlanarProfile(), rt.make_translation(0, 0, self.length))
+        image_surface = rt.Surface(rt.PlanarProfile(), otk.h4t.make_translation(0, 0, self.length))
         keys = ['transmitted']*len(lens_surfaces) + ['incident']
         surfaces = lens_surfaces + [image_surface]
         return surfaces, keys

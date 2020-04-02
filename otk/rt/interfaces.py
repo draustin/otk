@@ -4,7 +4,7 @@ import numpy as np
 import scipy.interpolate
 from otk.geo3 import make_perpendicular
 
-from .. import vector3
+from .. import v4b
 from .. import geo3
 from .. import math as omath
 from .. import ri
@@ -29,7 +29,7 @@ class InterfaceMode:
         self.vector = np.asarray(vector)
         assert self.vector.shape[-1] == 4
         # Row space of matrix should be orthogonal to outgoing k vector.
-        assert np.allclose(vector3.dot(self.matrix, self.vector[..., None, :]), 0, atol=1e-7)
+        assert np.allclose(v4b.dot(self.matrix, self.vector[..., None, :]), 0, atol=1e-7)
         # This checks that the shapes are consistent.
         self.shape = np.broadcast(self.matrix, self.vector[..., None]).shape
         self.n = n
@@ -71,9 +71,9 @@ class Mirror(Interface):
     def calc_modes(self, point: np.ndarray, normal: np.ndarray, lamb: float, incident_vector: np.ndarray,
             n: np.ndarray) -> Dict:
         reflected_vector = geo3.reflect_vector(incident_vector, normal)
-        s_pol_vector = vector3.cross(normal, incident_vector)
-        incident_p_pol_vector = vector3.cross(incident_vector, s_pol_vector)
-        reflected_p_pol_vector = vector3.cross(reflected_vector, s_pol_vector)
+        s_pol_vector = v4b.cross(normal, incident_vector)
+        incident_p_pol_vector = v4b.cross(incident_vector, s_pol_vector)
+        reflected_p_pol_vector = v4b.cross(reflected_vector, s_pol_vector)
 
         matrix = calc_matrix((incident_p_pol_vector, s_pol_vector), (reflected_p_pol_vector, s_pol_vector),
             np.asarray((1, 1)))
@@ -108,7 +108,7 @@ class IsotropicMediaInterface(Interface):
         """
         n1 = self.n1(lamb)
         n2 = self.n2(lamb)
-        cos_theta1 = vector3.dot(normal, incident_vector)
+        cos_theta1 = v4b.dot(normal, incident_vector)
 
         if 0:
             na = np.choose(cos_theta1 < 0, (n1, n2))
@@ -129,9 +129,9 @@ class IsotropicMediaInterface(Interface):
         # Generate unit vector perpendicular to normal and incident.
         s_pol_vector = make_perpendicular(normal, incident_vector)
 
-        incident_p_pol_vector = vector3.cross(incident_vector, s_pol_vector)
-        refracted_p_pol_vector = vector3.cross(refracted_vector, s_pol_vector)
-        reflected_p_pol_vector = vector3.cross(reflected_vector, s_pol_vector)
+        incident_p_pol_vector = v4b.cross(incident_vector, s_pol_vector)
+        refracted_p_pol_vector = v4b.cross(refracted_vector, s_pol_vector)
+        reflected_p_pol_vector = v4b.cross(reflected_vector, s_pol_vector)
 
         amplitudes = self.calc_amplitudes(na, nb, cos_theta1, lamb)
 

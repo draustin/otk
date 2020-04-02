@@ -40,7 +40,40 @@ Inputs are start point and an object that start point is inside, or None. If sta
 
 ## Development
 
-### 2020-03-29
+
+### 2020-03-04
+
+Near-term feature list:
+
+* Aspherics
+  * More generally: sag profiles. Need Lipshitz
+* Optical ray tracing
+* cross section view
+    * color
+    * border
+* smoothed edge union
+* 2d array with smooth transition
+
+#### Properties of a point - how to decide
+
+If an element (i.e. has a surface and single values for each property)
+For a union of disjoint elements, can define property of a point as property of the surface that contains it.
+
+
+##### surface labelling scheme
+
+Should surfaces have a 'metadata' dict attribute for keeping optical/physical/aesthetic information (option A)? Alternative is a mapping from surfaces to per-surface information for each subsystem (option B).
+
+B keeps surfaces lightweight - no empty dictionary.
+
+
+
+Disadvantages: the optical/physical/aesthetic code
+
+
+    * label surfaces with attributes e.g. color, edge style
+
+### 2020-03-29 random thoughts
 
 Regarding Assembly. TODO Making self.surface a simple union of the Element surfaces prevents a hierachical organization for e.g.
 bounding boxes and transformations. For example with a compound lens made of different material glasses, we must
@@ -76,35 +109,14 @@ This will really complicate glsl and numba. Premature optimization? Top-level El
 
 Proposed definition of Element: A region of space through which light passes without encountering an interface. Defined by a Surface. An Assembly is a set of Elements.
 
+### 2020-04-01
 
-### 2020-03-04
+Surface now has parent attribute. (Only one parent). Means that Surface objects appear only once in the tree. So a Surface has a sequence of ancestors all the way to root. Can therefore define a position-dependent transformation from root coordinates to the those of the Surface. An associated Element can also use that coordinate system.
 
-Near-term feature list:
+Scenario 1: a 2D array of compound lenses. The surface tree is 2D array (root) ( union ( singlet1, singlet2, ...) ). Each singlet defines an element.
 
-* Aspherics
-  * More generally: sag profiles. Need Lipshitz
-* Optical ray tracing
-* cross section view
-    * color
-    * border
-* smoothed edge union
-* 2d array with smooth transition
+What if the Surface of an Element has an ancestor that modifies its shape e.g. a nontrivial intersection. Doesn't make physical sense. But a bounding volume can be represented as an intersection.
 
-#### Properties of a point - how to decide
+Given a Surface S and point x, the root-to-local affine transform is the product of all parent-to-local transforms of ancestors of S.
 
-If an element (i.e. has a surface and single values for each property)
-For a union of disjoint elements, can define property of a point as property of the surface that contains it.
-
-
-##### surface labelling scheme
-
-Should surfaces have a 'metadata' dict attribute for keeping optical/physical/aesthetic information (option A)? Alternative is a mapping from surfaces to per-surface information for each subsystem (option B).
-
-B keeps surfaces lightweight - no empty dictionary.
-
-
-
-Disadvantages: the optical/physical/aesthetic code
-
-
-    * label surfaces with attributes e.g. color, edge style
+Given a root Surface and point x, define the enclosing Surfaces as all descendents that contain x transformed by the parent to local.

@@ -1,8 +1,8 @@
 import itertools
 import numpy as np
-from ..vector3 import make_translation, make_rotation
+from otk.h4t import make_translation, make_rotation
 from . import *
-from .scalar_base import *
+from ..v4 import normalize
 from .lens import *
 
 class Centers:
@@ -134,16 +134,18 @@ def make_combinations():
     surfaces = []
     set_properties = {}
 
-    center0 = next(centers)
-    sphere = Sphere(1, center0)
-    box = Box((0.5**0.5, 0.5**0.5, 0.5**0.5), center0)
+    center = next(centers)
+    sphere = Sphere(1, center)
+    box = Box((0.5**0.5, 0.5**0.5, 0.5**0.5), center)
     surface0 = UnionOp((sphere, box))
     surfaces.append(surface0)
     set_properties[sphere] = dict(surface_color=(1, 0, 0))
 
-    center1 = next(centers)
-    transform = make_rotation(normalize((1, 1, 1)), np.pi/4).dot(make_translation(*(center1 - center0)))
-    surfaces.append(AffineOp(surface0, transform))
+    sphere = Sphere(1)
+    box = Box((0.5**0.5, 0.5**0.5, 0.5**0.5))
+    center = next(centers)
+    transform = make_rotation(normalize((1, 1, 1)), np.pi/4).dot(make_translation(*center))
+    surfaces.append(AffineOp(UnionOp((sphere, box)), transform))
 
     center = next(centers)
     torus = Torus(1, 0.4, center)

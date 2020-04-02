@@ -1,6 +1,7 @@
 from typing import Sequence
 import numpy as np
 from . import *
+from ..v4 import norm
 
 __all__ = ['ZemaxConicSagFunction', 'RectangularArraySagFunction', 'SinusoidSagFunction']
 

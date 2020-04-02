@@ -6,7 +6,7 @@ import pyqtgraph_extended as pg
 import pyqtgraph_extended.opengl as pgl
 from . import surfaces
 from OpenGL import GL
-from .. import vector3
+from .. import v4b
 
 # class FlatSurfaceItem(pgl.GLGraphicsItem.GLGraphicsItem):
 #     def __init__(self, surface, parent=None):
@@ -60,7 +60,7 @@ class SurfaceItem(pgl.GLSurfacePlotItem):
         xv, yv = np.broadcast_arrays(x, y)
         xv = xv.ravel()
         yv = yv.ravel()
-        zv = surface.profile.intersect(vector3.stack_xyzw(xv, yv, 0, 1), vector3.stack_xyzw(0, 0, 1, 0))
+        zv = surface.profile.intersect(v4b.stack_xyzw(xv, yv, 0, 1), v4b.stack_xyzw(0, 0, 1, 0))
         z = zv.reshape((len(x), len(y)))
         pgl.GLSurfacePlotItem.__init__(self, x, y, z, color=color, smooth=smooth, shader=shader, glOptions=glOptions,
             **kwargs)

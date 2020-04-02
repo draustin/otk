@@ -1,4 +1,5 @@
 import numpy as np
+import otk.h4t
 from otk import ri, rt
 
 def test_conic_surface():
@@ -17,7 +18,7 @@ def test_conic_surface():
     conic_surface = rt.Surface(rt.ConicProfile(roc, kappa), interface=interface)
     origin = rt.stack_xyzw(x0s, 0, -1, 1)
     vector = rt.stack_xyzw(0, 0, 1, 0)
-    detector_surface = rt.Surface(rt.PlanarProfile(), matrix=rt.make_translation(0, 0, f))
+    detector_surface = rt.Surface(rt.PlanarProfile(), matrix=otk.h4t.make_translation(0, 0, f))
     surfaces = conic_surface, detector_surface
     line = rt.Line(origin, vector)
     pol = rt.cross(line.vector, [0,1,0,0])

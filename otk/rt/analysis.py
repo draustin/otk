@@ -6,7 +6,7 @@ from otk.rt import Ray
 from .. import geo3
 import mathx
 from .. import ri
-from .. import vector3
+from .. import v4b
 from . import raytrace
 import pyqtgraph_extended as pg
 
@@ -118,16 +118,16 @@ class SpotArray:
 
         oxv, oyv, vxv, vyv, vzv = [array.ravel() for array in np.broadcast_arrays(ox, oy, vx, vy, vz)]
 
-        origin_local = vector3.stack_xyzw(oxv, oyv, 0, 1)
-        vector_local = vector3.stack_xyzw(vxv, vyv, vzv, 0)
+        origin_local = v4b.stack_xyzw(oxv, oyv, 0, 1)
+        vector_local = v4b.stack_xyzw(vxv, vyv, vzv, 0)
         origin = stop_surface.to_global(origin_local)
         vector = stop_surface.to_global(vector_local)
-        pol = geo3.normalize(vector3.cross(vector, [0, 1, 0, 0]))
+        pol = geo3.normalize(v4b.cross(vector, [0, 1, 0, 0]))
         segments = trace_fun(raytrace.Ray(raytrace.Line(origin, vector), pol, 0, lamb, n0(lamb)))
         shape = num_spots, num_spots, num_rays, num_rays, 4
         line = segments[-1].ray.line
         ix, iy = geo3.to_xy(image_surface.to_local(line.origin).reshape(shape))
-        ivx, ivy, ivz = vector3.to_xyz(image_surface.to_local(line.vector).reshape(shape))
+        ivx, ivy, ivz = v4b.to_xyz(image_surface.to_local(line.vector).reshape(shape))
         iu = ivx/ivz
         iv = ivy/ivz
 
@@ -156,14 +156,14 @@ def trace_distortion(stop_surface, image_surface, trace_fun, lamb: float, stop_s
     ox, oy = make_stop_origins(stop_size, num_rays, stop_shape)
     oxv, oyv = [array.ravel() for array in np.broadcast_arrays(ox, oy)]
 
-    origin_local = vector3.stack_xyzw(oxv, oyv, 0, 1)
+    origin_local = v4b.stack_xyzw(oxv, oyv, 0, 1)
     origin = stop_surface.to_global(origin_local)
 
     ixs = []
     for theta in thetas:
         vx = np.sin(theta)
         vz = (1 - vx**2)**0.5
-        vector_local = vector3.stack_xyzw(vx, 0, vz, 0)
+        vector_local = v4b.stack_xyzw(vx, 0, vz, 0)
         vector = stop_surface.to_global(vector_local)
         pol = stop_surface.matrix[1, :]
         segments = trace_fun(raytrace.Ray(otk.rt.lines.Line(origin, vector), pol, 1, 0, lamb))

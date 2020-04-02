@@ -1,3 +1,4 @@
+import otk.h4t
 import otk.rt.lines
 import numpy as np
 
@@ -22,7 +23,7 @@ def test_refraction():
     f = 100
     r0 = np.asarray((100, 20, 300, 1))
     interface = rt.FresnelInterface(ri.FixedIndex(n1), ri.FixedIndex(n2))
-    s = rt.Surface(rt.SphericalProfile(f*(n2 - n1)), rt.make_translation(*r0[:3]), interface=interface)
+    s = rt.Surface(rt.SphericalProfile(f*(n2 - n1)), otk.h4t.make_translation(*r0[:3]), interface=interface)
     origin = r0 + (0, 0, -f*n1, 0)
     line = rt.Line(origin, rt.normalize((0.001, 0.001, 1, 0)))
     pol = rt.cross(line.vector, [0,1,0,0])

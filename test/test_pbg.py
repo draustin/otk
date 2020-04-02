@@ -1,3 +1,4 @@
+import otk.h4t
 import otk.rt.lines
 import numpy as np
 from numpy import testing
@@ -108,7 +109,7 @@ def test_pbg_transform_advance():
     field, phi_axis, grad_phi = mode.calc_field(k, points, calc_grad_phi=True)
     #print(abs(field).max()) # Check we don't have all zeros.
 
-    matrices = [rt.make_translation(-1, 2, 3), rt.make_scaling(-1, -1, -1),
+    matrices = [otk.h4t.make_translation(-1, 2, 3), otk.h4t.make_scaling(-1, -1, -1),
                 np.array([[0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]),
                 np.array([[0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])]
 

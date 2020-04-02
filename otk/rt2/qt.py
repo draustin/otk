@@ -3,7 +3,7 @@ from typing import Mapping, Sequence, Iterable
 from PyQt5 import QtWidgets, QtCore
 from ..sdb import Surface
 from ..sdb.glsl import gen_get_all_recursive
-from . import *
+from .scalar import Assembly
 from ..sdb.qt import SphereTraceRender, SphereTraceViewer
 
 def view_assembly(a: Assembly, set_properties:Mapping[Surface, Mapping]=None, parent_properties:Mapping=None):

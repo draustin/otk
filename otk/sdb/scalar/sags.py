@@ -2,12 +2,13 @@ from typing import Sequence
 import numpy as np
 from .. import *
 from .base import *
+from ... import v4
 
 __all__ = []
 
 @getsag.register
 def _(s:ZemaxConicSagFunction, x:Sequence[float]) -> float:
-    rho2 = min(norm_squared(x[:2]), s.radius**2)
+    rho2 = min(v4.norm_squared(x[:2]), s.radius**2)
     rho = rho2**0.5
     if np.isfinite(s.roc):
         z = rho2/(s.roc*(1 + (1 - s.kappa*rho2/s.roc**2)**0.5))

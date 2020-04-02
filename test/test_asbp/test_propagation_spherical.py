@@ -1,5 +1,6 @@
 import numpy as np
 import mathx
+import otk.h4t
 from mathx import matseq
 from otk import asbp, rt, math, bvar
 
@@ -473,7 +474,7 @@ def test_propagate_plane_to_curved_spherical_inclined():
         r0_centers = vector[:2]/vector[2]*z0
         qs_center = vector[:2]*k
         x0, y0 = asbp.calc_xy(r0_support, num_points, r0_centers)
-        matrix = rt.make_frame(vector, (0, 1, 0))
+        matrix = otk.h4t.make_frame(vector, (0, 1, 0))
         x0l, y0l, z0l, _ = matseq.mult_mat_vec(np.linalg.inv(matrix), (x0, y0, z0, 1))
         Er0 = asbp.calc_gaussian(k, x0l, y0l, waist, z0l)
         r1_centers = vector[:2]/vector[2]*z1m

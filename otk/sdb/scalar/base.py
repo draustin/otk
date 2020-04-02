@@ -2,25 +2,13 @@ import numpy as np
 from typing import Sequence
 from dataclasses import dataclass
 from functools import singledispatch
-#from ..vector3 import *
+from ...v4 import norm, normalize
+
 from ..geometry import *
 
-__all__ = ['getsdb', 'identify', 'spheretrace', 'getnormal', 'norm', 'normalize', 'dot', 'cross', 'norm_squared', 'getsag']
+__all__ = ['getsdb', 'identify', 'spheretrace', 'getnormal', 'getsag',
+    'traverse']
 
-def dot(a, b):
-    return np.dot(a[:3], b[:3])
-
-def norm_squared(x):
-    return dot(x, x)
-
-def norm(x):
-    return dot(x, x)**0.5
-
-def normalize(x):
-    return x/norm(x)
-
-def cross(a, b):
-    return np.r_[np.cross(a[:3], b[:3]), 0]
 
 @dataclass
 class ISDB:
@@ -94,6 +82,25 @@ def _(self:UnionOp, isdbs: Sequence[ISDB]) -> int:
             index0 = index
     return index0
 
+@singledispatch
+def traverse(s:Surface, x:Sequence[float]):
+    raise NotImplementedError(s)
+
+@traverse.register
+def _(s:Primitive, x:Sequence[float]):
+    d = getsdb(s, x)
+    yield s, d
+    return d
+
+@traverse.register
+def _(self:UnionOp, x:Sequence[float]):
+    d = yield from traverse(self.surfaces[0], x)
+    for child in self.surfaces[1:]:
+        d_child = yield from traverse(child, x)
+        d = min(d, d_child)
+    yield self, d
+    return d
+
 @getsdb.register
 def _(self:IntersectionOp, x):
     d = getsdb(self.surfaces[0], x)
@@ -111,6 +118,15 @@ def _(self:IntersectionOp, isdbs: Sequence[ISDB]) -> int:
             index0 = index
     return index0
 
+@traverse.register
+def _(self:IntersectionOp, x:Sequence[float]):
+    d = yield from traverse(self.surfaces[0], x)
+    for child in self.surfaces[1:]:
+        d_child = yield from traverse(child, x)
+        d = max(d, d_child)
+    yield self, d
+    return d
+
 @getsdb.register
 def _(self:DifferenceOp, p) -> np.ndarray:
     d0 = getsdb(self.surfaces[0], p)
@@ -122,6 +138,11 @@ def _(self:AffineOp, p:Sequence[float]) -> int:
     d = getsdb(self.surfaces[0], np.dot(p, self.invm))
     return d*self.scale
 
+@traverse.register
+def _(self:AffineOp, x:Sequence[float]):
+    d = yield from traverse(self.surfaces[0], np.dot(x, self.invm))
+    return d*self.scale
+
 @getsdb.register
 def _(s:SegmentedRadial, x):
     rho = norm(x[:2] - s.vertex)
@@ -129,6 +150,26 @@ def _(s:SegmentedRadial, x):
         if rho <= r:
             return getsdb(ss, x)
     return getsdb(s.surfaces[-1], x)
+
+@traverse.register
+def _(s:SegmentedRadial, x):
+    rho = norm(x[:2] - s.vertex)
+    d = None
+    for ss, r in zip(s.surfaces, s.radii):
+        ds = (yield from traverse(ss, x))
+        if rho <= r and d is None:
+            d = ds
+    if d is None:
+        d = ds
+    return d
+
+@getsdb.register
+def _(s:FiniteRectangularArray, x):
+    return getsdb(s.surfaces[0], s.transform(x))
+
+@traverse.register
+def _(s:FiniteRectangularArray, x):
+    return (yield from traverse(s.surfaces[0], s.transform(x)))
 
 def sum_weighted(w1, x1s, w2, x2s):
     a1 = w2/(w1 + w2)

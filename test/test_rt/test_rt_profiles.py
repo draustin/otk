@@ -3,7 +3,7 @@ import numpy as np
 from numpy import testing
 from mathx import RegularFiniteSquareLattice
 from otk.rt import profiles
-from otk import vector3
+from otk import v4b
 
 
 def test_SphericalProfile():
@@ -47,11 +47,11 @@ def test_LatticeProfile():
 
 def test_ConicProfile():
     p = profiles.ConicProfile(10, 0.5, [0.05])
-    origin = vector3.stack_xyzw([1, -1.1, 0, 0], [0, 0, -1.2, 1.3], [-1, -1.1, -1.2, -1.3], 1)
-    vector = vector3.normalize(vector3.stack_xyzw([0.1, 0.2, -0.1, 0.1], [-0.1, -0.1, 0.2, 0.2], [1, 1, 1, 1], 0))
+    origin = v4b.stack_xyzw([1, -1.1, 0, 0], [0, 0, -1.2, 1.3], [-1, -1.1, -1.2, -1.3], 1)
+    vector = v4b.normalize(v4b.stack_xyzw([0.1, 0.2, -0.1, 0.1], [-0.1, -0.1, 0.2, 0.2], [1, 1, 1, 1], 0))
     pd = p.intersect(origin, vector)
     point = origin + pd*vector
-    rho = vector3.dot(point[..., :2])**0.5
+    rho = v4b.dot(point[..., :2])**0.5
     assert np.allclose(p.calc_z(rho), point[..., [2]])
 
     p.calc_normal(point)

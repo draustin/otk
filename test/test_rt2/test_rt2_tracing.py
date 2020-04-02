@@ -5,34 +5,36 @@ from otk import paraxial
 from otk.sdb import *
 from otk.sdb.scalar import *
 from otk.rt2 import *
+from otk.rt2.scalar import *
 from otk.sdb.lens import *
+from otk import v4
 
 def test_tracing():
     normal = 0, 0, -1
     constant = 0
     surface = Plane(normal, constant)
-    deflector = SimpleDeflector(make_fresnel_interface())
+    deflector = make_fresnel_deflector()
     n0 = 1
     n0fun = ri.FixedIndex(n0)
     n1  = 1.5
     n1fun = ri.FixedIndex(n1)
-    element = SimpleElement(surface, n1fun, lambda x: deflector)
+    element = SimpleElement(surface, UniformIsotropic(n1fun), deflector)
 
-    assert element.get_deflector(np.asarray((1, 2, 3, 1))) is deflector
+    assert get_deflector(element, np.asarray((1, 2, 3, 1))) is deflector
 
-    assembly = Assembly([element], UniformIsotropic(n0fun))
-    assert assembly.get_element((1, 2, -1)) is None
-    assert assembly.get_element((1, 2, 1)) is element
+    assembly = Assembly(element.surface, [element], UniformIsotropic(n0fun))
+    assert assembly.get_transformed_element((1, 2, -1, 1)) is None
+    assert assembly.get_transformed_element((1, 2, 1, 1)).element is element
 
     lamb = 800e-9
-    incident_ray = make_ray(1, 2, -1, 0, 1, 1, 1, 0, 0, n1fun(lamb), 1, 0, lamb)
+    incident_ray = make_ray(1, 2, -1, 0, 1, 1, 1, 0, 0, n0fun(lamb), 1, 0, lamb)
     epsilon = 1e-9
     length, deflected_rays = assembly.process_ray(incident_ray, dict(epsilon=epsilon, t_max=1e9, max_steps=100))
     assert (2**0.5 - epsilon) <= length  <= (2**0.5 + epsilon)
 
-    (rp, rs), (tp, ts) = omath.calc_fresnel_coefficients(n0, n1, abs(dot(incident_ray.line.vector, normal)))
+    (rp, rs), (tp, ts) = omath.calc_fresnel_coefficients(n0, n1, abs(v4.dot(incident_ray.line.vector, normal)))
     assert 0 <= getsdb(surface, deflected_rays[0].line.origin) <= epsilon
-    assert np.array_equal(deflected_rays[0].line.vector, normalize((0, 1, -1, 0)))
+    assert np.array_equal(deflected_rays[0].line.vector, v4.normalize((0, 1, -1, 0)))
     assert np.isclose(deflected_rays[0].flux, rs**2)
 
     vy = 2**-0.5*n0/n1
@@ -47,9 +49,9 @@ def test_parabolic_mirror():
     vertex = np.asarray((0, 0, 0))
     # Creater a parabolic mirror pointing along +z axis.
     surface = BoundedParaboloid(roc, 1.5*roc, True, vertex)
-    deflector = SimpleDeflector(make_constant_interface(1, 1, 0, 0, True, False))
+    deflector = make_constant_deflector(1, 1, 0, 0, True, False)
     n = ri.vacuum
-    assembly = Assembly([SimpleElement(surface, n, lambda x: deflector)], UniformIsotropic(n))
+    assembly = Assembly(surface, [SimpleElement(surface, UniformIsotropic(n), deflector)], UniformIsotropic(n))
     lamb = 800e-9
     epsilon = 1e-9
     focus = vertex + (0, 0, f)
@@ -79,8 +81,8 @@ def test_biconvex_lens():
     assert np.isclose(getsdb(surface, vertex0 + (0, 0, -thickness, 0)), thickness)
 
 
-    element = SimpleElement(surface, n, lambda x: perfect_refractor)
-    assembly = Assembly([element], UniformIsotropic(ne))
+    element = SimpleElement(surface, UniformIsotropic(n), perfect_refractor)
+    assembly = Assembly(surface, [element], UniformIsotropic(ne))
     sphere_trace_kwargs = dict(epsilon=1e-9, t_max=1e9, max_steps=100)
 
     # Compute object and image points for 2f-2f imaging. zp is relative to vertex.
@@ -111,7 +113,7 @@ def test_biconvex_lens():
     segments = assembly.nonseq_trace(incident_ray1, sphere_trace_kwargs).flatten()
     assert len(segments) == 3
     # Check ray passes close to image.
-    assert norm(segments[2].ray.line.pass_point(image)[1].origin - image) < 1e-6
+    assert v4.norm(segments[2].ray.line.pass_point(image)[1].origin - image) < 1e-6
 
     # TODO check phase
 
@@ -128,15 +130,15 @@ def test_hyperbolic_lens():
     kappa = 0.55555 # 0.55555
     f = roc*n2/(n2 - n1)
     surface = ZemaxConic(roc, 0.3, 1, kappa)
-    element = SimpleElement(surface, ri.FixedIndex(n2), lambda x: perfect_refractor)
-    assembly = Assembly([element], UniformIsotropic(ri.FixedIndex(n1)))
+    element = SimpleElement(surface, UniformIsotropic(ri.FixedIndex(n2)), perfect_refractor)
+    assembly = Assembly(surface, [element], UniformIsotropic(ri.FixedIndex(n1)))
     sphere_trace_kwargs = dict(epsilon=1e-9, t_max=1e9, max_steps=100)
     focus = (0, 0, f, 1)
     for x0 in x0s:
         ray = make_ray(x0, 0, -1, 0, 0, 1, 1, 0, 0, n1, 1, 0, 800e-9)
         segments = assembly.nonseq_trace(ray, sphere_trace_kwargs).flatten()
         assert len(segments) == 2
-        assert norm(segments[1].ray.line.pass_point(focus)[1].origin - focus) < 1e-6
+        assert v4.norm(segments[1].ray.line.pass_point(focus)[1].origin - focus) < 1e-6
 
 
 
