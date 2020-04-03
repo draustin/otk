@@ -43,6 +43,9 @@ class RectangularArraySagFunction(SagFunction):
     about the x and y axis. This ensures continuity at the boundaries.
 
     The array is infinite to avoid the question of what happens at the edges.
+
+    TODO otpions for smoothing at boundaries. Simple possibility is quadratic function in transition zone matching slope.
+    In corner transition zones, quadratic (in distance from corner) matching slope at corners of active region.
     """
     def __init__(self, unit: SagFunction, pitch: Sequence[float]):
         pitch = np.array(pitch, float)

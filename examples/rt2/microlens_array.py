@@ -8,26 +8,9 @@ from otk import paraxial, ri
 from otk import sdb
 from otk.rt2 import *
 import otk.rt2.scalar as rt2
+from otk.rt2 import stock
 
-# TODO chrome mask
-def make_MLA150(small:bool=False):
-    # https://www.thorlabs.com/drawings/2387c2b71216f558-2D5B16EB-0174-2DDB-0867F5C4641A7CDC/MLA150-5C-SpecSheet.pdf
-    roc = 2.54e-3
-    d = 140e-6
-    p = 150e-6
-    t = 1.2e-3
-    w = 10e-3
-    h = 10e-3
-    unitfn = sdb.ZemaxConicSagFunction(roc, d/2)
-    fn = sdb.RectangularArraySagFunction(unitfn, (p, p))
-    front = sdb.Sag(fn, 1)
-    sides = sdb.InfiniteRectangularPrism(w, h)
-    back = sdb.Plane((0, 0, 1), -t)
-    surface = sdb.IntersectionOp((front, sides, back))
-    element = SimpleElement(surface, UniformIsotropic(ri.fused_silica), rt2.perfect_refractor)
-    return element
-
-element = make_MLA150()
+element = stock.make_MLA150()
 assembly = rt2.Assembly(element.surface, [element], UniformIsotropic(ri.air))
 sphere_trace_kwargs = dict(epsilon=1e-9, t_max=1e9, max_steps=100)
 
