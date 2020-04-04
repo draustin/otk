@@ -21,6 +21,8 @@ class SphereTraceRender(QtWidgets.QOpenGLWidget):
         self.rays = []
         self.ray_colors = []
         self.ray_program = None
+        self.wireframe_program = None
+        self.wireframe_models = []
         surface_format = QtGui.QSurfaceFormat()
         surface_format.setDepthBufferSize(24)
         self.setFormat(surface_format)
@@ -42,10 +44,18 @@ class SphereTraceRender(QtWidgets.QOpenGLWidget):
             self.ray_program.set_rays(rays, colors)
         self.update()
 
+    def set_wireframe_models(self, models:Sequence[render.WireframeModel]):
+        self.wireframe_models = models
+        if self.wireframe_program is not None:
+            self.wireframe_program.set_models(models)
+        self.update()
+
     def initializeGL(self) -> None:
         self.trace_programs = [opengl.make_sphere_trace_program(s) for s in self.sdb_glsls]
         self.ray_program = opengl.make_ray_program(10000)
         self.ray_program.set_rays(self.rays, self.ray_colors)
+        self.wireframe_program = opengl.WireframeProgram.make()
+        self.wireframe_program.set_models(self.wireframe_models)
 
         #print(self.trace_program.program, self.ray_program.program)
 
@@ -81,6 +91,7 @@ class SphereTraceRender(QtWidgets.QOpenGLWidget):
             self.epsilon, self.background_color)
         GL.glDepthFunc(GL.GL_LESS)
         self.ray_program.draw(world_to_clip)
+        self.wireframe_program.draw(world_to_clip)
 
     def getEyefromWindow(self, pos: QPoint):
         ratio = self.devicePixelRatio()
@@ -204,7 +215,7 @@ class ScenesViewer(QtWidgets.QWidget):
 
         self.display_widget = display_widget
         self.display_widget.make_eye_to_clip = projection
-        self._set_scene(0)
+        self.set_scene(0)
 
     def maxStepsChanged(self, value):
         self.display_widget.max_steps = value
@@ -221,6 +232,7 @@ class ScenesViewer(QtWidgets.QWidget):
     def _set_scene(self, num: int):
         self.display_widget.program_num = num
         scene = self._scenes[num]
+        self.display_widget.set_wireframe_models(scene.wireframe_models)
         self.display_widget.eye_to_world = lookat(scene.eye, scene.center)
         self.display_widget.z_near = scene.z_near
         self.display_widget.z_far = scene.z_far

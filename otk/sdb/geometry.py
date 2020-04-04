@@ -1,7 +1,9 @@
 from typing import List
+from  itertools import  product
 from abc import ABC, abstractmethod
 from typing import Sequence, Tuple
 import numpy as np
+from .. import v4
 from ..h4t import make_translation
 from . import bounding
 
@@ -38,7 +40,7 @@ class Surface:
         The matrix m transforms from the coordinate system of self to the box axes. If vp = (xa or xb, ya or yb, za or zb, 1)
         is box vertex in axis aligned space and v is the same in self space then vp = v*m.
         """
-        raise NotImplementedError()
+        raise NotImplementedError(self)
 
 def get_root_to_local(self:Surface, x: np.ndarray) -> np.ndarray:
     ancestors = self.get_ancestors()
@@ -67,6 +69,13 @@ class Sphere(Primitive):
         rv = self.r, self.r, self.r, 0
         return bounding.AABB.make(op - rv, op + rv)
 
+def get_box_vertices(center: Sequence[float], half_size: Sequence[float]) -> np.ndarray:
+    vertices = []
+    for signs in product((-1, 1), repeat=3):
+        vertex = [center + sign*half_size for center, sign, half_size in zip(center, signs, half_size)] + [1]
+        vertices.append(vertex)
+    vertices = np.asarray(vertices)
+    return vertices
 
 class Box(Primitive):
     def __init__(self, half_size:Sequence[float], center:Sequence[float]=None, radius: float = 0., parent: Surface = None):
@@ -79,7 +88,15 @@ class Box(Primitive):
         self.center = center
         self.radius = radius
 
+    def get_hull_vertices(self) -> np.ndarray:
+        return get_box_vertices(self.center, self.half_size)
+
+    def get_aabb(self, m: np.ndarray) -> bounding.AABB:
+        vertices = np.dot(self.get_hull_vertices(), m)
+        return bounding.AABB((np.min(vertices, 0), np.max(vertices, 0)))
+
 class Torus(Primitive):
+    """Circle of radius minor revolved around z axis."""
     def __init__(self, major: float, minor: float, center: Sequence[float]=None, parent: Surface = None):
         Primitive.__init__(self, parent)
         if center is None:
@@ -88,6 +105,14 @@ class Torus(Primitive):
         self.major = major
         self.minor = minor
         self.center = center
+
+    def get_hull_vertices(self) -> np.ndarray:
+        xy = self.major + self.minor
+        return get_box_vertices(self.center, (xy, xy, self.minor))
+
+    def get_aabb(self, m: np.ndarray) -> bounding.AABB:
+        vertices = np.dot(self.get_hull_vertices(), m)
+        return bounding.AABB((np.min(vertices, 0), np.max(vertices, 0)))
 
 class Ellipsoid(Primitive):
     def __init__(self, radii: Sequence[float], center: Sequence[float]=None, parent: Surface = None):
@@ -98,6 +123,13 @@ class Ellipsoid(Primitive):
         assert len(center) == 3
         self.radii = np.asarray(radii)
         self.center = np.asarray(center)
+
+    def get_hull_vertices(self) -> np.ndarray:
+        return get_box_vertices(self.center, self.radii)
+
+    def get_aabb(self, m: np.ndarray) -> bounding.AABB:
+        vertices = np.dot(self.get_hull_vertices(), m)
+        return bounding.AABB((np.min(vertices, 0), np.max(vertices, 0)))
 
 class InfiniteCylinder(Primitive):
     def __init__(self, r:float, o:Sequence[float]=None, parent: Surface = None):

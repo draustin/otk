@@ -1,3 +1,4 @@
+import itertools
 from dataclasses import dataclass
 from functools import singledispatch
 from typing import Sequence, Tuple
@@ -118,19 +119,19 @@ def _(b0: AABR, b1: AABR):
 @dataclass
 class AABB:
     """Axis-aligned bounding box."""
-    corner0: np.ndarray
-    corner1: np.ndarray
+    corners: Tuple[np.ndarray, np.ndarray]
 
     def __post_init__(self):
-        assert v4.is_point(self.corner0)
-        assert v4.is_point(self.corner1)
+        assert len(self.corners) == 2
+        assert v4.is_point(self.corners[0])
+        assert v4.is_point(self.corners[1])
 
     @property
-    def empty(self):
-        return any(self.corner0 >= self.corner1)
+    def empty(self) -> bool:
+        return any(self.corners[0] >= self.corners[1])
 
     def split(self, axis: int) -> Tuple[Interval, AABR]:
-        i = Interval(self.corner0[axis], self.corner1[axis])
+        i = Interval(self.corners[0][axis], self.corners[1][axis])
         if axis == 0:
             other_axes = [1, 2]
         elif axis == 1:
@@ -139,39 +140,39 @@ class AABB:
             other_axes = [1, 2]
         else:
             raise ValueError('Axis should be 0, 1, or 2.')
-        return i, AABR(self.corner0[other_axes], self.corner1[other_axes])
+        return i, AABR(self.corners[0][other_axes], self.corners[1][other_axes])
 
     @classmethod
     def make(cls, corner0: Sequence[float], corner1: Sequence[float]):
         corner0 = v4.to_point(corner0)
         corner1 = v4.to_point(corner1)
-        return cls(corner0, corner1)
+        return cls((corner0, corner1))
 
     @classmethod
     def combine(cls, ix: Interval, iy: Interval, iz: Interval) -> 'AABB':
         return AABB(np.array((ix.a, iy.a, iz.b, 1)), np.array((ix.b, iy.b, iz.b, 1)))
 
-    @classmethod
-    def union2(cls, b0: 'AABB', b1: 'AABB'):
-        return AABB(np.minimum(b0.corner0, b1.corner0), np.maximum(b0.corner1, b1.corner1))
-
-    @classmethod
-    def intersection2(cls, b0: 'AABB', b1: 'AABB'):
-        return AABB(np.maximum(b0.corner0, b1.corner0), np.minimum(b0.corner1, b1.corner1))
+    # @classmethod
+    # def union2(cls, b0: 'AABB', b1: 'AABB'):
+    #     return AABB(np.minimum(b0.corners[0], b1.corners[0]), np.maximum(b0.corners[1], b1.corners[1]))
+    #
+    # @classmethod
+    # def intersection2(cls, b0: 'AABB', b1: 'AABB'):
+    #     return AABB(np.maximum(b0.corners[0], b1.corners[0]), np.minimum(b0.corners[1], b1.corners[1]))
 
 @union.register
 def _(b: AABB, *args):
     bs = (b, ) + args
-    corner0 = np.minimum.reduce([b.corner0 for b in bs])
-    corner1 = np.maximum.reduce([b.corner1 for b in bs])
-    return AABB(corner0, corner1)
+    corner0 = np.minimum.reduce([b.corners[0] for b in bs])
+    corner1 = np.maximum.reduce([b.corners[1] for b in bs])
+    return AABB((corner0, corner1))
 
 @intersection.register
 def _(b: AABB, *args):
     bs = (b, ) + args
-    corner0 = np.maximum.reduce([b.corner0 for b in bs])
-    corner1 = np.minimum.reduce([b.corner1 for b in bs])
-    return AABB(corner0, corner1)
+    corner0 = np.maximum.reduce([b.corners[0] for b in bs])
+    corner1 = np.minimum.reduce([b.corners[1] for b in bs])
+    return AABB((corner0, corner1))
 
 @difference.register
 def _(b0: AABB, b1: AABB):

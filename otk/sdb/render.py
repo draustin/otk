@@ -1,10 +1,14 @@
 from dataclasses import dataclass
-from typing import Sequence
+from functools import singledispatch
+import itertools
+from typing import Sequence, List
 import numpy as np
 from ..v4b import *
 from .scalar import spheretrace
+from . import bounding
 
-__all__ = ['orthographic', 'projection', 'lookat', 'ndc2ray', 'pix2norm', 'shade_distance', 'raster', 'Scene']
+__all__ = ['orthographic', 'projection', 'lookat', 'ndc2ray', 'pix2norm', 'shade_distance', 'raster', 'Scene',
+    'WireframeModel', 'make_wireframe']
 
 """
 https://lmb.informatik.uni-freiburg.de/people/reisert/opengl/doc/glOrtho.html
@@ -94,6 +98,45 @@ def shade_distance(nx, ny, invP, surface, epsilon, max_steps):
     return d
 
 @dataclass
+class WireframeModel:
+    vertices: np.ndarray
+    edges: np.ndarray
+    color: np.ndarray
+
+    def __post_init__(self):
+        assert self.vertices.ndim == 2
+        assert self.vertices.shape[1] == 4
+        assert self.edges.ndim ==  2
+        assert self.edges.shape[1] == 2
+        assert self.color.shape == (3,)
+
+    @property
+    def num_vertices(self):
+        return self.vertices.shape[0]
+
+    @property
+    def num_edges(self):
+        return self.edges.shape[0]
+
+    @classmethod
+    def make(cls, vertices: Sequence[Sequence[float]], edges: Sequence[Sequence[int]], color: Sequence[float]):
+        vertices = np.array(vertices, float)
+        edges = np.array(edges, int)
+        color = np.array(color, float)
+        return WireframeModel(vertices, edges, color)
+
+@singledispatch
+def make_wireframe(obj, color: Sequence[float]) -> WireframeModel:
+    raise NotImplementedError(obj)
+
+@make_wireframe.register
+def _(obj: bounding.AABB, color: Sequence[float]):
+    # Get 8x4 array of corner vertices.
+    vertices = [[obj.corners[index][axis] for axis, index in enumerate(indices)] + [1] for indices in itertools.product((0, 1), repeat=3)]
+    edges = (0, 1), (1, 3), (0, 2), (2, 3), (0, 4), (1, 5), (2, 6), (3, 7), (4, 5), (5, 7), (4, 6), (4, 7)
+    return WireframeModel.make(vertices, edges, color)
+
+@dataclass
 class Scene:
     name: str
     sdb_glsl: str
@@ -101,3 +144,4 @@ class Scene:
     z_far: float
     eye: np.ndarray
     center: np.ndarray
+    wireframe_models: List[WireframeModel]
