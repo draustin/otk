@@ -5,12 +5,9 @@ TODOs:
 #      * Absorptive media
 #      * diffraction grating
 """
-from abc import ABC, abstractmethod
 from functools import singledispatch
 from dataclasses import dataclass
-from typing import Sequence, Mapping, Tuple, Callable, Union, List
-from .. import ri
-import numpy as np
+from typing import Sequence, Union, List
 from .. import math as omath
 from ..sdb import *
 #from ..v4b import *
@@ -20,12 +17,6 @@ from ..v4 import *
 from . import *
 
 __all__ = ['Assembly', 'Line', 'Ray', 'make_line', 'make_ray', 'perfect_refractor', 'Branch', 'get_points', 'get_deflector']
-
-def is_point(x:np.ndarray):
-    return (x.shape == (4,)) and (x[3] == 1.)
-
-def is_vector(v:np.ndarray):
-    return (v.shape == (4,)) and (v[3] == 0.)
 
 @dataclass
 class Line:

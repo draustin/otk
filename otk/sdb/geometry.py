@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from typing import Sequence, Tuple
 import numpy as np
 from ..h4t import make_translation
+from . import bounding
 
 from ..v4b import *
 
@@ -29,6 +30,16 @@ class Surface:
     def get_parent_to_child(self, x: np.ndarray) -> np.ndarray:
         return np.eye(4)
 
+    def get_aabb(self, m: np.ndarray) -> bounding.AABB:
+        """Get axis-aligned bounding box.
+
+        The box is returned in the form (xa, ya, za, 1), (xb, yb, zb, 1).
+
+        The matrix m transforms from the coordinate system of self to the box axes. If vp = (xa or xb, ya or yb, za or zb, 1)
+        is box vertex in axis aligned space and v is the same in self space then vp = v*m.
+        """
+        raise NotImplementedError()
+
 def get_root_to_local(self:Surface, x: np.ndarray) -> np.ndarray:
     ancestors = self.get_ancestors()
     m = np.eye(4)
@@ -49,6 +60,13 @@ class Sphere(Primitive):
         assert len(o) == 3
         self.r = r
         self.o = np.asarray(o)
+
+    def get_aabb(self, m: np.ndarray) -> bounding.AABB:
+        assert np.isclose(np.linalg.det(m), 1)
+        op = np.r_[self.o, 1].dot(m)
+        rv = self.r, self.r, self.r, 0
+        return bounding.AABB.make(op - rv, op + rv)
+
 
 class Box(Primitive):
     def __init__(self, half_size:Sequence[float], center:Sequence[float]=None, radius: float = 0., parent: Surface = None):
@@ -303,14 +321,22 @@ class UnionOp(Compound):
     pass
 
 class IntersectionOp(Compound):
-    pass
+    def __init__(self, surfaces:Sequence[Surface], bound:Surface = None, parent: Surface = None):
+        Compound.__init__(self, surfaces, parent)
+        self.bound = bound
 
+    def get_aabb(self, m: np.ndarray) -> bounding.AABB:
+        if self.bound is None:
+            return bounding.intersection([s.get_aabb(m) for s in self.surfaces])
+        else:
+            return self.bound.get_aabb(m)
 
 class DifferenceOp(Compound):
     def __init__(self, s1:Surface, s2:Surface, parent: Surface = None):
         Compound.__init__(self, (s1, s2), parent)
 
-    #def which(self):
+    def get_aabb(self, m: np.ndarray) -> bounding.AABB:
+        return bounding.difference(self.surfaces[0].get_aabb(m), self.surfaces[1].get_aabb(m))
 
 class AffineOp(Compound):
     def __init__(self, s:Surface, m:Sequence[Sequence[float]], parent: Surface = None):
@@ -339,6 +365,9 @@ class AffineOp(Compound):
 
     def get_parent_to_child(self, x: np.ndarray) -> np.ndarray:
         return self.invm
+
+    def get_aabb(self, m: np.ndarray) -> bounding.AABB:
+        return self.surfaces[0].get_aabb(self.m.dot(m))
 
 # TODO change to piecewise function of rho with Lipschitz the maximum Lipschitz.
 class SegmentedRadial(Compound):

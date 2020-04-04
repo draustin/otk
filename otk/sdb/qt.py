@@ -40,6 +40,7 @@ class SphereTraceRender(QtWidgets.QOpenGLWidget):
         self.ray_colors = colors
         if self.ray_program is not None:
             self.ray_program.set_rays(rays, colors)
+        self.update()
 
     def initializeGL(self) -> None:
         self.trace_programs = [opengl.make_sphere_trace_program(s) for s in self.sdb_glsls]

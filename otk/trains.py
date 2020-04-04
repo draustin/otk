@@ -700,7 +700,7 @@ class SegmentedSurface(Surface):
         self.sags = sags
 
     def __repr__(self):
-        return 'SegmentedSurface(%r)'%self.segments
+        return f'SegmentedSurface({self.segments}, {self.sags})'
 
     def __str__(self):
         return ', '.join(str(s) for s in self.segments)

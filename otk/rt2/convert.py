@@ -6,7 +6,8 @@ from .. import trains
 from ..sdb import *
 from . import *
 
-__all__ = ['make_element', 'make_surface', 'make_elements', 'make_square_array_element', 'make_square_array_elements']
+__all__ = ['make_element', 'make_surface', 'make_elements', 'make_square_array_surface', 'make_square_array_element',
+    'make_square_array_elements']
 
 # begin make_surface
 
@@ -106,14 +107,13 @@ def _(obj: trains.SingletSequence, shape:str='circle', start:Sequence[float]=Non
 # begin make_square_array_surface
 
 @singledispatch
-def make_square_array_surface(obj: trains.Surface, *args, **kwargs) -> Surface:
+def make_square_array_surface(obj, *args, **kwargs) -> Surface:
     raise NotImplementedError(obj)
 
 @make_square_array_surface.register
 def _(obj: trains.Surface, side: float=1., vertex: Sequence[float] = None) -> Surface:
     fn = RectangularArraySagFunction(make_sag_function(obj), (obj.radius*2**0.5,)*2)
     return Sag(fn, side, vertex)
-
 
 @make_square_array_surface.register
 def _(obj: trains.Singlet, size: Sequence[int], origin: Sequence[float] = None) -> Surface:
@@ -136,7 +136,7 @@ def _(obj: trains.Singlet, size: Sequence[int], origin: Sequence[float] = None) 
 # begin make_square_array_element
 @singledispatch
 def make_square_array_element(obj, size: Sequence[int], origin: Sequence[float] = None) -> Element:
-    pass
+    raise NotImplementedError(obj)
 
 @make_square_array_element.register
 def _(obj: trains.Singlet, size: Sequence[int], origin: Sequence[float] = None) -> Element:
