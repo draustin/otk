@@ -190,4 +190,4 @@ def _(b0: AABB, b1: AABB):
 
 @isclose.register
 def _(b0: AABB, b1: AABB):
-    return np.allclose(b0.corner0, b1.corner0) and np.allclose(b0.corner1, b1.corner1)
+    return np.allclose(b0.corners[0], b1.corners[0]) and np.allclose(b0.corners[1], b1.corners[1])

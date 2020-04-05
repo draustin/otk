@@ -29,11 +29,9 @@ sdb_glsl = sdb.gen_get_all_recursive(assembly.surface, {}, properties)
 
 app = QtWidgets.QApplication([])
 w = qt.SphereTraceViewer(sdb_glsl)
-w.display_widget.half_width = 8e-3
-w.display_widget.eye_to_world = sdb.lookat((-20e-3, 0, 2e-3), (0, 0, 2e-3))
-w.display_widget.z_near = 1e-6
-w.display_widget.z_far = 1
-w.log10epsilon.setValue(-7) # mysterious artefacts for smaller values
+w.projection = sdb.Orthographic(8e-3, 1)
+w.eye_to_world = sdb.lookat((-20e-3, 0, 2e-3), (0, 0, 2e-3))
+w.epsilon = 1e-7 # mysterious artefacts for smaller values
 w.display_widget.set_rays(rays_list)
 w.resize(800, 600)
 w.show()

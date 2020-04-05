@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from functools import singledispatch
+from abc import ABC, abstractmethod
 import itertools
 from typing import Sequence, List
 import numpy as np
@@ -8,8 +9,9 @@ from .scalar import spheretrace
 from . import bounding
 
 __all__ = ['orthographic', 'projection', 'lookat', 'ndc2ray', 'pix2norm', 'shade_distance', 'raster', 'Scene',
-    'WireframeModel', 'make_wireframe']
+    'WireframeModel', 'make_wireframe', 'Projection', 'Orthographic', 'Perspective']
 
+# TODO rename to make_orthographic, and possibly move to h4
 """
 https://lmb.informatik.uni-freiburg.de/people/reisert/opengl/doc/glOrtho.html
 http://www.songho.ca/opengl/gl_projectionmatrix.html
@@ -21,6 +23,7 @@ def orthographic(l:float, r:float, b:float, t:float, n:float, f:float):
         (0,         0,          -2/(f - n),  -(f + n)/(f - n)),
         (0,         0,          0,           1))).T
 
+# TODO rename to make_perspective, and possibly move to h4
 """
 https://lmb.informatik.uni-freiburg.de/people/reisert/opengl/doc/glFrustum.html
 http://www.songho.ca/opengl/gl_projectionmatrix.html
@@ -135,6 +138,34 @@ def _(obj: bounding.AABB, color: Sequence[float]):
     vertices = [[obj.corners[index][axis] for axis, index in enumerate(indices)] + [1] for indices in itertools.product((0, 1), repeat=3)]
     edges = (0, 1), (1, 3), (0, 2), (2, 3), (0, 4), (1, 5), (2, 6), (3, 7), (4, 5), (5, 7), (4, 6), (6, 7)
     return WireframeModel.make(vertices, edges, color)
+
+class Projection(ABC):
+    @property
+    @abstractmethod
+    def eye_to_clip(self, aspect: float) -> np.ndarray:
+        pass
+
+@dataclass
+class Orthographic(Projection):
+    half_width: float
+    z_far: float
+
+    def eye_to_clip(self, aspect: float) -> np.ndarray:
+        half_height = self.half_width*aspect
+        return orthographic(-self.half_width, self.half_width, -half_height, half_height, 0, self.z_far)
+
+@dataclass
+class Perspective(Projection):
+    fov: float # radians
+    z_near: float
+    z_far: float
+
+    def eye_to_clip(self, aspect: float) -> np.ndarray:
+        half_width = self.z_near*np.tan(self.fov/2)
+        half_height = half_width*aspect
+        return projection(-half_width, half_width, -half_height, half_height, self.z_near, self.z_far)
+
+# TODO make oblique projection - see https://www.cs.unm.edu/~angel/CS433/LECTURES/CS433_17.pdf. Could be useful.
 
 @dataclass
 class Scene:

@@ -37,15 +37,9 @@ for xy, color in zip(np.linspace(0, field_half_width, num_field_points), mcolors
 app = QtWidgets.QApplication([])
 viewer = qt.view_assembly(assembly)
 size = singlet_sequence.center_length
-viewer.display_widget.z_near = size*0.1
-# TODO when decent view controls added, remove this
-if False:
-    viewer.display_widget.half_width = viewer.display_widget.z_near/2
-    viewer.display_widget.make_eye_to_clip = projection
-else:
-    viewer.display_widget.half_width = size*0.6
-viewer.display_widget.eye_to_world = lookat((size*1.5, 0, size/2), (0, 0, size/2))
-viewer.log10epsilon.setValue(-4)
+viewer.projection = sdb.Orthographic(size*0.6, 1)
+viewer.eye_to_world = lookat((size*1.5, 0, size/2), (0, 0, size/2))
+viewer.epsilon = 1e-4
 viewer.set_rays(traced_rays, colors)
 viewer.show()
 app.exec()

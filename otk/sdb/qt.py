@@ -5,6 +5,7 @@ from OpenGL import GL
 from PyQt5.QtCore import QPoint
 from PyQt5 import QtWidgets, QtCore, QtGui
 from otk.h4t import make_x_rotation, make_y_rotation, make_translation
+from ..delegate import Delegate
 from . import *
 from . import opengl
 
@@ -15,8 +16,8 @@ class SphereTraceRender(QtWidgets.QOpenGLWidget):
         QtWidgets.QOpenGLWidget.__init__(self, parent)
         self.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding))
         self.start_time = time.time()
-        self.max_steps = 100
-        self.epsilon = 1e-2
+        self._max_steps = 100
+        self._epsilon = 1e-2
         self.sdb_glsls = sdb_glsls
         self.rays = []
         self.ray_colors = []
@@ -26,16 +27,51 @@ class SphereTraceRender(QtWidgets.QOpenGLWidget):
         surface_format = QtGui.QSurfaceFormat()
         surface_format.setDepthBufferSize(24)
         self.setFormat(surface_format)
-        self.half_width = 0.5
-        self.z_near = 0.01
-        self.z_far = 100
-        self.make_eye_to_clip = orthographic
+        self._projection = Orthographic(0.5, 100)
         self.program_num = 0
-        self.eye_to_world = np.eye(4)
+        self._eye_to_world = np.eye(4)
         self.background_color = 1., 1., 1., 1.
 
         self.ndc_orbit = None
         self.mouse_drag_mode = None
+
+    @property
+    def eye_to_world(self):
+        return self._eye_to_world
+
+    @eye_to_world.setter
+    def eye_to_world(self, m):
+        m = np.array(m, float)
+        assert m.shape == (4, 4)
+        self._eye_to_world = m
+        self.update()
+
+    @property
+    def projection(self) -> Projection:
+        return self._projection
+
+    @projection.setter
+    def projection(self, v: Projection):
+        self._projection = v
+        self.update()
+
+    @property
+    def max_steps(self) -> int:
+        return self._max_steps
+
+    @max_steps.setter
+    def max_steps(self, v:int):
+        self._max_steps = v
+        self.update()
+
+    @property
+    def epsilon(self) -> float:
+        return self._epsilon
+
+    @epsilon.setter
+    def epsilon(self, v: float):
+        self._epsilon = v
+        self.update()
 
     def set_rays(self, rays: Sequence[np.ndarray], colors: Iterable = None):
         self.rays = rays
@@ -70,14 +106,16 @@ class SphereTraceRender(QtWidgets.QOpenGLWidget):
         #width *= ratio
         #height *= ratio
 
-        half_height = self.half_width*height/width
-        eye_to_clip = self.make_eye_to_clip(-self.half_width, self.half_width, -half_height, half_height, self.z_near, self.z_far)
+        #half_height = self.half_width*height/width
+
+        eye_to_clip = self._projection.eye_to_clip(height/width)
+        #-self.half_width, self.half_width, -half_height, half_height, self.z_near, self.z_far)
 
         self.clip_to_eye = np.linalg.inv(eye_to_clip)
 
         elapsed_time = time.time() - self.start_time
 
-        clip_to_world = self.clip_to_eye.dot(self.eye_to_world)
+        clip_to_world = self.clip_to_eye.dot(self._eye_to_world)
         world_to_clip = np.linalg.inv(clip_to_world)
 
         # Took some experimentation to get right.
@@ -87,8 +125,8 @@ class SphereTraceRender(QtWidgets.QOpenGLWidget):
         GL.glDepthMask(GL.GL_TRUE) # Defensive - appears to be default.
         GL.glEnable(GL.GL_DEPTH_TEST)
         GL.glDepthFunc(GL.GL_ALWAYS)
-        self.trace_programs[self.program_num].draw(self.eye_to_world, eye_to_clip, (width, height), self.max_steps,
-            self.epsilon, self.background_color)
+        self.trace_programs[self.program_num].draw(self.eye_to_world, eye_to_clip, (width, height), self._max_steps,
+            self._epsilon, self.background_color)
         GL.glDepthFunc(GL.GL_LESS)
         self.ray_program.draw(world_to_clip)
         self.wireframe_program.draw(world_to_clip)
@@ -147,9 +185,10 @@ class SphereTraceViewer(QtWidgets.QWidget):
         max_steps.setRange(1, 1000)
         max_steps.setValue(display_widget.max_steps)
         max_steps.valueChanged.connect(self.maxStepsChanged)
+        self._max_steps = max_steps
 
         sb = QtWidgets.QDoubleSpinBox()
-        self.log10epsilon = sb
+        self._log10epsilon = sb
         sb.setRange(-20, 2)
         sb.setValue(np.log10(display_widget.epsilon))
         sb.valueChanged.connect(self.log10EpsilonChanged)
@@ -159,7 +198,7 @@ class SphereTraceViewer(QtWidgets.QWidget):
         vbox = QtWidgets.QVBoxLayout()
         hbox.addLayout(vbox)
         vbox.addWidget(max_steps)
-        vbox.addWidget(self.log10epsilon)
+        vbox.addWidget(self._log10epsilon)
         vbox.addStretch(1)
         hbox.addWidget(display_widget)
 
@@ -172,11 +211,28 @@ class SphereTraceViewer(QtWidgets.QWidget):
 
     def maxStepsChanged(self, value):
         self.display_widget.max_steps = value
-        self.display_widget.update()
 
     def log10EpsilonChanged(self, value):
         self.display_widget.epsilon = 10**value
-        self.display_widget.update()
+
+    projection = Delegate('display_widget', 'projection')
+    eye_to_world = Delegate('display_widget', 'eye_to_world')
+
+    @property
+    def max_steps(self) -> int:
+        return self.display_widget.max_steps
+
+    @max_steps.setter
+    def max_steps(self, v: int):
+        self._max_steps.setValue(v)
+
+    @property
+    def epsilon(self) -> float:
+        return self.display_widget.epsilon
+
+    @epsilon.setter
+    def epsilon(self, v: float):
+        self._log10epsilon.setValue(np.log10(v))
 
 class ScenesViewer(QtWidgets.QWidget):
     def __init__(self, scenes: Sequence[Scene], parent=None):
@@ -214,16 +270,16 @@ class ScenesViewer(QtWidgets.QWidget):
         hbox.addWidget(display_widget)
 
         self.display_widget = display_widget
-        self.display_widget.make_eye_to_clip = projection
         self.set_scene(0)
 
     def maxStepsChanged(self, value):
         self.display_widget.max_steps = value
-        self.display_widget.update()
 
     def log10EpsilonChanged(self, value):
         self.display_widget.epsilon = 10**value
-        self.display_widget.update()
+
+    def sizeHint(self):
+        return QtCore.QSize(800, 600)
 
     def sceneChanged(self, num: int):
         self._set_scene(num)
@@ -234,10 +290,7 @@ class ScenesViewer(QtWidgets.QWidget):
         scene = self._scenes[num]
         self.display_widget.set_wireframe_models(scene.wireframe_models)
         self.display_widget.eye_to_world = lookat(scene.eye, scene.center)
-        self.display_widget.z_near = scene.z_near
-        self.display_widget.z_far = scene.z_far
-        fov = np.pi/3
-        self.display_widget.half_width = np.tan(fov/2)*scene.z_near
+        self.display_widget.projection = Perspective(np.pi/3, scene.z_near, scene.z_far)
 
     def set_scene(self, num: int):
         self.scene_list.setCurrentRow(num)
