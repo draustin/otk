@@ -215,6 +215,9 @@ class SphereTraceViewer(QtWidgets.QWidget):
     def log10EpsilonChanged(self, value):
         self.display_widget.epsilon = 10**value
 
+    def sizeHint(self) -> QtCore.QSize:
+        return QtCore.QSize(800, 600)
+
     projection = Delegate('display_widget', 'projection')
     eye_to_world = Delegate('display_widget', 'eye_to_world')
 
