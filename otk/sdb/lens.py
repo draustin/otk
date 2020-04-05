@@ -1,5 +1,6 @@
 from typing import Sequence, Tuple
 import numpy as np
+from .. import math as omath
 from ..sdb import *
 
 __all__ = ['make_spherical_singlet', 'make_toroidal_singlet', 'make_spherical_singlet_square_array']
@@ -11,12 +12,20 @@ def make_spherical_singlet(roc0, roc1, thickness, vertex0:Sequence[float]=(0,0,0
     if shape == 'circle':
         assert radius is not None
         s2 = InfiniteCylinder(radius, vertex0[:2])
+        z0 = min(omath.calc_sphere_sag(roc0, radius), 0)
+        z1 = thickness + max(omath.calc_sphere_sag(roc1, radius), 0)
+        bound = Box((radius, radius, (z1 - z0)/2), (vertex0[0], vertex0[1], vertex0[2] + (z1 + z0)/2))
     elif shape == 'rectangle':
         assert len(side_lengths) == 2
         s2 = InfiniteRectangularPrism(*side_lengths, center=vertex0[:2])
+        radius = (side_lengths[0]**2 + side_lengths[1]**2)**0.5/2
+        z0 = min(omath.calc_sphere_sag(roc0, radius), 0)
+        z1 = thickness + max(omath.calc_sphere_sag(roc1, radius), 0)
+        bound = Box((side_lengths[0]/2, side_lengths[1]/2, (z1 - z0)/2), (vertex0[0], vertex0[1], vertex0[2] + (z1 + z0)/2))
     else:
         raise ValueError(f'Unknown shape {shape}.')
-    return IntersectionOp((s0, s1, s2))
+
+    return IntersectionOp((s0, s1, s2), bound)
 
 def make_toroidal_singlet(rocs0, rocs1, thickness, radius: float, vertex0:Sequence[float]=(0,0,0), shape:str='circle'):
     vertex0 = np.asarray(vertex0)
@@ -43,6 +52,10 @@ def make_spherical_singlet_square_array(roc0, roc1, thickness, pitch, size, face
     s0 = FiniteRectangularArray(pitch, size, SphericalSag(roc0, 1, (0, 0, face_center[2])), origin=face_center[:2])
     s1 = FiniteRectangularArray(pitch, size, SphericalSag(roc1, -1, (0, 0, face_center[2] + thickness)), origin=face_center[:2])
     s2 = InfiniteRectangularPrism(*(pitch*size), face_center[:2])
-    return IntersectionOp((s0, s1, s2))
+    radius = sum(pitch**2)**0.5/2
+    z0 = min(omath.calc_sphere_sag(roc0, radius), 0)
+    z1 = thickness + max(omath.calc_sphere_sag(roc1, radius), 0)
+    bound = Box((size[0]*pitch[0]/2, size[1]*pitch[1]/2, (z1 - z0)/2), (face_center[0], face_center[1], face_center[2] + (z1 + z0)/2))
+    return IntersectionOp((s0, s1, s2), bound)
 
 

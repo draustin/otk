@@ -158,7 +158,6 @@ class WireframeProgram:
             first_vertex = last_vertex
             first_edge = last_edge
 
-        print('hey', vertex_data.nbytes, edge_data.nbytes)
         GL.glBindBuffer(GL.GL_ARRAY_BUFFER, self.vertex_buffer)
         # TODO dynamic draw is correct flag?
         GL.glBufferData(GL.GL_ARRAY_BUFFER, vertex_data.nbytes, vertex_data.ravel().view(np.ubyte), GL.GL_DYNAMIC_DRAW)

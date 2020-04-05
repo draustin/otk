@@ -22,7 +22,7 @@ def _(s:Box, ids:Mapping) -> str:
     # https://www.iquilezles.org/www/articles/distfunctions/distfunctions.htm
     return dedent(f"""\
         float getSDB{id:d}(in vec4 x) {{
-            vec3 q = abs(x.xyz - {gen_vec3(s.center)}) - {gen_vec3(s.half_size)};
+            vec3 q = abs(x.xyz - {gen_vec3(s.center)}) - {gen_vec3(s.half_size - s.radius)};
             return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0) - {s.radius};
         }}\n\n""")
 

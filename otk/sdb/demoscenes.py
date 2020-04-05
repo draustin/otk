@@ -126,9 +126,9 @@ def make_sags():
     sdb_glsl = gen_get_all_recursive(surface, set_properties, properties)
     center = centers.center
 
-    wireframe_models = [make_wireframe(s.get_aabb(np.eye(4)), (0, 0, 0)) for s in surfaces]
+    #wireframe_models = [make_wireframe(s.get_aabb(np.eye(4)), (0, 0, 0)) for s in surfaces]
 
-    return Scene('sag functions', sdb_glsl, 0.01, 16, center + np.asarray((0, -4, 8)), center, wireframe_models)
+    return Scene('sag functions', sdb_glsl, 0.01, 16, center + np.asarray((0, -4, 8)), center, [])
 
 def make_conic_singlets():
     # all combinations of convex/concave/plano on both sides, alternating square and round
@@ -163,9 +163,9 @@ def make_combinations():
 
     center = next(centers)
     box = Box((1, 1, 1), center)
-    cylinder = InfiniteCylinder(0.5, center[:2])
-    surfaces.append(DifferenceOp(box, cylinder))
-    set_properties[cylinder] = dict(surface_color=(1, 0, 0))
+    sphere = Sphere(0.5, (center[0], center[1], center[2]+1))
+    surfaces.append(DifferenceOp(box, sphere))
+    set_properties[sphere] = dict(surface_color=(1, 0, 0))
 
     surface = UnionOp(surfaces)
 
@@ -189,15 +189,13 @@ def make_conic():
     front = ZemaxConic(1, radius, 1, -3, [], vertex=vertex0)
     back = ZemaxConic(-1.4, radius, -1, 3, [], vertex0 + (0, 0, 1))
     side = InfiniteCylinder(radius, vertex0[:2])
-    surfaces.append(IntersectionOp((front, back, side)))
+    surfaces.append(IntersectionOp((front, back, side), Box((radius, radius, 0.5), vertex0 + (0, 0, 0.5))))
 
     vertex1 = np.asarray((1, 0, 0))
     front = ZemaxConic(np.inf, radius, 1, 0, [0, 0, 0, 1], vertex=vertex1)
     back = ZemaxConic(np.inf, radius, -1, 0, [0, 0, 0, 0, -1], vertex1 + (0, 0, 1))
     side = InfiniteCylinder(radius, vertex1[:2])
-    surfaces.append(IntersectionOp((front, back, side)))
-
-
+    surfaces.append(IntersectionOp((front, back, side), Box((radius, radius, 0.5), vertex1 + (0, 0, 0.5))))
 
     surface = UnionOp(surfaces)
     parent_properties = dict(edge_width=0.01, edge_color=(0.3, 0.3, 0.3), surface_color=(0, 0, 1.))
@@ -208,4 +206,4 @@ def make_conic():
     return Scene('conic', sdb_glsl, 0.01, 10, np.asarray((0, 0, 5)), np.asarray((0, 0, 0)), wireframe_models)
 
 def make_all_scenes():
-    return [make_primitives()]#, make_spherical_singlets(), make_lens_array(), make_combinations(), make_conic(), make_sags()]
+    return [make_primitives(), make_spherical_singlets(), make_lens_array(), make_combinations(), make_conic(), make_sags()]

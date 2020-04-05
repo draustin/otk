@@ -330,6 +330,12 @@ class FiniteRectangularArray(Compound):
         center = self.get_center(x[:2])
         return make_translation(-center[0], -center[1], 0)
 
+    def get_aabb(self, m: np.ndarray) -> bounding.AABB:
+        unit = self.surfaces[0].get_aabb(m)
+        corner0 = unit.corners[0] + np.r_[self.corner + self.pitch/2, 0, 1]
+        corner1 = unit.corners[1] + np.r_[self.corner + self.pitch*(self.size - 0.5), 0, 1]
+        return bounding.AABB((corner0, corner1))
+
 class BoundedParaboloid(Primitive):
     def __init__(self, roc: float, radius: float, side:bool, vertex:Sequence[float]=None, parent: Surface = None):
         """Paraboloid out to given radius, then flat.
@@ -350,7 +356,8 @@ class BoundedParaboloid(Primitive):
         self.cos_theta = (1 + (self.radius/self.roc)**2)**-0.5
 
 class UnionOp(Compound):
-    pass
+    def get_aabb(self, m: np.ndarray) -> bounding.AABB:
+        return bounding.union(*[s.get_aabb(m) for s in self.surfaces])
 
 class IntersectionOp(Compound):
     def __init__(self, surfaces:Sequence[Surface], bound:Surface = None, parent: Surface = None):
@@ -359,7 +366,7 @@ class IntersectionOp(Compound):
 
     def get_aabb(self, m: np.ndarray) -> bounding.AABB:
         if self.bound is None:
-            return bounding.intersection([s.get_aabb(m) for s in self.surfaces])
+            return bounding.intersection(*[s.get_aabb(m) for s in self.surfaces])
         else:
             return self.bound.get_aabb(m)
 

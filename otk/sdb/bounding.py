@@ -76,7 +76,7 @@ class AABR:
 
     @classmethod
     def combine(cls, ix: Interval, iy: Interval):
-        return AABR(np.array(ix.a, iy.a, 1), np.array(ix.b, iy.b, 1))
+        return AABR(np.array((ix.a, iy.a, 1)), np.array((ix.b, iy.b, 1)))
 
     @property
     def empty(self):
@@ -133,11 +133,11 @@ class AABB:
     def split(self, axis: int) -> Tuple[Interval, AABR]:
         i = Interval(self.corners[0][axis], self.corners[1][axis])
         if axis == 0:
-            other_axes = [1, 2]
+            other_axes = [1, 2, 3]
         elif axis == 1:
-            other_axes = [0, 2]
+            other_axes = [0, 2, 3]
         elif axis == 2:
-            other_axes = [1, 2]
+            other_axes = [1, 2, 3]
         else:
             raise ValueError('Axis should be 0, 1, or 2.')
         return i, AABR(self.corners[0][other_axes], self.corners[1][other_axes])
@@ -150,7 +150,7 @@ class AABB:
 
     @classmethod
     def combine(cls, ix: Interval, iy: Interval, iz: Interval) -> 'AABB':
-        return AABB(np.array((ix.a, iy.a, iz.b, 1)), np.array((ix.b, iy.b, iz.b, 1)))
+        return AABB((np.array((ix.a, iy.a, iz.b, 1)), np.array((ix.b, iy.b, iz.b, 1))))
 
     # @classmethod
     # def union2(cls, b0: 'AABB', b1: 'AABB'):

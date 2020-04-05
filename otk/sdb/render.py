@@ -133,7 +133,7 @@ def make_wireframe(obj, color: Sequence[float]) -> WireframeModel:
 def _(obj: bounding.AABB, color: Sequence[float]):
     # Get 8x4 array of corner vertices.
     vertices = [[obj.corners[index][axis] for axis, index in enumerate(indices)] + [1] for indices in itertools.product((0, 1), repeat=3)]
-    edges = (0, 1), (1, 3), (0, 2), (2, 3), (0, 4), (1, 5), (2, 6), (3, 7), (4, 5), (5, 7), (4, 6), (4, 7)
+    edges = (0, 1), (1, 3), (0, 2), (2, 3), (0, 4), (1, 5), (2, 6), (3, 7), (4, 5), (5, 7), (4, 6), (6, 7)
     return WireframeModel.make(vertices, edges, color)
 
 @dataclass
