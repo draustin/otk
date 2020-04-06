@@ -38,9 +38,8 @@ def _(obj: trains.Singlet, shape:str='circle', vertex:Sequence[float]=None) -> S
         vertex = np.zeros(3)
     front = make_surface(obj.surfaces[0], 1., vertex)
     back = make_surface(obj.surfaces[1], -1., vertex + (0, 0, obj.thickness))
-    # TODO this assumes monotonicity.
-    z0 = min(obj.surfaces[0].calc_sag(obj.radius), 0)
-    z1 = obj.thickness + max(obj.surfaces[1].calc_sag(obj.radius), 0)
+    z0 = min(obj.surfaces[0].sag_range[0], 0)
+    z1 = obj.thickness + max(obj.surfaces[1].sag_range[1], 0)
     if shape == 'circle':
         side = InfiniteCylinder(obj.radius, vertex[:2])
         bound_half_size = obj.radius
@@ -131,11 +130,15 @@ def _(obj: trains.Singlet, size: Sequence[int], origin: Sequence[float] = None) 
     origin = np.array(origin, float)
     assert origin.shape == (3,)
     # TODO special cases for planar surface
-    front = make_square_array_surface(obj.surfaces[0], 1, origin)
-    back = make_square_array_surface(obj.surfaces[1], -1, origin + (0, 0, obj.thickness))
+    pitch = obj.radius*2**0.5
+    front = make_square_array_surface(obj.surfaces[0], 1, origin + (pitch/2, pitch/2, 0))
+    back = make_square_array_surface(obj.surfaces[1], -1, origin + (pitch/2, pitch/2, obj.thickness))
+    z0 = min(obj.surfaces[0].sag_range[0], 0)
+    z1 = obj.thickness + max(obj.surfaces[1].sag_range[1], 0)
     width, height = obj.radius*2**0.5*size
     side = InfiniteRectangularPrism(width, height, origin[:2])
-    surface = IntersectionOp((front, back, side))
+    bound = Box((width/2, height/2, (z1 - z0)/2), (origin[0], origin[1], origin[2] + (z1 + z0)/2))
+    surface = IntersectionOp((front, back, side), bound)
     return surface
 
 # end make_square_array_surface

@@ -18,9 +18,11 @@ def view_assembly(a: Assembly, set_properties:Mapping[Surface, Mapping]=None, pa
         parent_properties = {}
     parent_properties.setdefault('surface_color', (0, 0, 1))
     parent_properties.setdefault('edge_color', (0, 0, 0))
-    parent_properties.setdefault('edge_width', v4.norm(a.surface.get_aabb(np.eye(4)).size)*1e-3)
+    epsilon = v4.norm(a.surface.get_aabb(np.eye(4)).size)*1e-3
+    parent_properties.setdefault('edge_width', epsilon*5)
     sdb_glsl = gen_get_all_recursive(a.surface, set_properties, parent_properties)
     viewer = AssemblyViewer(sdb_glsl)
+    viewer.epsilon = epsilon
     viewer.show()
     return viewer
 

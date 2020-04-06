@@ -558,6 +558,12 @@ class Surface:
         self.roc = float(roc)
         self.radius = float(radius)
 
+    @property
+    def sag_range(self) -> np.ndarray:
+        # TODO this assumes monotonicity
+        sag = self.calc_sag(self.radius)
+        return np.asarray((min(sag, 0), max(sag, 0)))
+
     def to_interface(self, n1, n2):
         return Interface(n1, n2, self.roc, self.radius)
 
