@@ -16,6 +16,14 @@ class Medium(ABC):
     def uniform(self):
         pass
 
+    @classmethod
+    def make(cls, x):
+        if isinstance(x, ri.Index):
+            return UniformIsotropic(x)
+        else:
+            n = float(x)
+            return UniformIsotropic(ri.FixedIndex(n))
+
 @dataclass
 class UniformIsotropic(Medium):
     n: ri.Index

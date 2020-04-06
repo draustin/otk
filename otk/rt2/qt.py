@@ -6,6 +6,10 @@ from ..sdb.glsl import gen_get_all_recursive
 from .scalar import Assembly
 from ..sdb.qt import SphereTraceRender, SphereTraceViewer
 from ..delegate import Delegate
+from .. import v4
+from ..qt import application
+
+__all__ = ['view_assembly', 'AssemblyViewer', 'application']
 
 def view_assembly(a: Assembly, set_properties:Mapping[Surface, Mapping]=None, parent_properties:Mapping=None):
     if set_properties is None:
@@ -14,9 +18,10 @@ def view_assembly(a: Assembly, set_properties:Mapping[Surface, Mapping]=None, pa
         parent_properties = {}
     parent_properties.setdefault('surface_color', (0, 0, 1))
     parent_properties.setdefault('edge_color', (0, 0, 0))
-    parent_properties.setdefault('edge_width', 0.1e-3)
+    parent_properties.setdefault('edge_width', v4.norm(a.surface.get_aabb(np.eye(4)).size)*1e-3)
     sdb_glsl = gen_get_all_recursive(a.surface, set_properties, parent_properties)
     viewer = AssemblyViewer(sdb_glsl)
+    viewer.show()
     return viewer
 
 class AssemblyViewer(QtWidgets.QWidget):
@@ -82,3 +87,5 @@ class AssemblyViewer(QtWidgets.QWidget):
     @epsilon.setter
     def epsilon(self, v: float):
         self._log10epsilon.setValue(np.log10(v))
+
+

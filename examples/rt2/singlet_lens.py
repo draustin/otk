@@ -5,7 +5,7 @@ from otk.sdb import qt
 from otk import paraxial, ri
 from otk import sdb
 from otk.sdb import lens
-import otk.rt2.scalar as rt2
+from otk import rt2_scalar_qt as rt2
 
 ne = ri.air
 n = ri.fused_silica
@@ -49,12 +49,10 @@ ids = sdb.add_ids(assembly.surface)
 properties = dict(edge_width = 0.51e-6, edge_color = (0, 0, 0), surface_color = (0.2, 0.4, 1))
 sdb_glsl = sdb.gen_getSDB_recursive(assembly.surface, ids, set()) + sdb.gen_getColor_recursive(assembly.surface, ids, {}, properties, set())
 
-app = QtWidgets.QApplication([])
-w = qt.SphereTraceViewer(sdb_glsl)
-w.eye_to_world = sdb.lookat((0, 0, 5*f), (0, 0, 0))
-w.projection = sdb.Orthographic(4*r, 10*f)
-w.epsilon = 1e-7 # mysterious artefacts for smaller values
-w.display_widget.set_rays(rays_list)
-w.resize(800, 600)
-w.show()
-app.exec()
+with rt2.application():
+    w = qt.SphereTraceViewer(sdb_glsl)
+    w.eye_to_world = sdb.lookat((0, 0, 5*f), (0, 0, 0))
+    w.projection = sdb.Orthographic(4*r, 10*f)
+    w.epsilon = 1e-7 # mysterious artefacts for smaller values
+    w.display_widget.set_rays(rays_list)
+    w.show()

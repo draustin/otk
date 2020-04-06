@@ -8,8 +8,9 @@ from otk.h4t import make_x_rotation, make_y_rotation, make_translation
 from ..delegate import Delegate
 from . import *
 from . import opengl
+from ..qt import application
 
-__all__ = ['SphereTraceRender', 'SphereTraceViewer', 'Scene', 'ScenesViewer']
+__all__ = ['SphereTraceRender', 'SphereTraceViewer', 'Scene', 'ScenesViewer', 'application']
 
 class SphereTraceRender(QtWidgets.QOpenGLWidget):
     def __init__(self, sdb_glsls:Sequence[str], parent=None):

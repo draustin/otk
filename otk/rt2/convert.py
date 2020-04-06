@@ -5,6 +5,7 @@ import numpy as np
 from .. import trains
 from ..sdb import *
 from . import *
+from . import scalar
 
 __all__ = ['make_element', 'make_surface', 'make_elements', 'make_square_array_surface', 'make_square_array_element',
     'make_square_array_elements']
@@ -37,13 +38,19 @@ def _(obj: trains.Singlet, shape:str='circle', vertex:Sequence[float]=None) -> S
         vertex = np.zeros(3)
     front = make_surface(obj.surfaces[0], 1., vertex)
     back = make_surface(obj.surfaces[1], -1., vertex + (0, 0, obj.thickness))
+    # TODO this assumes monotonicity.
+    z0 = min(obj.surfaces[0].calc_sag(obj.radius), 0)
+    z1 = obj.thickness + max(obj.surfaces[1].calc_sag(obj.radius), 0)
     if shape == 'circle':
         side = InfiniteCylinder(obj.radius, vertex[:2])
+        bound_half_size = obj.radius
     elif shape == 'square':
         side = InfiniteRectangularPrism(obj.radius*2**0.5, center=vertex[:2])
+        bound_half_size = obj.radius/2**0.5
     else:
         raise ValueError(f'Unknown shape {shape}.')
-    surface = IntersectionOp((front, back, side))
+    bound = Box((bound_half_size, bound_half_size, (z1 - z0)/2), (vertex[0], vertex[1], vertex[2] + (z1 + z0)/2))
+    surface = IntersectionOp((front, back, side), bound)
     return surface
 
 # end make_surface

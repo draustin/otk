@@ -300,7 +300,7 @@ class Assembly:
     def nonseq_trace(self, start_ray:Ray, sphere_trace_kwargs_:dict=None, min_flux:float=None, num_deflections:int=None) -> Branch:
         if sphere_trace_kwargs_ is None:
             sphere_trace_kwargs_ = {}
-        sphere_trace_kwargs = dict(epsilon=1e-9, t_max=1e9, max_steps=100)
+        sphere_trace_kwargs = dict(epsilon=start_ray.lamb*1e-3, t_max=1e9, max_steps=100)
         sphere_trace_kwargs.update(sphere_trace_kwargs_)
 
         if num_deflections == 0:
@@ -314,5 +314,11 @@ class Assembly:
                 continue
             segments.append(self.nonseq_trace(ray, sphere_trace_kwargs, min_flux, num_deflections))
         return Branch(start_ray, length, segments)
+
+    @classmethod
+    def make(cls, elements: Sequence[Element], exterior):
+        surface = UnionOp([e.surface for e in elements])
+        exterior = Medium.make(exterior)
+        return Assembly(surface, elements, exterior)
 
 

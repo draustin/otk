@@ -130,6 +130,10 @@ class AABB:
     def empty(self) -> bool:
         return any(self.corners[0] >= self.corners[1])
 
+    @property
+    def size(self) -> np.ndarray:
+        return self.corners[1] - self.corners[0]
+
     def split(self, axis: int) -> Tuple[Interval, AABR]:
         i = Interval(self.corners[0][axis], self.corners[1][axis])
         if axis == 0:
