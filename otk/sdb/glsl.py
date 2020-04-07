@@ -77,6 +77,17 @@ def gen_getSDB(s:Surface, ids:Mapping) -> str:
 def gen_getColor(surface:Surface, ids:Mapping, properties:Mapping) -> str:
     raise NotImplementedError()
 
+def gen_getNormal(id) -> str:
+    return f"""\
+vec4 getNormal{id}(in vec4 x) {{
+    const float h = 0.00001; // TODO better determination of this
+    const vec3 k = vec3(1,-1,0.);
+    return normalize(k.xyyz*getSDB{id}( x + k.xyyz*h ) +
+                     k.yyxz*getSDB{id}( x + k.yyxz*h ) +
+                     k.yxyz*getSDB{id}( x + k.yxyz*h ) +
+                     k.xxxz*getSDB{id}( x + k.xxxz*h ) );
+}}\n\n"""
+
 @gen_getSDB.register
 def _(s:UnionOp, ids:Mapping) -> str:
     id = ids[s]
@@ -97,15 +108,23 @@ def _(s:UnionOp, ids:Mapping, properties:Mapping) -> str:
     return (f"""\
 vec3 getColor{id}(in vec4 x) {{
     float dp;
+    vec4 normalp;
+    float costheta;
     vec3 color = getColor{ids[s.surfaces[0]]}(x);
-    float d = getSDB{ids[s.surfaces[0]]}(x);\n""" +
+    float d = getSDB{ids[s.surfaces[0]]}(x);
+    vec4 normal = getNormal{ids[s.surfaces[0]]}(x);\n""" +
         ''.join(f"""\
     dp = getSDB{ids[sp]:d}(x);
-    if (abs(dp - d) < {edge_width})
+    normalp = getNormal{ids[sp]}(x);
+    costheta = dot(normal, normalp);
+    if (abs(dp) + abs(d) < {edge_width}*sqrt(1 - costheta*costheta))
         color = {gen_vec3(edge_color)};
     else if (dp < d)
         color = getColor{ids[sp]}(x);
-    d = min(d, dp);\n""" for sp in s.surfaces[1:]) +
+    if (dp < d) {{
+        d = dp;
+        normal = normalp;
+    }}\n""" for sp in s.surfaces[1:]) +
     """\
     return color;
 }\n\n""")
@@ -127,18 +146,27 @@ def _(s:IntersectionOp, ids:Mapping, properties:Mapping) -> str:
     id = ids[s]
     edge_width = get_property(properties, 'edge_width')
     edge_color = get_property(properties, 'edge_color')
+
     return (f"""\
 vec3 getColor{id}(in vec4 x) {{
     float dp;
+    vec4 normalp;
+    float costheta;
     vec3 color = getColor{ids[s.surfaces[0]]}(x);
-    float d = getSDB{ids[s.surfaces[0]]}(x);\n""" +
+    float d = getSDB{ids[s.surfaces[0]]}(x);
+    vec4 normal = getNormal{ids[s.surfaces[0]]}(x);\n""" +
         ''.join(f"""\
     dp = getSDB{ids[sp]:d}(x);
-    if (abs(dp - d) < {edge_width})
+    normalp = getNormal{ids[sp]}(x);
+    costheta = dot(normal, normalp);
+    if (abs(dp) + abs(d) < {edge_width}*sqrt(1 - costheta*costheta))
         color = {gen_vec3(edge_color)};
     else if (dp > d)
         color = getColor{ids[sp]}(x);
-    d = max(d, dp);\n""" for sp in s.surfaces[1:]) +
+    if (dp > d) {{
+        d = dp;
+        normal = normalp;
+    }}\n""" for sp in s.surfaces[1:]) +
     """\
     return color;
 }\n\n""")
@@ -160,10 +188,13 @@ def _(s:DifferenceOp, ids:Mapping, properties:Mapping) -> str:
     edge_color = get_property(properties, 'edge_color')
     return dedent(f"""\
         vec3 getColor{id:d}(in vec4 x) {{
-            float dd = getSDB{id0}(x) + getSDB{id1}(x);
+            float d0 = getSDB{id0}(x);
+            float d1 = getSDB{id1}(x);
+            float dd = d0 + d1;
+            float costheta = dot(getNormal{id0}(x), getNormal{id1}(x));
             if (dd < {-edge_width})
                 return getColor{id1}(x);
-            else if (dd <= {edge_width})
+            else if (abs(d0) + abs(d1) <= {edge_width}*sqrt(1 - costheta*costheta))
                 return {gen_vec3(edge_color)};
             else
                 return getColor{id0}(x);
@@ -304,6 +335,7 @@ def _(surface:Compound, ids, all_properties, done=None) -> str:
     for child_surface in surface.surfaces:
         child_id = ids[child_surface]
         if child_id not in done:
+            code += gen_getNormal(ids[child_surface])
             code += gen_getColor_recursive(child_surface, ids, all_properties, done)
     code += gen_getColor(surface, ids, all_properties.get(surface, {}))
     done.add(id)

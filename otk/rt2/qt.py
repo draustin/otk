@@ -20,7 +20,7 @@ def view_assembly(a: Assembly, all_properties: Dict[Surface, Dict] = None):
     epsilon = v4.norm(a.surface.get_aabb(np.eye(4)).size)*1e-3
 
     for surface in a.surface.descendants():
-        all_properties[surface].setdefault('edge_width', epsilon*5)
+        all_properties[surface].setdefault('edge_width', epsilon*2)
 
     sdb_glsl = gen_get_all_recursive(a.surface, all_properties)
     viewer = AssemblyViewer(sdb_glsl)
