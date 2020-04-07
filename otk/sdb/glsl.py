@@ -1,3 +1,4 @@
+from collections import defaultdict
 import os
 from textwrap import dedent
 from typing import Mapping, Set, Dict
@@ -41,6 +42,12 @@ void main() {
 }
 """
 
+# Edge detection is iffy at present. Set default to off.
+default_properties = dict(edge_width=0, edge_color=(0, 0, 0), surface_color=(0, 0, 1))
+
+def get_property(properties, name):
+    return properties.get(name, default_properties[name])
+
 def gen_vec2(x):
     return f'vec2({float(x[0])}, {float(x[1])})'
 
@@ -70,8 +77,6 @@ def gen_getSDB(s:Surface, ids:Mapping) -> str:
 def gen_getColor(surface:Surface, ids:Mapping, properties:Mapping) -> str:
     raise NotImplementedError()
 
-
-
 @gen_getSDB.register
 def _(s:UnionOp, ids:Mapping) -> str:
     id = ids[s]
@@ -87,8 +92,8 @@ def _(s:UnionOp, ids:Mapping) -> str:
 @gen_getColor.register
 def _(s:UnionOp, ids:Mapping, properties:Mapping) -> str:
     id = ids[s]
-    edge_width = properties['edge_width']
-    edge_color = properties['edge_color']
+    edge_width = get_property(properties, 'edge_width')
+    edge_color = get_property(properties, 'edge_color')
     return (f"""\
 vec3 getColor{id}(in vec4 x) {{
     float dp;
@@ -120,8 +125,8 @@ def _(s:IntersectionOp, ids:Mapping) -> str:
 @gen_getColor.register
 def _(s:IntersectionOp, ids:Mapping, properties:Mapping) -> str:
     id = ids[s]
-    edge_width = properties['edge_width']
-    edge_color = properties['edge_color']
+    edge_width = get_property(properties, 'edge_width')
+    edge_color = get_property(properties, 'edge_color')
     return (f"""\
 vec3 getColor{id}(in vec4 x) {{
     float dp;
@@ -151,8 +156,8 @@ def _(s:DifferenceOp, ids:Mapping, properties:Mapping) -> str:
     id = ids[s]
     id0 = ids[s.surfaces[0]]
     id1 = ids[s.surfaces[1]]
-    edge_width = properties['edge_width']
-    edge_color = properties['edge_color']
+    edge_width = get_property(properties, 'edge_width')
+    edge_color = get_property(properties, 'edge_color')
     return dedent(f"""\
         vec3 getColor{id:d}(in vec4 x) {{
             float dd = getSDB{id0}(x) + getSDB{id1}(x);
@@ -180,9 +185,9 @@ def _(s:InfiniteRectangularPrism, ids:Mapping) -> str:
 @gen_getColor.register
 def _(s:InfiniteRectangularPrism, ids:Dict[Surface, int], properties:Mapping) -> str:
     id = ids[s]
-    edge_width = properties['edge_width']
-    edge_color = properties['edge_color']
-    surface_color = properties['surface_color']
+    edge_width = get_property(properties, 'edge_width')
+    edge_color = get_property(properties, 'edge_color')
+    surface_color = get_property(properties, 'surface_color')
     return dedent(f"""\
         vec3 getColor{id}(in vec4 x) {{
             vec2 xp = x.xy - {gen_vec2(s.center)};
@@ -286,33 +291,29 @@ def _(surface:Primitive, ids:Mapping[Surface,int], done:Set[int]) -> str:
     return code
 
 @singledispatch
-def gen_getColor_recursive(surface:Surface, ids:Mapping[Surface,int], set_properties:Mapping[Surface, Mapping], parent_properties:dict, done:Set[int]) -> str:
+def gen_getColor_recursive(surface:Surface, ids:Mapping[Surface,int], all_properties:Dict[Surface, Dict], done:Set[int]=None) -> str:
     raise NotImplementedError()
 
 @gen_getColor_recursive.register
-def _(surface:Compound, ids, set_properties, parent_properties, done=None) -> str:
+def _(surface:Compound, ids, all_properties, done=None) -> str:
     if done is None:
         done = set()
-    properties = parent_properties.copy()
-    properties.update(set_properties.get(surface, {}))
     id = ids[surface]
     assert id not in done
     code = ''
     for child_surface in surface.surfaces:
         child_id = ids[child_surface]
         if child_id not in done:
-            code += gen_getColor_recursive(child_surface, ids, set_properties, properties, done)
-    code += gen_getColor(surface, ids, parent_properties)
+            code += gen_getColor_recursive(child_surface, ids, all_properties, done)
+    code += gen_getColor(surface, ids, all_properties.get(surface, {}))
     done.add(id)
     return code
 
 @gen_getColor_recursive.register
-def _(surface:Primitive, ids, set_properties, parent_properties, done=None) -> str:
+def _(surface:Primitive, ids, all_properties, done=None) -> str:
     if done is None:
         done = set()
-    properties = parent_properties.copy()
-    properties.update(set_properties.get(surface, {}))
-    code = gen_getColor(surface, ids, properties)
+    code = gen_getColor(surface, ids, all_properties.get(surface, {}))
     done.add(ids[surface])
     return code
 
@@ -338,10 +339,10 @@ def _(surface:Compound, ids:Dict[Surface, int]=None):
         add_ids(child_surface, ids)
     return ids
 
-def gen_get_all_recursive(surface:Surface, set_properties:Mapping[Surface, Mapping], parent_properties:Mapping, ids:Mapping[Surface, int]=None) -> str:
+def gen_get_all_recursive(surface:Surface, all_properties:Dict[Surface, Dict]=None, ids:Mapping[Surface, int]=None) -> str:
+    if all_properties is None:
+        all_properties = all_properties
     if ids is None:
         ids = add_ids(surface)
-    sdb_glsl = gen_getSDB_recursive(surface, ids) + gen_getColor_recursive(surface, ids, set_properties, parent_properties)
+    sdb_glsl = gen_getSDB_recursive(surface, ids) + gen_getColor_recursive(surface, ids, all_properties)
     return sdb_glsl
-
-

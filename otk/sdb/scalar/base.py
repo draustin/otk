@@ -84,6 +84,7 @@ def _(self:UnionOp, isdbs: Sequence[ISDB]) -> int:
 
 @singledispatch
 def traverse(s:Surface, x:Sequence[float]):
+    """Depth-first traversal starting at s yielding (surface, signed distance) for each descendent."""
     raise NotImplementedError(s)
 
 @traverse.register

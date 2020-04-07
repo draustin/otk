@@ -1,4 +1,5 @@
 import itertools
+from collections import defaultdict
 import numpy as np
 from otk.h4t import make_translation, make_rotation
 from . import *
@@ -47,9 +48,11 @@ def make_primitives():
     
     surface = UnionOp(surfaces)
 
-    properties = dict(edge_width = 0.01, edge_color = (0.3, 0.3, 0.3))
-    set_properties = {s:dict(surface_color=c) for s, c in zip(surfaces, colors)}
-    sdb_glsl = gen_get_all_recursive(surface, set_properties, properties)
+    all_properties = {s:dict(edge_width = 0.01, edge_color = (0.3, 0.3, 0.3)) for s in surface.descendants()}
+    for s, c in zip(surfaces, colors):
+        all_properties[s]['surface_color'] = c
+
+    sdb_glsl = gen_get_all_recursive(surface, all_properties)
 
     wireframe_models = [make_wireframe(s.get_aabb(np.eye(4)), (0, 0, 0)) for s in surfaces]
 
@@ -71,8 +74,8 @@ def make_spherical_singlets():
         surfaces.append(make_spherical_singlet(roc*sign0, roc*sign1, thickness, next(centers) - (0, 0, thickness/2), **kwargs))
 
     surface = UnionOp(surfaces)
-    properties = dict(edge_width=0.01, edge_color=(0.3, 0.3, 0.3), surface_color=(0, 0.5, 1))
-    sdb_glsl = gen_get_all_recursive(surface, {}, properties)
+    all_properties = {s: dict(edge_width=0.01, edge_color=(0.3, 0.3, 0.3), surface_color=(0, 0.5, 1)) for s in surface.descendants()}
+    sdb_glsl = gen_get_all_recursive(surface, all_properties)
 
     wireframe_models = [make_wireframe(s.get_aabb(np.eye(4)), (0, 0, 0)) for s in surfaces]
 
@@ -83,8 +86,8 @@ def make_spherical_singlets():
 
 def make_lens_array():
     surface = make_spherical_singlet_square_array(1, -1.5, 0.8, (0.5, 1), (16, 8))
-    properties = dict(edge_width=0.01, edge_color=(0.3, 0.3, 0.3), surface_color=(0, 0.5, 1))
-    sdb_glsl = gen_get_all_recursive(surface, {}, properties)
+    all_properties = {s:dict(edge_width=0.01, edge_color=(0.3, 0.3, 0.3), surface_color=(0, 0.5, 1)) for s in surface.descendants()}
+    sdb_glsl = gen_get_all_recursive(surface, all_properties)
     wireframe_model = make_wireframe(surface.get_aabb(np.eye(4)), (0, 0, 0))
     return Scene('lens array', sdb_glsl, 0.01, 64, np.asarray((0, -8, 16)), np.asarray((0, 0, 0)), [wireframe_model])
 
@@ -121,9 +124,11 @@ def make_sags():
 
     surface = UnionOp(surfaces)
 
-    properties = dict(edge_width=0.01, edge_color=(0, 0, 0), surface_color=(0.5, 0.5, 0.5))
-    set_properties = {sag:dict(surface_color=(1, 0, 0)) for sag in sags}
-    sdb_glsl = gen_get_all_recursive(surface, set_properties, properties)
+    all_properties = {s:dict(edge_width=0.01, edge_color=(0, 0, 0), surface_color=(0.5, 0.5, 0.5)) for s in surface.descendants()}
+    for sag in sags:
+        all_properties[sag]['surface_color'] = (1, 0, 0)
+
+    sdb_glsl = gen_get_all_recursive(surface, all_properties)
     center = centers.center
 
     #wireframe_models = [make_wireframe(s.get_aabb(np.eye(4)), (0, 0, 0)) for s in surfaces]
@@ -140,38 +145,42 @@ def make_conic_lens_array():
 def make_combinations():
     centers = Centers(2, 3.)
     surfaces = []
-    set_properties = {}
+    all_properties = defaultdict(dict)
 
     center = next(centers)
     sphere = Sphere(1, center)
     box = Box((0.5**0.5, 0.5**0.5, 0.5**0.5), center)
     surface0 = UnionOp((sphere, box))
     surfaces.append(surface0)
-    set_properties[sphere] = dict(surface_color=(1, 0, 0))
+    all_properties[sphere]['surface_color'] = (1, 0, 0)
 
     sphere = Sphere(1)
     box = Box((0.5**0.5, 0.5**0.5, 0.5**0.5))
     center = next(centers)
     transform = make_rotation(normalize((1, 1, 1)), np.pi/4).dot(make_translation(*center))
     surfaces.append(AffineOp(UnionOp((sphere, box)), transform))
+    all_properties[sphere]['surface_color'] = (1, 0, 0)
 
     center = next(centers)
     torus = Torus(1, 0.4, center)
     box = Box((1.1, 1.1, 0.3), center)
     surfaces.append(IntersectionOp((torus, box)))
-    set_properties[torus] = dict(surface_color=(1, 0, 0))
+    all_properties[torus]['surface_color'] = (1, 0, 0)
 
     center = next(centers)
     box = Box((1, 1, 1), center)
     sphere = Sphere(0.5, (center[0], center[1], center[2]+1))
     surfaces.append(DifferenceOp(box, sphere))
-    set_properties[sphere] = dict(surface_color=(1, 0, 0))
+    all_properties[sphere]['surface_color'] = (1, 0, 0)
 
     surface = UnionOp(surfaces)
 
-    parent_properties = dict(edge_width=0.01, edge_color=(0.3, 0.3, 0.3), surface_color=(0.5, 0.5, 0.5))
+    default_properties = dict(edge_width=0.01, edge_color=(0.3, 0.3, 0.3), surface_color=(0.5, 0.5, 1))
+    for s in surface.descendants():
+        for k, v in default_properties.items():
+            all_properties[s].setdefault(k, v)
 
-    sdb_glsl = gen_get_all_recursive(surface, set_properties, parent_properties)
+    sdb_glsl = gen_get_all_recursive(surface, dict(all_properties))
 
     z_eye = max(centers.num_columns - 1, centers.row)*centers.spacing*2
     center = centers.center
@@ -198,8 +207,8 @@ def make_conic():
     surfaces.append(IntersectionOp((front, back, side), Box((radius, radius, 0.5), vertex1 + (0, 0, 0.5))))
 
     surface = UnionOp(surfaces)
-    parent_properties = dict(edge_width=0.01, edge_color=(0.3, 0.3, 0.3), surface_color=(0, 0, 1.))
-    sdb_glsl = gen_get_all_recursive(surface, {}, parent_properties)
+    all_properties = {s:dict(edge_width=0.01, edge_color=(0.3, 0.3, 0.3), surface_color=(0, 0, 1.)) for s in surface.descendants()}
+    sdb_glsl = gen_get_all_recursive(surface, all_properties)
 
     wireframe_models = [make_wireframe(s.get_aabb(np.eye(4)), (0, 0, 0)) for s in surfaces]
 

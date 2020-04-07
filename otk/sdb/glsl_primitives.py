@@ -3,6 +3,7 @@ import numpy as np
 from textwrap import dedent
 from typing import Mapping
 from . import *
+from .glsl import get_property
 
 __all__ = []
 
@@ -119,7 +120,7 @@ def _(s:Sag, ids:Mapping) -> str:
 @gen_getColor.register(ZemaxConic)
 @gen_getColor.register(Sag)
 def _(surface, ids:Mapping[Surface, int], properties:Mapping) -> str:
-    color = properties['surface_color']
+    color = get_property(properties, 'surface_color')
     id = ids[surface]
     return dedent(f"""\
         vec3 getColor{id}(in vec4 x) {{

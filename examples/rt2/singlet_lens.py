@@ -45,14 +45,9 @@ thetas = np.arange(1, num_theta)/(num_theta - 1)*theta_max
 phis = np.arange(num_phi)/num_phi*2*np.pi
 rays_list = [get_rays(theta, phi) for theta, phi in itertools.product(thetas, phis)]
 
-ids = sdb.add_ids(assembly.surface)
-properties = dict(edge_width = 0.51e-6, edge_color = (0, 0, 0), surface_color = (0.2, 0.4, 1))
-sdb_glsl = sdb.gen_getSDB_recursive(assembly.surface, ids, set()) + sdb.gen_getColor_recursive(assembly.surface, ids, {}, properties, set())
-
 with rt2.application():
-    w = qt.SphereTraceViewer(sdb_glsl)
+    w = rt2.view_assembly(assembly)
     w.eye_to_world = sdb.lookat((0, 0, 5*f), (0, 0, 0))
     w.projection = sdb.Orthographic(4*r, 10*f)
     w.epsilon = 1e-7 # mysterious artefacts for smaller values
-    w.display_widget.set_rays(rays_list)
-    w.show()
+    w.set_rays(rays_list)

@@ -42,6 +42,10 @@ class Surface:
         """
         raise NotImplementedError(self)
 
+    def descendants(self):
+        """Returns generator of descendants in depth-first traversal."""
+        raise NotImplementedError(self)
+
 def get_root_to_local(self:Surface, x: np.ndarray) -> np.ndarray:
     ancestors = self.get_ancestors()
     m = np.eye(4)
@@ -52,7 +56,8 @@ def get_root_to_local(self:Surface, x: np.ndarray) -> np.ndarray:
     return m
 
 class Primitive(Surface):
-    pass
+    def descendants(self):
+        yield self
 
 class Sphere(Primitive):
     def __init__(self, r:float, o:Sequence[float]=None, parent: Surface = None):
@@ -281,6 +286,10 @@ class Compound(Surface):
             s._parent = self
         self.surfaces = surfaces
 
+    def descendants(self):
+        for s in self.surfaces:
+            yield from s.descendants()
+        yield self
 
 class FiniteRectangularArray(Compound):
     # surface must be
