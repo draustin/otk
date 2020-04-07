@@ -121,7 +121,7 @@ vec3 getColor{id}(in vec4 x) {{
         color = {gen_vec3(edge_color)};
     else if (dp < d)
         color = getColor{ids[sp]}(x);
-    if (dp > d) {{
+    if (dp < d) {{
         d = dp;
         normal = normalp;
     }}\n""" for sp in s.surfaces[1:]) +
@@ -188,10 +188,13 @@ def _(s:DifferenceOp, ids:Mapping, properties:Mapping) -> str:
     edge_color = get_property(properties, 'edge_color')
     return dedent(f"""\
         vec3 getColor{id:d}(in vec4 x) {{
-            float dd = getSDB{id0}(x) + getSDB{id1}(x);
+            float d0 = getSDB{id0}(x);
+            float d1 = getSDB{id1}(x);
+            float dd = d0 + d1;
+            float costheta = dot(getNormal{id0}(x), getNormal{id1}(x));
             if (dd < {-edge_width})
                 return getColor{id1}(x);
-            else if (dd <= {edge_width})
+            else if (abs(d0) + abs(d1) <= {edge_width}*sqrt(1 - costheta*costheta))
                 return {gen_vec3(edge_color)};
             else
                 return getColor{id0}(x);
