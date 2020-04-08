@@ -63,9 +63,15 @@ def _(s:ZemaxConic, x):
 
 @getsdb.register
 def _(s:ToroidalSag, x):
-    pass
+    raise NotImplementedError()
 
 @getsdb.register
 def _(s:Sag, x):
     sag = getsag(s.sagfun, x[:2] - s.origin[:2])
     return s.side*(sag + s.origin[2] - x[2])/s.lipschitz
+
+@getsdb.register
+def _(s: Box, x):
+    q = abs(x[:3] - s.center) - (s.half_size - s.radius)
+    return norm(np.maximum(q, 0.)) + min(max(q[0], max(q[1], q[2])), 0.0) - s.radius
+

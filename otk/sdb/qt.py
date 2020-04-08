@@ -219,6 +219,9 @@ class SphereTraceViewer(QtWidgets.QWidget):
     def sizeHint(self) -> QtCore.QSize:
         return QtCore.QSize(800, 600)
 
+    def set_rays(self, rays: Sequence[np.ndarray], colors: Iterable = None):
+        self.display_widget.set_rays(rays, colors)
+
     projection = Delegate('display_widget', 'projection')
     eye_to_world = Delegate('display_widget', 'eye_to_world')
 

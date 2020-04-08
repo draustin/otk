@@ -236,6 +236,13 @@ class Assembly:
         self.exterior = exterior
         #self.surface = UnionOp([e.surface for e in elements])
 
+    def get_dielectric(self, lamb: float, x: Sequence[float]) -> np.ndarray:
+        element = self.get_transformed_element(x)
+        if element is None:
+            return get_dielectric_tensor(self.exterior, lamb, x)
+        else:
+            return element.get_dielectric_tensor(lamb, x)
+
     def get_transformed_element(self, x) -> TransformedElement:
         insides = []
         for surface, d in traverse(self.surface, x):
@@ -320,5 +327,14 @@ class Assembly:
         surface = UnionOp([e.surface for e in elements])
         exterior = Medium.make(exterior)
         return Assembly(surface, elements, exterior)
+
+    def make_ray(self, ox, oy, oz, vx, vy, vz, px, py, pz, lamb, flux=1, phase_origin=0):
+        x = to_vector((ox, oy, oz))
+        dielectric = self.get_dielectric(lamb, x)
+        assert is_isotropic(dielectric)
+        n = dielectric[0, 0]**0.5
+        return make_ray(ox, oy, oz, vx, vy, vz, px, py, pz, n, flux, phase_origin, lamb)
+
+
 
 

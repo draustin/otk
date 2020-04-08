@@ -102,6 +102,14 @@ def _(self:UnionOp, x:Sequence[float]):
     yield self, d
     return d
 
+@traverse.register
+def _(self:DifferenceOp, x:Sequence[float]):
+    d0 = yield from traverse(self.surfaces[0], x)
+    d1 = yield from traverse(self.surfaces[1], x)
+    d = max(d0, -d1)
+    yield self, d
+    return d
+
 @getsdb.register
 def _(self:IntersectionOp, x):
     d = getsdb(self.surfaces[0], x)
