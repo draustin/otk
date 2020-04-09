@@ -8,7 +8,7 @@ from . import *
 from . import scalar
 
 __all__ = ['make_element', 'make_surface', 'make_elements', 'make_square_array_surface', 'make_square_array_element',
-    'make_square_array_elements']
+    'make_square_array_elements', 'make_sag_function']
 
 # begin make_surface
 
@@ -99,7 +99,9 @@ def _(obj: trains.SingletSequence, shape:str='circle', start:Sequence[float]=Non
 
     """
     if start is None:
-        start = np.zeros(3)
+        start = 0, 0, 0
+    start = np.array(start, float)
+    assert start.shape == (3,)
     elements = []
     z = 0
     for space, singlet in zip(obj.spaces[:-1], obj.singlets):
@@ -122,7 +124,7 @@ def _(obj: trains.Surface, side: float=1., vertex: Sequence[float] = None) -> Su
     return Sag(fn, side, vertex)
 
 @make_square_array_surface.register
-def _(obj: trains.Singlet, size: Sequence[int], origin: Sequence[float] = None) -> Surface:
+def _(obj: trains.Singlet, size: Sequence[int], origin: Sequence[float] = None, pitch: float = None) -> Surface:
     size = np.array(size, int)
     assert size.shape == (2,)
     if origin is None:
@@ -130,12 +132,13 @@ def _(obj: trains.Singlet, size: Sequence[int], origin: Sequence[float] = None) 
     origin = np.array(origin, float)
     assert origin.shape == (3,)
     # TODO special cases for planar surface
-    pitch = obj.radius*2**0.5
+    if pitch is None:
+        pitch = obj.radius*2**0.5
     front = make_square_array_surface(obj.surfaces[0], 1, origin + (pitch/2, pitch/2, 0))
     back = make_square_array_surface(obj.surfaces[1], -1, origin + (pitch/2, pitch/2, obj.thickness))
     z0 = min(obj.surfaces[0].sag_range[0], 0)
     z1 = obj.thickness + max(obj.surfaces[1].sag_range[1], 0)
-    width, height = obj.radius*2**0.5*size
+    width, height = pitch*size
     side = InfiniteRectangularPrism(width, height, origin[:2])
     bound = Box((width/2, height/2, (z1 - z0)/2), (origin[0], origin[1], origin[2] + (z1 + z0)/2))
     surface = IntersectionOp((front, back, side), bound)
@@ -149,25 +152,31 @@ def make_square_array_element(obj, size: Sequence[int], origin: Sequence[float] 
     raise NotImplementedError(obj)
 
 @make_square_array_element.register
-def _(obj: trains.Singlet, size: Sequence[int], origin: Sequence[float] = None) -> Element:
-    surface = make_square_array_surface(obj, size, origin)
+def _(obj: trains.Singlet, size: Sequence[int], origin: Sequence[float] = None, pitch: float = None) -> Element:
+    surface = make_square_array_surface(obj, size=size, origin=origin, pitch=pitch)
     return SimpleElement(surface, UniformIsotropic(obj.n), perfect_refractor)
 # end make_square_array_element
 
 # begin make_square_array_elements
 @singledispatch
-def make_square_array_elements(obj, size: Sequence[int], start: Sequence[float] = None) -> List[Element]:
+def make_square_array_elements(obj, size: Sequence[int], start: Sequence[float] = None, pitch: float = None) -> List[Element]:
     raise NotImplementedError(obj)
 
 @make_square_array_elements.register
-def _(obj: trains.SingletSequence, size: Sequence[int], start: Sequence[float] = None) -> List[Element]:
+def _(obj: trains.SingletSequence, size: Sequence[int], start: Sequence[float] = None, pitch: float = None) -> List[Element]:
     if start is None:
-        start = np.zeros(3)
+        start = 0, 0, 0
+    start = np.array(start, float)
+    assert start.shape == (3,)
+
+    if pitch is None:
+        pitch = obj.singlets[0].radius*2**0.5
+
     elements = []
     z = 0
     for space, singlet in zip(obj.spaces[:-1], obj.singlets):
         z += space
-        elements.append(make_square_array_element(singlet, size, start + (0, 0, z)))
+        elements.append(make_square_array_element(singlet, size, start + (0, 0, z), pitch))
         z += singlet.thickness
     return elements
 # end make_square_array_elements

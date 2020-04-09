@@ -341,8 +341,8 @@ class FiniteRectangularArray(Compound):
 
     def get_aabb(self, m: np.ndarray) -> bounding.AABB:
         unit = self.surfaces[0].get_aabb(m)
-        corner0 = unit.corners[0] + np.r_[self.corner + self.pitch/2, 0, 1]
-        corner1 = unit.corners[1] + np.r_[self.corner + self.pitch*(self.size - 0.5), 0, 1]
+        corner0 = unit.corners[0] + np.r_[self.corner + self.pitch/2, 0, 0]
+        corner1 = unit.corners[1] + np.r_[self.corner + self.pitch*(self.size - 0.5), 0, 0]
         return bounding.AABB((corner0, corner1))
 
 class BoundedParaboloid(Primitive):

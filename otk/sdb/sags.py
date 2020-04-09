@@ -1,9 +1,10 @@
-from typing import Sequence
+from typing import Sequence, Union
+from dataclasses import dataclass
 import numpy as np
 from . import *
 from ..v4 import norm
 
-__all__ = ['ZemaxConicSagFunction', 'RectangularArraySagFunction', 'SinusoidSagFunction']
+__all__ = ['ZemaxConicSagFunction', 'RectangularArraySagFunction', 'SinusoidSagFunction', "RectangularArrayLevel"]
 
 class ZemaxConicSagFunction(SagFunction):
     """
@@ -35,6 +36,33 @@ class ZemaxConicSagFunction(SagFunction):
     @property
     def lipschitz(self) -> float:
         return self._lipschitz
+
+@dataclass
+class RectangularArrayLevel:
+    pitch: np.ndarray
+    size: Union[np.ndarray, None]
+    clamp: bool
+
+    @classmethod
+    def make(cls, pitch, size = None, clamp: bool = False):
+        try:
+            pitch = (float(pitch),)*2
+        except TypeError:
+            pass
+        pitch = np.array(pitch, float)
+        assert pitch.shape == (2,)
+        assert all(pitch > 0)
+
+        if size is not None:
+            try:
+                size = (int(size),)*2
+            except TypeError:
+                pass
+            size = np.array(size, int)
+            assert size.shape == (2,)
+            assert all(size > 0)
+
+        return cls(pitch, size, clamp)
 
 class RectangularArraySagFunction(SagFunction):
     """Infinite rectangular array of sag functions.
@@ -68,6 +96,19 @@ class RectangularArraySagFunction(SagFunction):
     @property
     def lipschitz(self) -> float:
         return self.unit.lipschitz
+
+    @classmethod
+    def make_multi(cls, unit: SagFunction, levels: Sequence[RectangularArrayLevel]):
+        """Make multi-level rectangular array.
+
+        Args:
+            unit: Function to be repeated.
+            levels: From smallest to largest scale.
+        """
+        sag = unit
+        for l in levels:
+            sag = RectangularArraySagFunction(sag, l.pitch, l.size, l.clamp)
+        return sag
 
 class SinusoidSagFunction(SagFunction):
     """Fixed wave-vector sinusoidal sag function.
