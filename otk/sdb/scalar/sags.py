@@ -23,5 +23,11 @@ def _(s:ZemaxConicSagFunction, x:Sequence[float]) -> float:
 
 @getsag.register
 def _(s:RectangularArraySagFunction, x: Sequence[float]) -> float:
-    q = np.mod(x + s.pitch/2, s.pitch) - s.pitch/2
+    if s.size is None:
+        q = abs(np.mod(x + s.pitch/2, s.pitch) - s.pitch/2)
+    else:
+        n = np.clip(np.floor(x/s.pitch + s.size/2), 0, s.size - 1)
+        q = abs(x - (n + 0.5 - s.size/2)*s.pitch)
+        if s.clamp:
+            q = np.minimum(q, s.pitch/2)
     return getsag(s.unit, q)

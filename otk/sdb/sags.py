@@ -42,17 +42,28 @@ class RectangularArraySagFunction(SagFunction):
     The unit function is evaluated for x in [0, pitch[0]/2) and y in [0, pitch[1]/2) i.e. it is implicitly symmetric
     about the x and y axis. This ensures continuity at the boundaries.
 
-    The array is infinite to avoid the question of what happens at the edges.
+    The number of copies of the unit function along each dimension is given by size.
+
+    If size is None the array is infinite with one unit centered on the origin. Otherwise, the offset is chosen so that
+    the center of the entire array is at the origin. The coordinates passed to the unit function are clipped.
 
     TODO otpions for smoothing at boundaries. Simple possibility is quadratic function in transition zone matching slope.
     In corner transition zones, quadratic (in distance from corner) matching slope at corners of active region.
     """
-    def __init__(self, unit: SagFunction, pitch: Sequence[float]):
+    def __init__(self, unit: SagFunction, pitch: Sequence[float], size: Sequence[int] = None, clamp: bool = False):
         pitch = np.array(pitch, float)
         assert pitch.shape == (2,)
+        assert all(pitch > 0)
+
+        if size is not None:
+            size = np.array(size, int)
+            assert size.shape == (2,)
+            assert all(size > 0)
 
         self.unit = unit
         self.pitch = pitch
+        self.size = size
+        self.clamp = clamp
 
     @property
     def lipschitz(self) -> float:

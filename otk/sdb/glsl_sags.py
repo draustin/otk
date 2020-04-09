@@ -36,8 +36,21 @@ def _(s:SinusoidSagFunction, id):
 @gen_getSag.register
 def _(s:RectangularArraySagFunction, id):
     id_unit = id + 'Unit'
-    return gen_getSag(s.unit, id_unit) + dedent(f"""\
+    gen = gen_getSag(s.unit, id_unit)
+    if s.size is None:
+       gen += dedent(f"""\
         float getSag{id}(in vec2 x) {{
-            vec2 q = mod(x + {gen_vec2(s.pitch/2)}, {gen_vec2(s.pitch)}) - {gen_vec2(s.pitch/2)};
+            vec2 q = abs(mod(x + {gen_vec2(s.pitch/2)}, {gen_vec2(s.pitch)}) - {gen_vec2(s.pitch/2)});
             return getSag{id_unit}(q);
         }}\n\n""")
+    else:
+        gen += dedent(f"""\
+        float getSag{id}(in vec2 x) {{
+            vec2 n = clamp(floor(x/{gen_vec2(s.pitch)} + {gen_vec2(s.size/2)}), vec2(0., 0.), {gen_vec2(s.size - 1)});
+            vec2 q = abs(x - (n + {gen_vec2(0.5 - s.size/2)})*{gen_vec2(s.pitch)});\n""")
+        if s.clamp:
+            gen += f'    q = min(q, {gen_vec2(s.pitch/2)});'
+        gen += dedent(f"""\
+            return getSag{id_unit}(q);
+        }}\n\n""")
+    return gen

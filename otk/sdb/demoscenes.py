@@ -122,6 +122,22 @@ def make_sags():
     sags.append(sag)
     surfaces.append(IntersectionOp([sag, InfiniteCylinder(1, center[:2]), Plane((0, 0, -1), -1)]))
 
+    # Finite array without clamping.
+    pitch = 0.4
+    fn = RectangularArraySagFunction(unitfn, (pitch, pitch), (2, 2), False)
+    center = next(centers)
+    sag = Sag(fn, -1, center + (0., 0., 1))
+    sags.append(sag)
+    surfaces.append(IntersectionOp([sag, InfiniteCylinder(1, center[:2]), Plane((0, 0, -1), -1)]))
+
+    # Finite array with clamping.
+    pitch = 0.4
+    fn = RectangularArraySagFunction(unitfn, (pitch, pitch), (2, 2), True)
+    center = next(centers)
+    sag = Sag(fn, -1, center + (0., 0., 1))
+    sags.append(sag)
+    surfaces.append(IntersectionOp([sag, InfiniteCylinder(1, center[:2]), Plane((0, 0, -1), -1)]))
+
     surface = UnionOp(surfaces)
 
     all_properties = {s:dict(edge_width=0.01, edge_color=(0, 0, 0), surface_color=(0.5, 0.5, 0.5)) for s in surface.descendants()}
