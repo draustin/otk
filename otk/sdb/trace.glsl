@@ -5,7 +5,7 @@ uniform mat4 clip_to_world;
 uniform mat4 world_to_clip;
 
 vec4 getNormal(in vec4 x) {
-    const float h = 0.00001; // TODO better determination of this
+    const float h = 0.000001; // TODO better determination of this
     const vec3 k = vec3(1,-1,0.);
     return normalize( k.xyyz*getSDB0( x + k.xyyz*h ) +
                       k.yyxz*getSDB0( x + k.yyxz*h ) +

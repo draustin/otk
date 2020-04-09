@@ -380,11 +380,15 @@ class IntersectionOp(Compound):
             return self.bound.get_aabb(m)
 
 class DifferenceOp(Compound):
-    def __init__(self, s1:Surface, s2:Surface, parent: Surface = None):
+    def __init__(self, s1:Surface, s2:Surface, bound:Surface = None, parent: Surface = None):
         Compound.__init__(self, (s1, s2), parent)
+        self.bound = bound
 
     def get_aabb(self, m: np.ndarray) -> bounding.AABB:
-        return bounding.difference(self.surfaces[0].get_aabb(m), self.surfaces[1].get_aabb(m))
+        if self.bound is None:
+            return bounding.difference(self.surfaces[0].get_aabb(m), self.surfaces[1].get_aabb(m))
+        else:
+            return self.bound.get_aabb(m)
 
 class AffineOp(Compound):
     def __init__(self, s:Surface, m:Sequence[Sequence[float]], parent: Surface = None):
