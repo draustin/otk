@@ -176,6 +176,10 @@ class SphereTraceRender(QtWidgets.QOpenGLWidget):
             (event.button() == QtCore.Qt.LeftButton and self.mouse_drag_mode == 'pan')):
             self.mouse_drag_mode = None
 
+    def wheelEvent(self, event: QtGui.QWheelEvent) -> None:
+        factor = 2 if event.angleDelta().y() > 0 else 0.5
+        self.projection = self.projection.zoom(factor)
+
 class SphereTraceViewer(QtWidgets.QWidget):
     def __init__(self, sdb_glsl: str, parent=None):
         QtWidgets.QWidget.__init__(self, parent)

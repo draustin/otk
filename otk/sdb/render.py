@@ -145,6 +145,12 @@ class Projection(ABC):
     def eye_to_clip(self, aspect: float) -> np.ndarray:
         pass
 
+    @property
+    @abstractmethod
+    def zoom(self, factor: float) -> 'Projection':
+        """Copy of self representing zoom by factor (> 1 means zoom in)."""
+        pass
+
 @dataclass
 class Orthographic(Projection):
     half_width: float
@@ -153,6 +159,10 @@ class Orthographic(Projection):
     def eye_to_clip(self, aspect: float) -> np.ndarray:
         half_height = self.half_width*aspect
         return orthographic(-self.half_width, self.half_width, -half_height, half_height, 0, self.z_far)
+
+    def zoom(self, factor: float):
+        """Copy of self representing zoom by factor (> 1 means zoom in)."""
+        return Orthographic(self.half_width/factor, self.z_far)
 
 @dataclass
 class Perspective(Projection):
@@ -164,6 +174,11 @@ class Perspective(Projection):
         half_width = self.z_near*np.tan(self.fov/2)
         half_height = half_width*aspect
         return projection(-half_width, half_width, -half_height, half_height, self.z_near, self.z_far)
+
+    def zoom(self, factor: float):
+        """Copy of self representing zoom by factor (> 1 means zoom in)."""
+        fovp = np.arctan(np.tan(self.fov/2)/factor)*2
+        return Perspective(fovp, self.z_near, self.z_far)
 
 # TODO make oblique projection - see https://www.cs.unm.edu/~angel/CS433/LECTURES/CS433_17.pdf. Could be useful.
 

@@ -14,7 +14,8 @@ from ..sdb.qt import SphereTraceViewer
 
 __all__ = ['view_assembly', 'application', 'view_elements']
 
-def view_elements(elements: Sequence[Element], all_properties: Dict[sdb.Surface, Dict] = None, surface: sdb.Surface = None):
+def view_elements(elements: Sequence[Element], all_properties: Dict[sdb.Surface, Dict] = None,
+    surface: sdb.Surface = None, default_edge_width: float = None):
     if all_properties is None:
         all_properties = {}
     all_properties = defaultdict(dict, all_properties)
@@ -24,8 +25,11 @@ def view_elements(elements: Sequence[Element], all_properties: Dict[sdb.Surface,
 
     epsilon = v4.norm(surface.get_aabb(np.eye(4)).size)*1e-3
 
+    if default_edge_width is None:
+        default_edge_width = epsilon*2
+
     for surface in surface.descendants():
-        all_properties[surface].setdefault('edge_width', epsilon*2)
+        all_properties[surface].setdefault('edge_width', default_edge_width)
 
     sdb_glsl = gen_get_all_recursive(surface, all_properties)
     viewer = SphereTraceViewer(sdb_glsl)
