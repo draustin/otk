@@ -298,6 +298,7 @@ class Assembly:
                     normal1 = -element1.getnormal(xm)
                     assert np.allclose(normal, normal1)
                     deflector1 = element1.get_deflector(x1)
+                    deflector = deflector1 # TODO HACK
                     # TODO assert deflectors are equal
 
         ray = ray.advance(trace.tm)

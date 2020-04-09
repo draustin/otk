@@ -7,7 +7,7 @@ from otk import ri
 from ..sdb import Surface
 
 __all__ = ['Medium', 'UniformIsotropic', 'Element', 'SimpleElement', 'Deflector', 'SimpleInterface', 'ConstantInterface',
-    'calc_amplitudes',
+    'calc_amplitudes', 'perfect_reflector',
     'FresnelInterface', 'SimpleDeflector', 'make_constant_deflector', 'make_fresnel_deflector', 'perfect_refractor']
 
 class Medium(ABC):
@@ -86,6 +86,6 @@ def make_fresnel_deflector(reflects:bool = True, refracts:bool = True):
     return SimpleDeflector(FresnelInterface(), reflects, refracts)
 
 perfect_refractor = make_constant_deflector(0, 0, 1, 1, False, True)
-
+perfect_reflector = make_constant_deflector(1, 1, 0, 0, True, False)
 
 

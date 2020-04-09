@@ -45,7 +45,7 @@ def getsag(s, x: Sequence[float]) -> float:
     raise NotImplementedError()
 
 @singledispatch
-def getnormal(surface:Surface, x, h=1e-7) -> np.ndarray:
+def getnormal(surface:Surface, x, h=1e-9) -> np.ndarray:
     ks = (np.asarray((1, 1, 1, 0)), np.asarray((1, -1, -1, 0)),
         np.asarray((-1, 1, -1, 0)), np.asarray((-1, -1, 1, 0)))
     return normalize(sum(k*getsdb(surface, x + k*h) for k in ks))
