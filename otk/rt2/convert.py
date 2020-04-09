@@ -119,8 +119,10 @@ def make_square_array_surface(obj, *args, **kwargs) -> Surface:
     raise NotImplementedError(obj)
 
 @make_square_array_surface.register
-def _(obj: trains.Surface, side: float=1., vertex: Sequence[float] = None) -> Surface:
-    fn = RectangularArraySagFunction(make_sag_function(obj), (obj.radius*2**0.5,)*2)
+def _(obj: trains.Surface, side: float=1., vertex: Sequence[float] = None, pitch: float = None) -> Surface:
+    if pitch is None:
+        pitch = obj.radius*2**0.5
+    fn = RectangularArraySagFunction(make_sag_function(obj), (pitch,)*2)
     return Sag(fn, side, vertex)
 
 @make_square_array_surface.register
@@ -134,8 +136,8 @@ def _(obj: trains.Singlet, size: Sequence[int], origin: Sequence[float] = None, 
     # TODO special cases for planar surface
     if pitch is None:
         pitch = obj.radius*2**0.5
-    front = make_square_array_surface(obj.surfaces[0], 1, origin + (pitch/2, pitch/2, 0))
-    back = make_square_array_surface(obj.surfaces[1], -1, origin + (pitch/2, pitch/2, obj.thickness))
+    front = make_square_array_surface(obj.surfaces[0], 1, origin + (pitch/2, pitch/2, 0), pitch)
+    back = make_square_array_surface(obj.surfaces[1], -1, origin + (pitch/2, pitch/2, obj.thickness), pitch)
     z0 = min(obj.surfaces[0].sag_range[0], 0)
     z1 = obj.thickness + max(obj.surfaces[1].sag_range[1], 0)
     width, height = pitch*size
