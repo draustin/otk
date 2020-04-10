@@ -1,6 +1,7 @@
 from functools import  singledispatch
 from itertools import accumulate
 from typing import Sequence, List
+from warnings import warn
 import numpy as np
 from .. import trains
 from ..sdb import *
@@ -17,7 +18,7 @@ def make_surface(obj, *args, **kwargs) -> Surface:
     raise NotImplementedError()
 
 @make_surface.register
-def _(obj: trains.Surface, side: float=1., vertex:Sequence[float]=None):
+def _(obj: trains.SphericalSurface, side: float=1., vertex:Sequence[float]=None):
     return SphericalSag(obj.roc, side, vertex)
 
 @make_surface.register
@@ -57,12 +58,21 @@ def _(obj: trains.Singlet, shape:str='circle', vertex:Sequence[float]=None) -> S
 # begin make_sag function
 
 @singledispatch
-def make_sag_function(obj: trains.Surface) -> SagFunction:
+def make_sag_function(obj) -> SagFunction:
+    raise NotImplementedError(obj)
+
+@make_sag_function.register
+def _(obj: trains.SphericalSurface):
     return ZemaxConicSagFunction(obj.roc, obj.radius)
 
 @make_sag_function.register
 def _(obj: trains.ConicSurface) -> SagFunction:
     return ZemaxConicSagFunction(obj.roc, obj.radius, obj.kappa, obj.alphas)
+
+@make_sag_function.register
+def _(obj: trains.SegmentedSurface):
+    warn('No segmented sag function, so using central segment.')
+    return make_sag_function(obj.segments[0])
 
 # end make_sag function
 

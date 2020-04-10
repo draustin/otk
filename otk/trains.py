@@ -2,6 +2,7 @@
 import itertools
 from functools import singledispatch
 from dataclasses import dataclass
+from abc import ABC, abstractmethod
 from typing import Sequence, Tuple, Mapping
 import numpy as np
 import otk.h4t
@@ -550,14 +551,45 @@ class Train:
         xs = rt.trace_distortion(stop_surface, surfaces[-1], trace_fun, lamb, stop_size, num_rays, thetas, stop_shape)
         return xs
 
+class Surface(ABC):
+    """An axisymmetric surface between two media.
 
-class Surface:
-    """An axisymmetric surface between two media."""
+    TODO define radius. Is sag constant outside this i.e. is sag(rho) = sag(radius) for rho > radius?"""
 
     def __init__(self, roc: float, radius: float):
         self.roc = float(roc)
         self.radius = float(radius)
 
+    @property
+    @abstractmethod
+    def sag_range(self) -> np.ndarray:
+        """Returns minimum and maximum sag.
+
+        TODO must be tight bound? Convert to method so can specify rho interval?"""
+        pass
+
+    @abstractmethod
+    def to_interface(self, n1: ri.Index, n2: ri.Index):
+        pass
+
+    @abstractmethod
+    def reverse(self) -> 'Surface':
+        pass
+
+    @abstractmethod
+    def calc_sag(self, rho, derivative: bool = False):
+        """Calculate sag of surface.
+
+        Positive ROC means positive sag.
+
+        Args:
+            rho: Distance from center.
+            derivative: If True, derivative is returned as well.
+
+        """
+        pass
+
+class SphericalSurface(Surface):
     @property
     def sag_range(self) -> np.ndarray:
         # TODO this assumes monotonicity
@@ -567,8 +599,8 @@ class Surface:
     def to_interface(self, n1, n2):
         return Interface(n1, n2, self.roc, self.radius)
 
-    def reverse(self) -> 'Surface':
-        return Surface(-self.roc, self.radius)
+    def reverse(self) -> 'SphericalSurface':
+        return SphericalSurface(-self.roc, self.radius)
 
     def __str__(self):
         return 'ROC %.3g mm, radius %.3g mm'%(self.roc*1e3, self.radius*1e3)
@@ -610,7 +642,7 @@ def to_surface(obj, *args, **kwargs) -> Surface:
 def _(obj: Interface, radius: float=None) -> Surface:
     if radius is None:
         radius = obj.radius
-    return Surface(obj.roc, radius)
+    return SphericalSurface(obj.roc, radius)
 
 class ConicSurface(Surface):
     def __init__(self, roc: float, radius: float, kappa: float, alphas: Sequence[float] = None):
@@ -628,6 +660,11 @@ class ConicSurface(Surface):
 
     def make_profile(self):
         return rt.ConicProfile(self.roc, self.kappa, self.alphas)
+
+    @property
+    def sag_range(self) -> np.ndarray:
+        s = self.calc_sag(self.radius)
+        return np.array((min(s, 0), max(s, 0)))
 
     def __str__(self):
         return 'ROC %.3f mm, radius %.3f mm, kappa %.3f, alphas %s'%(
@@ -708,8 +745,8 @@ class SegmentedSurface(Surface):
     def __repr__(self):
         return f'SegmentedSurface({self.segments}, {self.sags})'
 
-    def __str__(self):
-        return ', '.join(str(s) for s in self.segments)
+    #def __str__(self):
+    #    return ', '.join(str(s) for s in self.segments)
 
     def reverse(self) -> 'SegmentedSurface':
         segments = [s.reverse() for s in self.segments]
@@ -717,6 +754,21 @@ class SegmentedSurface(Surface):
 
     def to_interface(self, n1, n2):
         return SegmentedInterface(n1, n2, self.segments, self.sags)
+
+    def calc_sag(self, rho: float, derivative: bool = False):
+        rho = float(rho)
+        rho0 = 0
+        for segment in self.segments:
+            rho0 += segment.radius
+            if rho <= rho0:
+                return segment.calc_sag(rho)
+        # TODO clamp?
+        return self.segments[-1].calc_sag(rho)
+
+    @property
+    def sag_range(self) -> np.ndarray:
+        rngs = [segment.sag_range for segment in self.segments]
+        return np.array((min(rng[0] for rng in rngs), max(rng[1] for rng in rngs)))
 
 @to_surface.register
 def _(obj: SegmentedInterface, radius: float=None) -> SegmentedSurface:
@@ -763,7 +815,7 @@ class Singlet:
 
     @classmethod
     def from_rocs(cls, rocs: Tuple[float, float], n: ri.Index, center_thickness: float, radius: float):
-        return cls(tuple(Surface(roc, radius) for roc in rocs), center_thickness, n)
+        return cls(tuple(SphericalSurface(roc, radius) for roc in rocs), center_thickness, n)
 
     def to_train(self, n1: ri.Index, n2: ri.Index = None) -> Train:
         """Convert singlet to train.
@@ -867,7 +919,7 @@ class SingletSequence:
             edge_propagation_distance = working_distance + math.calc_sphere_sag(max(rocs[0], 0), field_radius)
             radius = field_radius + edge_propagation_distance*tan_theta
             thickness = paraxial.calc_center_thickness(rocs, radius, min_thickness)
-            singlet = Singlet(tuple(Surface(roc, radius) for roc in rocs), thickness, n)
+            singlet = Singlet(tuple(SphericalSurface(roc, radius) for roc in rocs), thickness, n)
             sequence = SingletSequence((singlet,), (0, 0), n_external)
             train = sequence.to_train()
             half_transform_train = train.pad_to_half_transform(lamb, f=f_transform)

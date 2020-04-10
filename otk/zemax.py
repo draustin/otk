@@ -39,7 +39,7 @@ def read_interface(file:TextIO, n1=ri.air):
     kappa = float(commands.get('CONI', [0])[0]) + 1
     surface_type = commands['TYPE'][0]
     if surface_type == 'STANDARD' and np.isclose(kappa,1):
-        inner_surface = trains.Surface(roc, clear_radius)
+        inner_surface = trains.SphericalSurface(roc, clear_radius)
     elif surface_type in ('STANDARD','EVENASPH'):
         alphas = []
         for parm_index, parm_value in parms.items():
@@ -56,9 +56,10 @@ def read_interface(file:TextIO, n1=ri.air):
 
     mech_semi_dia = float(commands['MEMA'][0])*1e-3
     if mech_semi_dia - clear_radius > 1e-6:
+        # TODO tidy this up - get rid of rt first?
         # Somehow need to offset this surface (in z). No way of describing this at present. Could add an offset
         # attribute to Surface. Then would need an offset in Profile.
-        outer_surface = trains.Surface(np.inf, mech_semi_dia - clear_radius)
+        outer_surface = trains.SphericalSurface(np.inf, mech_semi_dia - clear_radius)
         outer_sag = inner_surface.calc_sag(clear_radius)
         surface = trains.SegmentedSurface((inner_surface, outer_surface), (0, outer_sag))
     else:

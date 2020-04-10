@@ -17,7 +17,7 @@ from ..v4 import *
 from . import *
 
 __all__ = ['Assembly', 'Line', 'Ray', 'make_line', 'make_ray', 'perfect_refractor', 'Branch', 'get_points',
-    'get_deflector', 'intersect']
+    'get_deflector', 'intersect', 'Segment']
 
 @dataclass
 class Line:
