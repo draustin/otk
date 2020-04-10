@@ -16,7 +16,8 @@ from ..sdb.scalar import *
 from ..v4 import *
 from . import *
 
-__all__ = ['Assembly', 'Line', 'Ray', 'make_line', 'make_ray', 'perfect_refractor', 'Branch', 'get_points', 'get_deflector']
+__all__ = ['Assembly', 'Line', 'Ray', 'make_line', 'make_ray', 'perfect_refractor', 'Branch', 'get_points',
+    'get_deflector', 'intersect']
 
 @dataclass
 class Line:
@@ -39,6 +40,24 @@ class Line:
 
     def transform(self, m: np.ndarray) -> 'Line':
         return Line(np.dot(self.origin, m), np.dot(self.vector, m))
+
+    def advance_to(self, surface: Surface) -> 'Line':
+        t = intersect(surface, self)
+        return self.advance(t)
+
+@singledispatch
+def intersect(surface: Surface, line: Line) -> float:
+    """First intersection of line with surface."""
+    raise NotImplementedError()
+
+@intersect.register
+def _(s: Plane, l: Line) -> float:
+    d = dot(l.vector[:3], s.n)
+    try:
+        t = -(s.c + dot(l.origin[:3], s.n))/d
+    except ZeroDivisionError:
+        t = float('inf')
+    return t
 
 def make_line(ox, oy, oz,  vx, vy, vz):
     return Line(np.array((ox, oy, oz, 1.)), np.array((vx, vy, vz, 0.)))

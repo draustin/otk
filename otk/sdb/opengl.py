@@ -10,20 +10,20 @@ def link_program(vertex_source:str, fragment_source:str):
     vertex_shader = GL.glCreateShader(GL.GL_VERTEX_SHADER)
     GL.glShaderSource(vertex_shader, vertex_source)
     GL.glCompileShader(vertex_shader)
-    print(GL.glGetShaderInfoLog(vertex_shader))
+    #print(GL.glGetShaderInfoLog(vertex_shader))
 
     fragment_shader = GL.glCreateShader(GL.GL_FRAGMENT_SHADER)
     GL.glShaderSource(fragment_shader, fragment_source)
     GL.glCompileShader(fragment_shader)
-    print(GL.glGetShaderInfoLog(fragment_shader))
-    print(fragment_source)
+    #print(GL.glGetShaderInfoLog(fragment_shader))
+    #print(fragment_source)
 
     program = GL.glCreateProgram()
     GL.glAttachShader(program, vertex_shader)
     GL.glAttachShader(program, fragment_shader)
     GL.glLinkProgram(program)
 
-    print(GL.glGetProgramInfoLog(program))
+    #print(GL.glGetProgramInfoLog(program))
 
     GL.glDetachShader(program, vertex_shader)
     GL.glDetachShader(program, fragment_shader)
