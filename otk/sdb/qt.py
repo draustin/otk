@@ -132,7 +132,7 @@ class SphereTraceRender(QtWidgets.QOpenGLWidget):
         self.ray_program.draw(world_to_clip)
         self.wireframe_program.draw(world_to_clip)
 
-    def getEyefromWindow(self, pos: QPoint):
+    def pos_to_ndc(self, pos: QPoint) -> np.ndarray:
         ratio = self.devicePixelRatio()
         x_window = pos.x()*ratio
         y_window = (self.height() - pos.y())*ratio
@@ -143,15 +143,24 @@ class SphereTraceRender(QtWidgets.QOpenGLWidget):
         # https://www.khronos.org/opengl/wiki/Compute_eye_space_from_window_space
         ndc = np.asarray((2*(x_window - viewport_x0)/viewport_width - 1, 2*(y_window - viewport_y0)/viewport_height - 1,
         (2*z_window - (depth_range_far + depth_range_near))/(depth_range_far - depth_range_near), 1))
+        return ndc
+
+    def ndc_to_eye(self, ndc: np.ndarray) -> np.ndarray:
         eyep = ndc.dot(self.clip_to_eye)
         eye = eyep/eyep[3]
+        return eye
+
+    def pos_to_eye(self, pos: QPoint):
+        ndc = self.pos_to_ndc(pos)
+        eye = self.ndc_to_eye(ndc)
         return eye
 
     def mousePressEvent(self, event: QtGui.QMouseEvent) -> None:
         if self.mouse_drag_mode is None:
             self.mouse_press_pos = event.pos()
             self.mouse_press_eye_to_world = self.eye_to_world.copy()
-            self.mouse_press_eye = self.getEyefromWindow(event.pos())
+            self.mouse_press_ndc = self.pos_to_ndc(event.pos())
+            self.mouse_press_eye = self.ndc_to_eye(self.mouse_press_ndc)
             if event.button() == QtCore.Qt.RightButton:
                 self.mouse_drag_mode = 'orbit'
             elif event.button() == QtCore.Qt.LeftButton:
@@ -166,7 +175,12 @@ class SphereTraceRender(QtWidgets.QOpenGLWidget):
             self.eye_to_world = transform.dot(self.mouse_press_eye_to_world)
             self.update()
         elif self.mouse_drag_mode == 'pan':
-            delta = self.getEyefromWindow(event.pos()) - self.mouse_press_eye
+            ndc = self.pos_to_ndc(event.pos())
+            # If the user moves the mouse too fast, the panning doesn't keep up. The mouse can fall over a point with very
+            # different z, which can result is unpredictable movement.
+            ndc[2] = self.mouse_press_ndc[2]
+            eye = self.ndc_to_eye(ndc)
+            delta = eye - self.mouse_press_eye
             transform = make_translation(-delta[0], -delta[1], 0)
             self.eye_to_world = transform.dot(self.mouse_press_eye_to_world)
             self.update()
@@ -177,7 +191,8 @@ class SphereTraceRender(QtWidgets.QOpenGLWidget):
             self.mouse_drag_mode = None
 
     def wheelEvent(self, event: QtGui.QWheelEvent) -> None:
-        factor = 2 if event.angleDelta().y() > 0 else 0.5
+        by = 1.5
+        factor = by if event.angleDelta().y() > 0 else 1/by
         self.projection = self.projection.zoom(factor)
 
 class SphereTraceViewer(QtWidgets.QWidget):
