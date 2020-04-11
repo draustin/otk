@@ -69,7 +69,7 @@ def which(s:Compound, isdbs: Sequence[ISDB]) -> int:
 def _(self:UnionOp, p):
     d = getsdb(self.surfaces[0], p)
     for surface in self.surfaces[1:]:
-        d = np.minimum(d, getsdb(surface, p))
+        d = min(d, getsdb(surface, p))
     return d
 
 @which.register
