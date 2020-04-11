@@ -6,7 +6,7 @@ from .. import sdb
 from ..sdb.glsl import gen_get_all_recursive
 from .scalar import Assembly
 from ..sdb.qt import SphereTraceRender, SphereTraceViewer
-from ..delegate import Delegate
+from .._utility import Delegate
 from . import Element
 from .. import v4
 from ..qt import application

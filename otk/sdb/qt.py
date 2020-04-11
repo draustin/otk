@@ -5,7 +5,7 @@ from OpenGL import GL
 from PyQt5.QtCore import QPoint
 from PyQt5 import QtWidgets, QtCore, QtGui
 from otk.h4t import make_x_rotation, make_y_rotation, make_translation
-from ..delegate import Delegate
+from .._utility import Delegate
 from . import *
 from . import opengl
 from ..qt import application

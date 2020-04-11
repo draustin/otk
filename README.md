@@ -1,5 +1,8 @@
-# otk
-Optics toolkit
+# otk - optics toolkit
+
+Tools for doing optics in Python
+
+![](screenshots/zemax_conic_telecentric_lens.png)
 
 ## Installation
 
