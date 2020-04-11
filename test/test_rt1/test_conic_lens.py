@@ -1,6 +1,6 @@
 import numpy as np
 import otk.h4t
-from otk import ri, rt
+from otk import ri, rt1
 
 def test_conic_surface():
     # Prove that with a conic surface we can focus parallel rays perfectly.
@@ -14,15 +14,15 @@ def test_conic_surface():
     # but I obtained it numerically (in demo_conic_surface.py).
     kappa = 0.55555
     f = roc*n2/(n2 - n1)
-    interface = rt.FresnelInterface(ri.FixedIndex(n1), ri.FixedIndex(n2))
-    conic_surface = rt.Surface(rt.ConicProfile(roc, kappa), interface=interface)
-    origin = rt.stack_xyzw(x0s, 0, -1, 1)
-    vector = rt.stack_xyzw(0, 0, 1, 0)
-    detector_surface = rt.Surface(rt.PlanarProfile(), matrix=otk.h4t.make_translation(0, 0, f))
+    interface = rt1.FresnelInterface(ri.FixedIndex(n1), ri.FixedIndex(n2))
+    conic_surface = rt1.Surface(rt1.ConicProfile(roc, kappa), interface=interface)
+    origin = rt1.stack_xyzw(x0s, 0, -1, 1)
+    vector = rt1.stack_xyzw(0, 0, 1, 0)
+    detector_surface = rt1.Surface(rt1.PlanarProfile(), matrix=otk.h4t.make_translation(0, 0, f))
     surfaces = conic_surface, detector_surface
-    line = rt.Line(origin, vector)
-    pol = rt.cross(line.vector, [0,1,0,0])
-    ray = rt.raytrace.Ray(line, pol, 1, 0, 860e-9, n1)
+    line = rt1.Line(origin, vector)
+    pol = rt1.cross(line.vector, [0,1,0,0])
+    ray = rt1.raytrace.Ray(line, pol, 1, 0, 860e-9, n1)
     segments = ray.trace_surfaces(surfaces, ['transmitted', 'incident'])[0]
     assert len(segments) == 3
     xy = segments[-1].ray.line.origin[..., :2]

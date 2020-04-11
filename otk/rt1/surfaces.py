@@ -1,7 +1,7 @@
 from typing import Iterable
 
 import otk.h4t
-import otk.rt.lines
+import otk.rt1.lines
 import scipy.optimize
 import numpy as np
 from .. import ri

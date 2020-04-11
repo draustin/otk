@@ -1,3 +1,4 @@
+"""Miscellaneous non-optics, non-math stuff."""
 class Delegate:
     # Inspired by https://gist.github.com/dubslow/b8996308fc6af2437bef436fa28e86fa.
     def __init__(self, field: str, subfield: str):

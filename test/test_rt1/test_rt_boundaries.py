@@ -1,5 +1,5 @@
 import numpy as np
-from otk.rt import boundaries
+from otk.rt1 import boundaries
 
 def test_SquareBoundary():
     sb = boundaries.SquareBoundary(0.2)

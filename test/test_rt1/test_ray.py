@@ -1,16 +1,16 @@
 import otk.h4t
-import otk.rt.lines
+import otk.rt1.lines
 import numpy as np
 
-import otk.rt.raytrace
-from otk import rt, paraxial, ri
+import otk.rt1.raytrace
+from otk import rt1, paraxial, ri
 
 def test_ray():
     half_angle = 1e-3
     num_x = 7
     num_y = 9
     pol = [0, 1, 0, 0]
-    ray = rt.Ray.make_filled_pyramid(half_angle, 800e-9, num_x, num_y, pol)
+    ray = rt1.Ray.make_filled_pyramid(half_angle, 800e-9, num_x, num_y, pol)
     assert np.allclose(ray.line.origin, [0, 0, 0, 1])
     assert ray.line.vector.shape == (num_x, num_y, 4)
     assert np.allclose(ray.line.vector[3, 4, :], [0, 0, 1, 0])
@@ -22,12 +22,12 @@ def test_refraction():
     n2 =  3
     f = 100
     r0 = np.asarray((100, 20, 300, 1))
-    interface = rt.FresnelInterface(ri.FixedIndex(n1), ri.FixedIndex(n2))
-    s = rt.Surface(rt.SphericalProfile(f*(n2 - n1)), otk.h4t.make_translation(*r0[:3]), interface=interface)
+    interface = rt1.FresnelInterface(ri.FixedIndex(n1), ri.FixedIndex(n2))
+    s = rt1.Surface(rt1.SphericalProfile(f*(n2 - n1)), otk.h4t.make_translation(*r0[:3]), interface=interface)
     origin = r0 + (0, 0, -f*n1, 0)
-    line = rt.Line(origin, rt.normalize((0.001, 0.001, 1, 0)))
-    pol = rt.cross(line.vector, [0,1,0,0])
-    ray = rt.raytrace.Ray(line, pol, 0, 860e-9, n1)
+    line = rt1.Line(origin, rt1.normalize((0.001, 0.001, 1, 0)))
+    pol = rt1.cross(line.vector, [0,1,0,0])
+    ray = rt1.raytrace.Ray(line, pol, 0, 860e-9, n1)
     segments = ray.trace_surfaces((s,), ('transmitted', ))[0]
     assert len(segments) == 2
     assert segments[-1].ray.n == n2
@@ -46,10 +46,10 @@ def test_make_spherical_lens_surfaces():
     d = 30
     n = 1.5
     f, h1, h2 = paraxial.calc_thick_spherical_lens(n, roc1, -roc2, d)
-    surfaces = rt.make_spherical_lens_surfaces(roc1, -roc2, d, ri.FixedIndex(n))
-    line = rt.Line((0, 0, -f + h1 - d/2, 1), rt.normalize((1e-4, 1e-4, 1, 0)))
-    pol = rt.cross(line.vector, [0,1,0,0])
-    ray = rt.raytrace.Ray(line, pol, 0, 860e-9, 1)
+    surfaces = rt1.make_spherical_lens_surfaces(roc1, -roc2, d, ri.FixedIndex(n))
+    line = rt1.Line((0, 0, -f + h1 - d/2, 1), rt1.normalize((1e-4, 1e-4, 1, 0)))
+    pol = rt1.cross(line.vector, [0,1,0,0])
+    ray = rt1.raytrace.Ray(line, pol, 0, 860e-9, 1)
     segments = ray.trace_surfaces(surfaces, ['transmitted']*2)[0]
     assert len(segments) == 3
     assert segments[1].ray.n == n
@@ -62,11 +62,11 @@ def test_make_spherical_lens_surfaces():
     # assert np.allclose(nodes[-1].field.line.vector, (0, 0, 1, 0))
 
 def test_reflect_Surface():
-    s = rt.Surface(rt.PlanarProfile(), interface=rt.Mirror())
+    s = rt1.Surface(rt1.PlanarProfile(), interface=rt1.Mirror())
     s.rotate_y(np.pi/4)
-    line = rt.Line((0, 0, -1, 1), (0, 0, 1, 0))
-    pol = rt.cross(line.vector, [0,1,0,0])
-    ray = rt.raytrace.Ray(line, pol, 0, 860e-9, 1)
+    line = rt1.Line((0, 0, -1, 1), (0, 0, 1, 0))
+    pol = rt1.cross(line.vector, [0,1,0,0])
+    ray = rt1.raytrace.Ray(line, pol, 0, 860e-9, 1)
     segments = ray.trace_surfaces([s], ['reflected'])[0]
     assert len(segments) == 2
     assert np.allclose(segments[-1].ray.line.vector, (-1, 0, 0, 0))

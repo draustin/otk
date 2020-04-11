@@ -2,7 +2,7 @@ import mathx
 import otk.h4t
 from mathx import matseq
 import numpy as np
-from otk import asbp, math, bvar, rt
+from otk import asbp, math, bvar, rt1
 
 def test_propagate_flat_1d():
     k = 2*np.pi/860e-9

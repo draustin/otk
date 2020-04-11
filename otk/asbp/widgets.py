@@ -4,7 +4,7 @@ import pyqtgraph_extended as pg
 from PyQt5 import QtWidgets, Qt
 import mathx
 from . import sa, profiles, plotting
-from .. import rt as rt
+from .. import rt1 as rt
 
 scatter_kwargs = dict(pen=None, brush='g', size=4)
 
@@ -301,8 +301,8 @@ class CurvedProfileWidget(ProfileWidget):
             point = self.line.origin
             vector = self.line.vector
             # Scatter plot item wants 1D arrays.
-            x, y = rt.to_xy(point.reshape((-1, 4)))
-            kx, ky = rt.to_xy(vector.reshape((-1, 4)))*p.k
+            x, y = rt1.to_xy(point.reshape((-1, 4)))
+            kx, ky = rt1.to_xy(vector.reshape((-1, 4)))*p.k
 
             if field_index in (1, 2):
                 # Remove spherical wavefront from transverse wavenumbers.

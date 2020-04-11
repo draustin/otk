@@ -9,7 +9,7 @@ import otk.h4t
 import scipy.optimize
 import mathx
 from . import abcd, paraxial, math
-from . import rt, ri
+from . import rt1, ri
 
 # TODO Make Interface composition of Surface and refractive indeices.
 
@@ -59,9 +59,9 @@ class Interface:
 
     def make_profile(self):
         if np.isfinite(self.roc):
-            return rt.SphericalProfile(self.roc)
+            return rt1.SphericalProfile(self.roc)
         else:
-            return rt.PlanarProfile()
+            return rt1.PlanarProfile()
 
     def calc_sag(self, rho, derivative: bool = False):
         """Calculate sag of surface.
@@ -104,17 +104,17 @@ class Interface:
         else:
             return f
 
-    def make_surface(self, shape:str, matrix:np.ndarray=None, name:str=None) -> rt.Surface:
+    def make_surface(self, shape:str, matrix:np.ndarray=None, name:str=None) -> rt1.Surface:
         if matrix is None:
             matrix = np.eye(4)
         profile = self.make_profile()
         if shape == 'circle':
-            boundary = rt.CircleBoundary(self.radius/2)
+            boundary = rt1.CircleBoundary(self.radius/2)
         elif shape == 'square':
-            boundary = rt.SquareBoundary(self.radius*2**0.5)
+            boundary = rt1.SquareBoundary(self.radius*2**0.5)
         else:
             boundary = None
-        surface = rt.Surface(profile, matrix, name, boundary, None, rt.FresnelInterface(self.n1, self.n2))
+        surface = rt1.Surface(profile, matrix, name, boundary, None, rt1.FresnelInterface(self.n1, self.n2))
         return surface
 
 @dataclass
@@ -158,7 +158,7 @@ class ConicInterface(Interface):
         return ConicInterface(self.n2, self.n1, -self.roc, self.radius, self.kappa, -self.alphas)
 
     def make_profile(self):
-        return rt.ConicProfile(self.roc, self.kappa, self.alphas)
+        return rt1.ConicProfile(self.roc, self.kappa, self.alphas)
 
     def calc_sag(self, rho, derivative: bool = False):
         """Calculate sag of surface.
@@ -325,7 +325,7 @@ class Train:
             z += space
         return surfaces
 
-    def make_surfaces_lattice(self, lattice: mathx.Lattice, boundary: rt.Boundary = None, names: Sequence[str] = None):
+    def make_surfaces_lattice(self, lattice: mathx.Lattice, boundary: rt1.Boundary = None, names: Sequence[str] = None):
         """Make optical surface for each interface with lattice surface profiles.
 
         The surfaces are placed along the z axis.
@@ -347,9 +347,9 @@ class Train:
         for num, (interface, space, name) in enumerate(zip(self.interfaces, self.spaces[1:], names)):
             profile = interface.make_profile()
             if lattice is not None:
-                profile = rt.LatticeProfile(lattice, profile)
+                profile = rt1.LatticeProfile(lattice, profile)
             matrix = otk.h4t.make_translation(0, 0, z)
-            surface = rt.Surface(profile, matrix, name, boundary, None, rt.FresnelInterface(interface.n1, interface.n2))
+            surface = rt1.Surface(profile, matrix, name, boundary, None, rt1.FresnelInterface(interface.n1, interface.n2))
             surfaces.append(surface)
             z += space
         return surfaces
@@ -514,7 +514,7 @@ class Train:
 
     def make_analysis_surfaces(self):
         lens_surfaces = self.make_surfaces()
-        image_surface = rt.Surface(rt.PlanarProfile(), otk.h4t.make_translation(0, 0, self.length))
+        image_surface = rt1.Surface(rt1.PlanarProfile(), otk.h4t.make_translation(0, 0, self.length))
         keys = ['transmitted']*len(lens_surfaces) + ['incident']
         surfaces = lens_surfaces + [image_surface]
         return surfaces, keys
@@ -534,21 +534,21 @@ class Train:
     #     return stop_surface, image_surface, trace_fun, lens_surfaces
 
     def trace_spot_array(self, lamb: float, stop_size: float, num_rays: int, field_size: float, num_spots: int,
-            stop_shape: str = 'circle', field_shape: str = 'circle') -> rt.SpotArray:
+            stop_shape: str = 'circle', field_shape: str = 'circle') -> rt1.SpotArray:
         """Trace square angular lattice of 'plane waves'."""
         surfaces, keys = self.make_analysis_surfaces()
-        stop_surface = rt.Surface(rt.PlanarProfile())
+        stop_surface = rt1.Surface(rt1.PlanarProfile())
         trace_fun = lambda ray: ray.trace_surfaces(surfaces, keys)[0]
-        spot_array = rt.SpotArray.trace(stop_surface, surfaces[-1], trace_fun, lamb, stop_size, num_rays, field_size,
+        spot_array = rt1.SpotArray.trace(stop_surface, surfaces[-1], trace_fun, lamb, stop_size, num_rays, field_size,
                                         num_spots, stop_shape, field_shape)
         return spot_array
 
     def trace_distortion(self, lamb: float, stop_size: float, num_rays: int, thetas: Sequence[float],
             stop_shape: str = 'circle') -> np.ndarray:
         surfaces, keys = self.make_analysis_surfaces()
-        stop_surface = rt.Surface(rt.PlanarProfile())
+        stop_surface = rt1.Surface(rt1.PlanarProfile())
         trace_fun = lambda ray: ray.trace_surfaces(surfaces, keys)[0]
-        xs = rt.trace_distortion(stop_surface, surfaces[-1], trace_fun, lamb, stop_size, num_rays, thetas, stop_shape)
+        xs = rt1.trace_distortion(stop_surface, surfaces[-1], trace_fun, lamb, stop_size, num_rays, thetas, stop_shape)
         return xs
 
 class Surface(ABC):
@@ -613,9 +613,9 @@ class SphericalSurface(Surface):
 
     def make_profile(self):
         if np.isfinite(self.roc):
-            return rt.SphericalProfile(self.roc)
+            return rt1.SphericalProfile(self.roc)
         else:
-            return rt.PlanarProfile()
+            return rt1.PlanarProfile()
 
     def calc_sag(self, rho, derivative: bool = False):
         """Calculate sag of surface.
@@ -659,7 +659,7 @@ class ConicSurface(Surface):
         return ConicSurface(-self.roc, self.radius, self.kappa, -self.alphas)
 
     def make_profile(self):
-        return rt.ConicProfile(self.roc, self.kappa, self.alphas)
+        return rt1.ConicProfile(self.roc, self.kappa, self.alphas)
 
     @property
     def sag_range(self) -> np.ndarray:
@@ -726,8 +726,8 @@ class SegmentedInterface(Interface):
         # TODO move to single dispatch in rt
         assert len(self.segments) == 2
         profiles = [s.make_profile() for s in self.segments]
-        boundary = rt.CircleBoundary(self.segments[0].radius*2)
-        return rt.BinaryProfile(profiles, boundary)
+        boundary = rt1.CircleBoundary(self.segments[0].radius*2)
+        return rt1.BinaryProfile(profiles, boundary)
 
     def calc_sag(self, rho, derivative: bool = False):
         raise NotImplementedError()

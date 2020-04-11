@@ -1,6 +1,6 @@
 import numpy as np
 import mathx
-from otk import asbp, rt
+from otk import asbp, rt1
 
 def test_calc_gradxyE_spherical():
     rs_support = 200e-6

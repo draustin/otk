@@ -2,7 +2,7 @@
 import numpy as np
 from numpy import testing
 from mathx import RegularFiniteSquareLattice
-from otk.rt import profiles
+from otk.rt1 import profiles
 from otk import v4b
 
 

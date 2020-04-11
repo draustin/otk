@@ -1,7 +1,6 @@
-"""For dealing with refractive indices
+"""Abstractions for the refractive index of materials.
 
-This module provides abstractions for the refractive index of materials. At present it is very limited, but if needed
-we will extend it to include wavelength dependence, and maybe even dependence on mechanical and manufacturing conditions.
+TODO merge wth refindinf library in Dane's optphys package.
 """
 from typing import Callable
 import scipy.interpolate

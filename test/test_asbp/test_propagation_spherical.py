@@ -2,7 +2,7 @@ import numpy as np
 import mathx
 import otk.h4t
 from mathx import matseq
-from otk import asbp, rt, math, bvar
+from otk import asbp, rt1, math, bvar
 
 
 def test_propagate_curved_paraxial_1d():

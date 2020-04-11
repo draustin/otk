@@ -22,7 +22,7 @@ References:
 import logging
 from collections import namedtuple
 
-import otk.rt.lines
+import otk.rt1.lines
 import numpy as np
 import pyqtgraph_extended as pg
 from typing import Sequence
@@ -31,9 +31,9 @@ try:
     import gizeh
 except ImportError:
     pass
-import otk.rt.raytrace
+import otk.rt1.raytrace
 import mathx
-from . import rt as rt
+from . import rt1
 from . import asbp
 
 logger = logging.getLogger(__name__)
@@ -61,7 +61,7 @@ class Mode:
         line2 (rt.ComplexLine):
     """
 
-    def __init__(self, line_base: otk.rt.lines.Line, line1: otk.rt.lines.ComplexLine, line2: otk.rt.lines.ComplexLine):
+    def __init__(self, line_base: otk.rt1.lines.Line, line1: otk.rt1.lines.ComplexLine, line2: otk.rt1.lines.ComplexLine):
         self.shape = line_base.shape
         assert self.shape == line1.shape
         assert self.shape == line2.shape
@@ -98,7 +98,7 @@ class Mode:
                   self.line2.imag.vector)
         vector = np.stack(arrays, 0)
 
-        return otk.rt.lines.Line(origin, vector)
+        return otk.rt1.lines.Line(origin, vector)
 
     @classmethod
     def unstack(cls, line):
@@ -112,11 +112,11 @@ class Mode:
             ModeBundle object
         """
         assert line.shape[0] == 5
-        bundle_base = otk.rt.lines.Line(line.origin[0, ...], line.vector[0, ...])
-        bundle1 = otk.rt.lines.ComplexLine(otk.rt.lines.Line(line.origin[1, ...], line.vector[1, ...]),
-                                 otk.rt.lines.Line(line.origin[2, ...], line.vector[2, ...]))
-        bundle2 = otk.rt.lines.ComplexLine(otk.rt.lines.Line(line.origin[3, ...], line.vector[3, ...]),
-                                 otk.rt.lines.Line(line.origin[4, ...], line.vector[4, ...]))
+        bundle_base = otk.rt1.lines.Line(line.origin[0, ...], line.vector[0, ...])
+        bundle1 = otk.rt1.lines.ComplexLine(otk.rt1.lines.Line(line.origin[1, ...], line.vector[1, ...]),
+                                 otk.rt1.lines.Line(line.origin[2, ...], line.vector[2, ...]))
+        bundle2 = otk.rt1.lines.ComplexLine(otk.rt1.lines.Line(line.origin[3, ...], line.vector[3, ...]),
+                                 otk.rt1.lines.Line(line.origin[4, ...], line.vector[4, ...]))
         return cls(bundle_base, bundle1, bundle2)
 
     def calc_field(self, k, point, flux=1, phi_axis_origin=0, calc_grad_phi=False):
@@ -192,13 +192,13 @@ class Mode:
         if d2 is None:
             d2 = d1
         origin, vector, axis1 = np.broadcast_arrays(line_base.origin, line_base.vector, axis1)
-        axis2 = rt.normalize(rt.cross(vector, axis1))
-        axis1 = rt.cross(axis2, vector)
+        axis2 = rt1.normalize(rt1.cross(vector, axis1))
+        axis1 = rt1.cross(axis2, vector)
         theta1 = lamb/(np.pi*waist1)
         theta2 = lamb/(np.pi*waist2)
 
         # Define axis 1 divergence ray.
-        vector1_real = rt.normalize(vector + axis1*theta1)
+        vector1_real = rt1.normalize(vector + axis1*theta1)
         origin1_real = origin + vector*d1
 
         # Define axis 1 waist ray.
@@ -206,20 +206,20 @@ class Mode:
         vector1_imag = vector
 
         # Define axis 2 divergence ray.
-        vector2_real = rt.normalize(vector + axis2*theta2)
+        vector2_real = rt1.normalize(vector + axis2*theta2)
         origin2_real = origin + vector*d2
 
         # Define axis 1 waist ray.
         origin2_imag = origin + axis2*waist2
         vector2_imag = vector
 
-        bundle1 = otk.rt.lines.ComplexLine(otk.rt.lines.Line(origin1_real, vector1_real), otk.rt.lines.Line(origin1_imag, vector1_imag))
-        bundle2 = otk.rt.lines.ComplexLine(otk.rt.lines.Line(origin2_real, vector2_real), otk.rt.lines.Line(origin2_imag, vector2_imag))
+        bundle1 = otk.rt1.lines.ComplexLine(otk.rt1.lines.Line(origin1_real, vector1_real), otk.rt1.lines.Line(origin1_imag, vector1_imag))
+        bundle2 = otk.rt1.lines.ComplexLine(otk.rt1.lines.Line(origin2_real, vector2_real), otk.rt1.lines.Line(origin2_imag, vector2_imag))
 
         return cls(line_base, bundle1, bundle2), (axis1, axis2)
 
     def project_profile(self, profile):
-        points = rt.stack_xyzw(profile.x, profile.y, profile.z, 1)
+        points = rt1.stack_xyzw(profile.x, profile.y, profile.z, 1)
         flux, phi_axis_origin, projected_field = self.project_field(profile.k, points, profile.Er)
         beam = Beam(profile.n, profile.lamb, self, flux, phi_axis_origin)
         return beam, projected_field
@@ -248,10 +248,10 @@ class Mode:
         theta_maxs = asbp.to_scalar_pair(theta_maxs)
         thetay = np.linspace(theta_mins[0], theta_maxs[0], num_rays)
         thetax = np.linspace(theta_mins[1], theta_maxs[1], num_rays)[:, None]
-        vector = rt.normalize(rt.stack_xyzw(thetax, thetay, 1, 0))
-        axis1 = rt.normalize(rt.stack_xyzw(1, 0, 0, 0))
+        vector = rt1.normalize(rt1.stack_xyzw(thetax, thetay, 1, 0))
+        axis1 = rt1.normalize(rt1.stack_xyzw(1, 0, 0, 0))
         origin = 0, 0, 0, 1
-        bundle = cls.make(otk.rt.lines.Line(origin, vector), axis1, lamb, waist)
+        bundle = cls.make(otk.rt1.lines.Line(origin, vector), axis1, lamb, waist)
         return bundle
 
 
@@ -279,8 +279,8 @@ class Beam:
         self.k = 2*np.pi*n/lamb
         self.mode = mode
         self.polarization = np.broadcast_to(polarization, mode.shape + (4,))
-        assert np.allclose(rt.dot(self.mode.line_base.vector, self.polarization), 0)
-        assert np.allclose(rt.dot(self.polarization), 1)
+        assert np.allclose(rt1.dot(self.mode.line_base.vector, self.polarization), 0)
+        assert np.allclose(rt1.dot(self.polarization), 1)
         self.flux = np.broadcast_to(flux, mode.shape + (1,))
         self.phi_axis_origin = np.broadcast_to(phi_axis_origin, mode.shape + (1,))
 
@@ -304,18 +304,18 @@ class Beam:
 
     def stack(self):
         pol_base = self.polarization
-        y_base = rt.cross(self.mode.line_base.vector, self.polarization)
-        pol1_real = rt.cross(y_base, self.mode.line1.real.vector)
-        pol1_imag = rt.cross(y_base, self.mode.line1.imag.vector)
-        pol2_real = rt.cross(y_base, self.mode.line2.real.vector)
-        pol2_imag = rt.cross(y_base, self.mode.line2.imag.vector)
-        polarization = rt.normalize(np.stack((pol_base, pol1_real, pol1_imag, pol2_real, pol2_imag), 0))
+        y_base = rt1.cross(self.mode.line_base.vector, self.polarization)
+        pol1_real = rt1.cross(y_base, self.mode.line1.real.vector)
+        pol1_imag = rt1.cross(y_base, self.mode.line1.imag.vector)
+        pol2_real = rt1.cross(y_base, self.mode.line2.real.vector)
+        pol2_imag = rt1.cross(y_base, self.mode.line2.imag.vector)
+        polarization = rt1.normalize(np.stack((pol_base, pol1_real, pol1_imag, pol2_real, pol2_imag), 0))
 
-        ray = rt.Ray(self.mode.stack(), polarization, self.flux, self.phi_axis_origin, self.lamb, self.n)
+        ray = rt1.Ray(self.mode.stack(), polarization, self.flux, self.phi_axis_origin, self.lamb, self.n)
         return ray
 
     def get_base(self):
-        return rt.Ray(self.mode.line_base, self.phi_axis_origin, self.lamb, self.n)
+        return rt1.Ray(self.mode.line_base, self.phi_axis_origin, self.lamb, self.n)
 
     def transform(self, matrix):
         return Beam(self.n, self.lamb, self.mode.transform(matrix), self.polarization.dot(matrix), self.flux,
@@ -362,25 +362,25 @@ class Beam:
             asbp.Profile object.
         """
         if surface_profile is None:
-            surface_profile = rt.PlanarProfile()
+            surface_profile = rt1.PlanarProfile()
 
         if rs_center is None or rs_support is None:
             origin = surface_profile.intersect_line(self.mode.line_base).origin
-            xi, yi = rt.to_xy(origin)
+            xi, yi = rt1.to_xy(origin)
             flux = self.flux[..., 0]
             mean_x, mean_y, var_x, var_y, var_xy = mathx.mean_and_variance2(xi, yi, flux)
             if rs_center is None:
                 rs_center = (mean_x, mean_y)
             if rs_support is None:
-                x1, y1 = rt.to_xy(self.mode.prp.h1)
-                x2, y2 = rt.to_xy(self.mode.prp.h2)
+                x1, y1 = rt1.to_xy(self.mode.prp.h1)
+                x2, y2 = rt1.to_xy(self.mode.prp.h2)
                 var_x = max(var_x, mathx.abs_sqd(x1).max(), mathx.abs_sqd(x2).max())
                 var_y = max(var_y, mathx.abs_sqd(y1).max(), mathx.abs_sqd(y2).max())
                 rs_support = num_sigmas*np.asarray((var_x, var_y))**0.5
 
         if qs_center is None:
             vector = self.mode.line_base.vector
-            kx, ky = rt.to_xy(vector)*self.k
+            kx, ky = rt1.to_xy(vector)*self.k
             flux = self.flux[..., 0]
             mean_kx, mean_ky, var_kx, var_ky, var_kxky = mathx.mean_and_variance2(kx, ky, flux)
             qs_center = mean_kx, mean_ky
@@ -389,7 +389,7 @@ class Beam:
         num_pointss = asbp.to_scalar_pair(num_pointss)
         x, y = asbp.calc_xy(rs_support, num_pointss, rs_center)
         z = surface_profile.calc_z(x, y)
-        points = rt.stack_xyzw(x, y, z, 1)
+        points = rt1.stack_xyzw(x, y, z, 1)
         Er = self.calc_total_field(points)[..., 0]
         # This only works if the field is well sampled. The most promising method for getting a correct gradient is to
         # evaluate the derivatives of the Gaussians directly. TODO derive and implement.
@@ -510,7 +510,7 @@ class Segment:
         return segments
 
     def get_base(self):
-        return rt.RaySegment(self.surfaces, self.beam.get_base(), self.length)
+        return rt1.RaySegment(self.surfaces, self.beam.get_base(), self.length)
 
     def make_asbp_beam(self, surface_index, rs_support=None, num_pointss=64, rs_center=None, qs_center=None,
             num_sigmas=6):
@@ -549,7 +549,7 @@ class Segment:
         length = np.asscalar(self.length)  # Extra dimensions confuse things.
         origin = self.beam.mode.line_base.origin.reshape((4,))
         vector = self.beam.mode.line_base.vector.reshape((4,))
-        rhat = rt.cross(matrix[2, :], vector)
+        rhat = rt1.cross(matrix[2, :], vector)
 
         def calc_point(d, sign):
             """Calculate beam edge point.
@@ -614,7 +614,7 @@ def follow_pbg_bundle_trace(ray_trace, lamb, phi_axis_origin=None, all_inside=No
         all_inside = all_insides[-1] & intersection.is_inside().all(axis=0)
         all_insides.append(all_inside)
 
-        current_bundle = otk.rt.lines.Line(intersection.point, intersection.deflected_vector)
+        current_bundle = otk.rt1.lines.Line(intersection.point, intersection.deflected_vector)
         n = intersection.n_next
     phi_axis_origins = np.stack(phi_axis_origins)
     return phi_axis_origins, all_insides
@@ -667,7 +667,7 @@ def calc_lagrange_invariant(h1, u1, h2, u2):
     Returns:
         ...x1 complex array: Lagrange invariant.
     """
-    return rt.dot(u1, h2) - rt.dot(u2, h1)
+    return rt1.dot(u1, h2) - rt1.dot(u2, h1)
 
 
 def calc_pbg_field(k, base, h1origin, u1, h2origin, u2, point, flux=1, phi_axis_origin=0, calc_grad_phi=False):
@@ -694,15 +694,15 @@ def calc_pbg_field(k, base, h1origin, u1, h2origin, u2, point, flux=1, phi_axis_
     h2 = h2origin + u2*z
 
     # h1 x h2 is a quadratic in z. Calculate coefficients.
-    a = rt.triple(v, u1, u2)  # z**2 coefficient.
-    b = rt.triple(v, u1, h2origin) + rt.triple(v, h1origin, u2)  # z coefficient
-    h1_cross_h2_origin = rt.triple(v, h1origin, h2origin)  # constant
+    a = rt1.triple(v, u1, u2)  # z**2 coefficient.
+    b = rt1.triple(v, u1, h2origin) + rt1.triple(v, h1origin, u2)  # z coefficient
+    h1_cross_h2_origin = rt1.triple(v, h1origin, h2origin)  # constant
     h1_cross_h2 = z*(a*z + b) + h1_cross_h2_origin
 
-    u1_dot_r = rt.dot(u1, r)
-    u2_dot_r = rt.dot(u2, r)
-    v_h1_r = rt.triple(v, h1, r)
-    v_h2_r = rt.triple(v, h2, r)
+    u1_dot_r = rt1.dot(u1, r)
+    u2_dot_r = rt1.dot(u2, r)
+    v_h1_r = rt1.triple(v, h1, r)
+    v_h2_r = rt1.triple(v, h2, r)
 
     # Evaluate 'wavefront' - distance factor in exponent. See (7) of Greynolds 1986.
     w_numerator = v_h1_r*u2_dot_r - v_h2_r*u1_dot_r
@@ -729,7 +729,7 @@ def calc_pbg_field(k, base, h1origin, u1, h2origin, u2, point, flux=1, phi_axis_
     if calc_grad_phi:
         # Calculate derivative of numerator of w w.r.t z. The derivative of the v_h1_r triple product is v_u1_r
         # (and likewise for h2).
-        dw_numerator_dz = rt.triple(v, u1, r)*u2_dot_r - rt.triple(v, u2, r)*u1_dot_r
+        dw_numerator_dz = rt1.triple(v, u1, r)*u2_dot_r - rt1.triple(v, u2, r)*u1_dot_r
         dh1_cross_h2_dz = 2*a*z + b  # derivative of h1 x h2
         # Apply quotient rule.
         dw_dz = (dw_numerator_dz*h1_cross_h2 - w_numerator*dh1_cross_h2_dz)/(2*h1_cross_h2**2)
@@ -741,7 +741,7 @@ def calc_pbg_field(k, base, h1origin, u1, h2origin, u2, point, flux=1, phi_axis_
         # Calculate gradient of wavefront w.r.t r. This gradient is perpendicular to v (u1 and u2 are perpendicular to v).
         # Note this assumes r is real (dot product conjugates second argument). The cross products are conjugated
         # by convention rt.cross conjugates its output.
-        gradr_w_numerator = v_h1_r*u2 + rt.cross(v, h1).conj()*u2_dot_r - (v_h2_r*u1 + rt.cross(v, h2).conj()*u1_dot_r)
+        gradr_w_numerator = v_h1_r*u2 + rt1.cross(v, h1).conj()*u2_dot_r - (v_h2_r*u1 + rt1.cross(v, h2).conj()*u1_dot_r)
         gradr_w = gradr_w_numerator/(2*h1_cross_h2)
 
         # Phase gradient is sum of partial derivatives w.r.t to axial and transverse coordinates.
@@ -773,13 +773,13 @@ def calc_edge_distance(k, base, h1origin, u1, h2origin, u2, z, rhat, exponent=1)
     h1 = h1origin + u1*z
     h2 = h2origin + u2*z
     # The cross product is a quadratic in z. Calculate coefficients.
-    a = rt.triple(base.vector, u1, u2)  # z**2 coefficient.
-    b = rt.triple(base.vector, u1, h2origin) + rt.triple(base.vector, h1origin, u2)  # z coefficient.
-    cross_origin = rt.triple(base.vector, h1origin, h2origin)  # Constant coefficient.
+    a = rt1.triple(base.vector, u1, u2)  # z**2 coefficient.
+    b = rt1.triple(base.vector, u1, h2origin) + rt1.triple(base.vector, h1origin, u2)  # z coefficient.
+    cross_origin = rt1.triple(base.vector, h1origin, h2origin)  # Constant coefficient.
     cross = z*(a*z + b) + cross_origin
 
     # Complex phase is quadratic in displacement along rhat. Get coefficient.
-    wk = k*(rt.triple(base.vector, h1, rhat)*rt.dot(u2, rhat) - rt.triple(base.vector, h2, rhat)*rt.dot(u1, rhat))/(
+    wk = k*(rt1.triple(base.vector, h1, rhat)*rt1.dot(u2, rhat) - rt1.triple(base.vector, h2, rhat)*rt1.dot(u1, rhat))/(
             2*cross)
     r = (exponent/wk.imag)**0.5
     return r

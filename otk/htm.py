@@ -4,7 +4,7 @@ from typing import Sequence
 
 import otk.h4t
 
-from . import rt
+from . import rt1
 import numpy as np
 
 @dataclass

@@ -1,3 +1,4 @@
+"""Tools for dealing with 1D ray transfer ("ABCD") matrices."""
 from typing import Tuple
 import numpy as np
 import mathx

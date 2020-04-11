@@ -1,3 +1,4 @@
+"""Standard beams e.g. Gaussian modes. Currently only fundamental Gaussian."""
 import numpy as np
 import scipy
 import mathx

@@ -1,8 +1,8 @@
-import otk.rt.lines
+import otk.rt1.lines
 import numpy as np
 from typing import Tuple, Sequence
 
-from otk.rt import Ray
+from otk.rt1 import Ray
 from .. import geo3
 import mathx
 from .. import ri
@@ -166,7 +166,7 @@ def trace_distortion(stop_surface, image_surface, trace_fun, lamb: float, stop_s
         vector_local = v4b.stack_xyzw(vx, 0, vz, 0)
         vector = stop_surface.to_global(vector_local)
         pol = stop_surface.matrix[1, :]
-        segments = trace_fun(raytrace.Ray(otk.rt.lines.Line(origin, vector), pol, 1, 0, lamb))
+        segments = trace_fun(raytrace.Ray(otk.rt1.lines.Line(origin, vector), pol, 1, 0, lamb))
         ix, iy = geo3.to_xy(image_surface.to_local(segments[-1].ray.line.origin))
         ixs.append(ix.mean())
 
@@ -182,14 +182,14 @@ def connect_mapped_points(ray0, point1, map_to, map_from, max_error_distance=1e-
         error1 = geo3.dot(ray1i.line.origin - point1)
 
         # Make ray from point1 in opposite direction to ray1i.
-        ray1 = Ray(otk.rt.lines.Line(point1, -ray1i.line.vector), ray1i.pol, ray1i.flux, 0, ray1i.lamb, ray1i.n)
+        ray1 = Ray(otk.rt1.lines.Line(point1, -ray1i.line.vector), ray1i.pol, ray1i.flux, 0, ray1i.lamb, ray1i.n)
 
         # Trace from 1 to 0.
         ray0i = map_from(ray1)
         error0 = geo3.dot(ray0i.line.origin - point0)
 
         # Make ray from point0 in opposite direction to ray0i.
-        ray0 = Ray(otk.rt.lines.Line(point0, -ray0i.line.vector), ray0i.pol, ray0i.flux, 0, ray0i.lamb, ray0i.n)
+        ray0 = Ray(otk.rt1.lines.Line(point0, -ray0i.line.vector), ray0i.pol, ray0i.flux, 0, ray0i.lamb, ray0i.n)
 
         error_distance = max(error0.max(), error1.max())
         if error_distance <= max_error_distance:

@@ -5,7 +5,7 @@ from otk import asbp, math, beams, bvar, trains, ri
 
 def test_profile_propagation():
     import numpy as np
-    from otk import asbp, math, rt, beams, bvar
+    from otk import asbp, math, rt1, beams, bvar
     import mathx
     import pyqtgraph_extended as pg
     # Propagate Gaussian beam onto curved surface. Plane 0 is the waist, plane 1 is the start surface and plane 2 is the

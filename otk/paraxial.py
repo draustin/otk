@@ -1,4 +1,4 @@
-import numba
+"""Basic paraxial optics calculations."""
 from typing import Tuple
 import numpy as np
 import mathx

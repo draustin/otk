@@ -4,7 +4,7 @@ from PyQt5.QtCore import Qt
 import pyqtgraph_extended as pg
 import numpy as np
 import mathx
-from otk import rt as rt
+from otk import rt1
 from otk import asbp, ri, paraxial
 
 
@@ -223,11 +223,11 @@ class SimpleLensPropagator(QtWidgets.QWidget):
         profile0 = asbp.PlaneProfile(lamb, 1, source_z, r0_support, Er0, asbp.calc_gradxyE(r0_support, Er0, q0_centers),
             r0_centers, q0_centers)
         b0 = asbp.Beam(profile0)
-        s1 = rt.Surface(rt.SphericalProfile(roc1), otk.h4t.make_translation(0, 0, w1),
-                        interface=rt.PerfectRefractor(ri.air, n))
-        s2 = rt.Surface(rt.SphericalProfile(-roc2), otk.h4t.make_translation(0, 0, w1 + d),
-                        interface=rt.PerfectRefractor(n, ri.air))
-        s3 = rt.Surface(rt.PlanarProfile(), otk.h4t.make_translation(0, 0, w1 + d + w2))
+        s1 = rt1.Surface(rt1.SphericalProfile(roc1), otk.h4t.make_translation(0, 0, w1),
+                        interface=rt1.PerfectRefractor(ri.air, n))
+        s2 = rt1.Surface(rt1.SphericalProfile(-roc2), otk.h4t.make_translation(0, 0, w1 + d),
+                        interface=rt1.PerfectRefractor(n, ri.air))
+        s3 = rt1.Surface(rt1.PlanarProfile(), otk.h4t.make_translation(0, 0, w1 + d + w2))
 
 
 

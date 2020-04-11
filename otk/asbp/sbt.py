@@ -1,7 +1,7 @@
 """Sequential beam tracing."""
 from dataclasses import dataclass
 from typing import Tuple, Sequence, Iterable
-from  .. import rt
+from  .. import rt1
 from .tracing import Beam
 
 __all__ = ['trace_surfaces']
@@ -13,7 +13,7 @@ class BeamSegment:
         surfaces:
         beams: In global coordinates.
     """
-    surfaces: Tuple[rt.Surface, rt.Surface]
+    surfaces: Tuple[rt1.Surface, rt1.Surface]
     beams: Tuple[Beam, Beam]
     planarized_beam: Beam
 
@@ -39,10 +39,10 @@ class BeamSegment:
 
 @dataclass
 class BeamOnSurface:
-    surface: rt.Surface
+    surface: rt1.Surface
     beams: Sequence[Tuple[str, Beam]]
 
-def process_surface(beam, surface: rt.Surface, mode_key: str, last_surface:rt.Surface, last_beam:Beam) -> Tuple[BeamSegment, BeamOnSurface, Beam]:
+def process_surface(beam, surface: rt1.Surface, mode_key: str, last_surface:rt1.Surface, last_beam:Beam) -> Tuple[BeamSegment, BeamOnSurface, Beam]:
     incident_beam, planarized_beam = beam.propagate_to_surface(surface)
 
     segment = BeamSegment((last_surface, surface), (last_beam, incident_beam), planarized_beam)
@@ -70,7 +70,7 @@ def process_surface(beam, surface: rt.Surface, mode_key: str, last_surface:rt.Su
     return segment, beam_on_surface, beam
 
 
-def trace_surfaces(beam, surfaces: Iterable[rt.Surface], mode_keys: Iterable[str]) -> Tuple[
+def trace_surfaces(beam, surfaces: Iterable[rt1.Surface], mode_keys: Iterable[str]) -> Tuple[
     Sequence[BeamSegment], Sequence[BeamOnSurface]]:
     """Trace over a sequence of surfaces.
 

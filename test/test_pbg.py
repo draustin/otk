@@ -1,27 +1,27 @@
 import otk.h4t
-import otk.rt.lines
+import otk.rt1.lines
 import numpy as np
 from numpy import testing
 from otk import beams
 import mathx
-from otk import rt, pbg, ri
+from otk import rt1, pbg, ri
 from otk import math as omath
 
 def test_pbg_calc_field():
-    origin = rt.stack_xyzw(0, 0, 0, 1)
-    vector = rt.stack_xyzw(0, 0, 1, 0)
-    axis1 = rt.normalize(rt.stack_xyzw(1, 1j, 0.5j, 0))
+    origin = rt1.stack_xyzw(0, 0, 0, 1)
+    vector = rt1.stack_xyzw(0, 0, 1, 0)
+    axis1 = rt1.normalize(rt1.stack_xyzw(1, 1j, 0.5j, 0))
     lamb = 860e-9
     k = 2*np.pi/lamb
     waist = 100e-6
     z_R = np.pi*waist**2/lamb
     z_waist = 1*z_R
-    mode = pbg.Mode.make(otk.rt.lines.Line(origin, vector), axis1, lamb, waist, z_waist)[0]
+    mode = pbg.Mode.make(otk.rt1.lines.Line(origin, vector), axis1, lamb, waist, z_waist)[0]
 
     z = np.linspace(-z_R*16, z_R*16, 200)[:, None]
     x = np.arange(3)[:, None, None]*waist
     #zv, xv = [array.ravel() for array in np.broadcast_arrays(zs, xs)]
-    points = rt.concatenate_xyzw(x, 0, z, 1)
+    points = rt1.concatenate_xyzw(x, 0, z, 1)
     field, phi_axis, grad_phi = mode.calc_field(k, points, calc_grad_phi=True)
     psis = field*mathx.expj(-z*k)
     psis_true = beams.FundamentalGaussian(lamb, w_0=waist, flux=1).E(z - z_waist, x)*np.exp(
@@ -50,10 +50,10 @@ def test_pbg_simple():
     k = 2*np.pi*n/lamb
     # Totally arbitrary origin and axes.
     origin = np.asarray([1, 2, 3, 1])
-    vector = rt.normalize(np.asarray([1, -2, -1, 0]))
-    axis_x = rt.normalize(np.asarray([1, 1, 0, 0]))
+    vector = rt1.normalize(np.asarray([1, -2, -1, 0]))
+    axis_x = rt1.normalize(np.asarray([1, 1, 0, 0]))
 
-    mode, (axis_x, axis_y) = pbg.Mode.make(otk.rt.lines.Line(origin, vector), axis_x, lamb/n, waist)
+    mode, (axis_x, axis_y) = pbg.Mode.make(otk.rt1.lines.Line(origin, vector), axis_x, lamb/n, waist)
 
     z_R = waist**2*k/2
     z = np.asarray([-10, 1, 0, 1, 10])[:, None]*z_R*0
@@ -67,7 +67,7 @@ def test_pbg_simple():
     yhat = np.asarray([0, 1, 0, 0])
     rhohat = mathx.divide0(xhat*x + yhat*y, rho)
     mode_matrix = np.stack([axis_x, axis_y, vector, origin], 0)
-    points = rt.concatenate_xyzw(x, y, z, 1).dot(mode_matrix)
+    points = rt1.concatenate_xyzw(x, y, z, 1).dot(mode_matrix)
 
     field, phi_axis, grad_phi = mode.calc_field(k, points, calc_grad_phi=True)
 
@@ -93,19 +93,19 @@ def test_pbg_transform_advance():
     x0 = 1
     y0 = 2
     z0 = 3
-    origin = rt.stack_xyzw(x0, y0, z0, 1)
-    vector = rt.normalize(rt.stack_xyzw(0, 0, 1, 0))
-    axis1 = rt.normalize(rt.stack_xyzw(1 + 1j, 1, 0, 0))
+    origin = rt1.stack_xyzw(x0, y0, z0, 1)
+    vector = rt1.normalize(rt1.stack_xyzw(0, 0, 1, 0))
+    axis1 = rt1.normalize(rt1.stack_xyzw(1 + 1j, 1, 0, 0))
 
     z_waist1 = (1 + 1j)*z_R
     z_waist2 = (2 - 1j)*z_R
-    mode = pbg.Mode.make(otk.rt.lines.Line(origin, vector), axis1, lamb, waist1, z_waist1, waist2, z_waist2)[0]
+    mode = pbg.Mode.make(otk.rt1.lines.Line(origin, vector), axis1, lamb, waist1, z_waist1, waist2, z_waist2)[0]
     z = np.linspace(-z_R*16, z_R*16, 200)[:, None] + z0
     rho = np.arange(3)[:, None, None]*waist1
     theta = np.pi/4
     x = np.cos(theta)*rho + x0
     y = np.sin(theta)*rho + y0
-    points = rt.concatenate_xyzw(x, y, z, 1)
+    points = rt1.concatenate_xyzw(x, y, z, 1)
     field, phi_axis, grad_phi = mode.calc_field(k, points, calc_grad_phi=True)
     #print(abs(field).max()) # Check we don't have all zeros.
 
@@ -119,7 +119,7 @@ def test_pbg_transform_advance():
         modep, phi_axis_origin = mode.advance(k, advance)
         for matrix in matrices:
             modepp = modep.transform(matrix)
-            pointsp = rt.transform(points, matrix)
+            pointsp = rt1.transform(points, matrix)
 
             fieldp, phi_axisp, grad_phipp = modepp.calc_field(k, pointsp, 1, phi_axis_origin, calc_grad_phi=True)
             grad_phip = grad_phipp.dot(np.linalg.inv(matrix))
@@ -143,14 +143,14 @@ def test_pbg_project_field():
     Er *= np.exp(1j*beam.Gouy(-z_waist)) # Want phase at origin to be zero for comparison below.
 
     # Define a set of PBGs of different angles with same waist plane as Er.
-    origin = rt.stack_xyzw(0, 0, 0, 1)
+    origin = rt1.stack_xyzw(0, 0, 0, 1)
     thetay = np.linspace(-0.5, 0.5, 3)[:, None]*6*lamb/(np.pi*waist)
     thetax = np.linspace(-0.5, 0.5, 3)[:, None, None]*6*lamb/(np.pi*waist)
-    vector = rt.normalize(rt.concatenate_xyzw(thetax, thetay, 1, 0))
-    axis1 = rt.normalize(rt.stack_xyzw(1, 0, 0, 0))
-    mode_bundle = pbg.Mode.make(otk.rt.lines.Line(origin, vector), axis1, lamb, waist, z_waist)[0]
+    vector = rt1.normalize(rt1.concatenate_xyzw(thetax, thetay, 1, 0))
+    axis1 = rt1.normalize(rt1.stack_xyzw(1, 0, 0, 0))
+    mode_bundle = pbg.Mode.make(otk.rt1.lines.Line(origin, vector), axis1, lamb, waist, z_waist)[0]
 
-    flux_, phi_axis_origin_, projected_field = mode_bundle.project_field(k, rt.concatenate_xyzw(x, y, z, 1), Er)
+    flux_, phi_axis_origin_, projected_field = mode_bundle.project_field(k, rt1.concatenate_xyzw(x, y, z, 1), Er)
     coefficients = flux_**0.5 * np.exp(1j*phi_axis_origin_)
     testing.assert_allclose(coefficients, np.asarray([[0, 0, 0], [0, flux**0.5, 0], [0, 0, 0]])[:, :, None], atol=1e-10)
 

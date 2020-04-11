@@ -1,6 +1,6 @@
 import otk.geo3
 import numpy as np
-from otk.rt import interfaces
+from otk.rt1 import interfaces
 from otk import v4b, v4
 
 
