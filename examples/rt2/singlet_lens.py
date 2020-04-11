@@ -5,7 +5,7 @@ from otk.sdb import qt
 from otk import paraxial, ri
 from otk import sdb
 from otk.sdb import lens
-from otk import rt2_scalar_qt as rt2
+from otk.rt2 import rt2_scalar_qt as rt2
 
 ne = ri.air
 n = ri.fused_silica
@@ -35,7 +35,7 @@ def get_rays(theta, phi) -> np.ndarray:
     vy = np.sin(theta)*np.sin(phi)
     vz = np.cos(theta)
     incident_ray0 = rt2.make_ray(*object[:3], vx, vy, vz, 0, 1, 0, ne(lamb), 1, 0, lamb)
-    rays = rt2.get_points(assembly.nonseq_trace(incident_ray0, sphere_trace_kwargs).flatten(), 2*f)[:, :3]
+    rays = rt2.get_points(rt2.nonseq_trace(assembly, incident_ray0, sphere_trace_kwargs).flatten(), 2*f)[:, :3]
     return rays
 
 num_theta = 6

@@ -46,5 +46,19 @@ print(f(1))
 def sumit(x):
     return np.sum(x)
 
-sumit([1,2,3])
+sumit(np.asarray([1,2,3]))
 
+class Interval:
+    def __init__(self, a, b):
+        self.a = a
+        self.b = b
+
+    def make_f(self):
+        a = self.a
+        @numba.njit()
+        def f(x):
+            return a + x
+        return f
+
+f = Interval(1,2).make_f()
+print(f(4))

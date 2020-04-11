@@ -12,12 +12,12 @@ from .. import math as omath
 from ..sdb import *
 #from ..v4b import *
 from ..geo3 import *
-from ..sdb.scalar import *
+from ..sdb.npscalar import *
 from ..v4 import *
 from . import *
 
-__all__ = ['Assembly', 'Line', 'Ray', 'make_line', 'make_ray', 'perfect_refractor', 'Branch', 'get_points',
-    'get_deflector', 'intersect', 'Segment']
+__all__ = ['Line', 'Ray', 'make_line', 'make_ray', 'perfect_refractor', 'Branch', 'get_points',
+    'get_deflector', 'intersect', 'Segment', 'nonseq_trace']
 
 @dataclass
 class Line:
@@ -80,7 +80,12 @@ class Ray:
         phi = self.phase_origin + np.dot(self.k, self.line.vector)*t
         return Ray(self.line.advance(t), self.k, self.polarization, self.flux, phi, self.lamb)
 
-def make_ray(ox, oy, oz, vx, vy, vz, px, py, pz, n, flux, phase_origin, lamb):
+@singledispatch
+def make_ray(*args, **kwargs) -> Ray:
+    raise NotImplementedError(args[0])
+
+@make_ray.register
+def _(ox: float, oy, oz, vx, vy, vz, px, py, pz, n, flux, phase_origin, lamb):
     """Make ray in isotropic medium.
 
     Args:
@@ -179,7 +184,7 @@ def is_isotropic(tensor):
 
 
 @get_dielectric_tensor.register
-def _(self, lamb: float, x: Sequence[float]):
+def _(self, lamb: float, x: Sequence[float]) -> np.ndarray:
     xp = np.dot(x, self.root_to_local)
     return get_dielectric_tensor(self.region, lamb, xp)
 
@@ -248,112 +253,101 @@ class TransformedElement:
         xp = np.dot(x, self.root_to_local)
         return get_deflector(self.element, xp).transform(self.local_to_root)
 
-class Assembly:
-    def __init__(self, surface: Surface, elements:Sequence[Element], exterior: Medium):
-        self.surface = surface
-        self.elements = {e.surface:e for e in elements}
-        self.exterior = exterior
-        #self.surface = UnionOp([e.surface for e in elements])
+@get_dielectric_tensor.register
+def _(self: Assembly, lamb: float, x: Sequence[float]) -> np.ndarray:
+    element = _get_transformed_element(self, x)
+    if element is None:
+        return get_dielectric_tensor(self.exterior, lamb, x)
+    else:
+        return element.get_dielectric_tensor(lamb, x)
 
-    def get_dielectric(self, lamb: float, x: Sequence[float]) -> np.ndarray:
-        element = self.get_transformed_element(x)
-        if element is None:
-            return get_dielectric_tensor(self.exterior, lamb, x)
+def _get_transformed_element(self: Assembly, x) -> TransformedElement:
+    insides = []
+    for surface, d in traverse(self.surface, x):
+        if d <= 0 and surface in self.elements:
+            insides.append(surface)
+    if len(insides) == 0:
+        return None
+    elif len(insides) == 1:
+        element = self.elements[insides[0]]
+        return TransformedElement(get_root_to_local(element.surface, x), element)
+    else:
+        raise ValueError(f'Point {x} is inside {len(insides)} elements.')
+
+def _process_ray(self: Assembly, ray:Ray, sphere_trace_kwargs:dict) -> tuple:
+    """Intersect ray with geometry, the deflect it."""
+    # Ray travels from element/medium 0 to 1.
+    element0 = _get_transformed_element(self, ray.line.origin)
+    if element0 is None:
+        trace = spheretrace(self.surface, ray.line.origin, ray.line.vector, sign=1., through=True,
+            **sphere_trace_kwargs)
+        if trace.d >= 0:
+            return None, ()
         else:
-            return element.get_dielectric_tensor(lamb, x)
-
-    def get_transformed_element(self, x) -> TransformedElement:
-        insides = []
-        for surface, d in traverse(self.surface, x):
-            if d <= 0 and surface in self.elements:
-                insides.append(surface)
-        if len(insides) == 0:
-            return None
-        elif len(insides) == 1:
-            element = self.elements[insides[0]]
-            return TransformedElement(get_root_to_local(element.surface, x), element)
+            x0 = trace.last_x
+            x1 = trace.x
+            tensor0 = get_dielectric_tensor(self.exterior, ray.lamb, trace.last_x)
+            element1 = _get_transformed_element(self, trace.x)
+            tensor1 = element1.get_dielectric_tensor(ray.lamb, trace.x)
+            normal = -element1.getnormal(trace.xm) # Normal points from 0 to 1.
+            deflector = element1.get_deflector(trace.x)
+    else:
+        line0 = ray.line.transform(element0.root_to_local)
+        trace = spheretrace(element0.element.surface, line0.origin, line0.vector, sign=-1., through=True,
+            **sphere_trace_kwargs)
+        if trace.d <= 0:
+            return None, ()
         else:
-            raise ValueError(f'Point {x} is inside {len(insides)} elements.')
+            # TODO some recomputation of transforms here
+            x0 = np.dot(trace.last_x, element0.local_to_root)
+            xm = np.dot(trace.xm, element0.local_to_root)
+            x1 = np.dot(trace.x, element0.local_to_root)
 
-    def process_ray(self, ray:Ray, sphere_trace_kwargs:dict) -> tuple:
-        """Intersect ray with geometry, the deflect it."""
-        # Ray travels from element/medium 0 to 1.
-        element0 = self.get_transformed_element(ray.line.origin)
-        if element0 is None:
-            trace = spheretrace(self.surface, ray.line.origin, ray.line.vector, sign=1., through=True,
-                **sphere_trace_kwargs)
-            if trace.d >= 0:
-                return None, ()
+            tensor0 = element0.get_dielectric_tensor(ray.lamb, x0)
+            # normal should point from 0 to 1, so no minus sign.
+            normal = element0.getnormal(xm)
+            deflector = element0.get_deflector(x0)
+
+            element1 = _get_transformed_element(self, x1)
+            if element1 is None:
+                tensor1 = get_dielectric_tensor(self.exterior, ray.lamb, x1)
             else:
-                x0 = trace.last_x
-                x1 = trace.x
-                tensor0 = get_dielectric_tensor(self.exterior, ray.lamb, trace.last_x)
-                element1 = self.get_transformed_element(trace.x)
-                tensor1 = element1.get_dielectric_tensor(ray.lamb, trace.x)
-                normal = -element1.getnormal(trace.xm) # Normal points from 0 to 1.
-                deflector = element1.get_deflector(trace.x)
-        else:
-            line0 = ray.line.transform(element0.root_to_local)
-            trace = spheretrace(element0.element.surface, line0.origin, line0.vector, sign=-1., through=True,
-                **sphere_trace_kwargs)
-            if trace.d <= 0:
-                return None, ()
-            else:
-                # TODO some recomputation of transforms here
-                x0 = np.dot(trace.last_x, element0.local_to_root)
-                xm = np.dot(trace.xm, element0.local_to_root)
-                x1 = np.dot(trace.x, element0.local_to_root)
+                tensor1 = element1.get_dielectric_tensor(ray.lamb, x1)
+                normal1 = -element1.getnormal(xm)
+                assert np.allclose(normal, normal1)
+                deflector1 = element1.get_deflector(x1)
+                deflector = deflector1 # TODO HACK
+                # TODO assert deflectors are equal
 
-                tensor0 = element0.get_dielectric_tensor(ray.lamb, x0)
-                # normal should point from 0 to 1, so no minus sign.
-                normal = element0.getnormal(xm)
-                deflector = element0.get_deflector(x0)
+    ray = ray.advance(trace.tm)
+    deflected_rays = deflect_ray(deflector, ray, x0, x1, tensor0, normal, tensor1)
+    return trace.tm, deflected_rays
 
-                element1 = self.get_transformed_element(x1)
-                if element1 is None:
-                    tensor1 = get_dielectric_tensor(self.exterior, ray.lamb, x1)
-                else:
-                    tensor1 = element1.get_dielectric_tensor(ray.lamb, x1)
-                    normal1 = -element1.getnormal(xm)
-                    assert np.allclose(normal, normal1)
-                    deflector1 = element1.get_deflector(x1)
-                    deflector = deflector1 # TODO HACK
-                    # TODO assert deflectors are equal
+def nonseq_trace(self: Assembly, start_ray:Ray, sphere_trace_kwargs_:dict=None, min_flux:float=None, num_deflections:int=None) -> Branch:
+    if sphere_trace_kwargs_ is None:
+        sphere_trace_kwargs_ = {}
+    sphere_trace_kwargs = dict(epsilon=start_ray.lamb*1e-3, t_max=1e9, max_steps=100)
+    sphere_trace_kwargs.update(sphere_trace_kwargs_)
 
-        ray = ray.advance(trace.tm)
-        deflected_rays = deflect_ray(deflector, ray, x0, x1, tensor0, normal, tensor1)
-        return trace.tm, deflected_rays
+    if num_deflections == 0:
+        return Branch(start_ray, None, [])
+    length, deflected_rays = _process_ray(self, start_ray, sphere_trace_kwargs)
+    segments = []
+    if num_deflections is not None:
+        num_deflections -= 1
+    for ray in deflected_rays:
+        if min_flux is not None and ray.flux < min_flux:
+            continue
+        segments.append(nonseq_trace(self, ray, sphere_trace_kwargs, min_flux, num_deflections))
+    return Branch(start_ray, length, segments)
 
-    def nonseq_trace(self, start_ray:Ray, sphere_trace_kwargs_:dict=None, min_flux:float=None, num_deflections:int=None) -> Branch:
-        if sphere_trace_kwargs_ is None:
-            sphere_trace_kwargs_ = {}
-        sphere_trace_kwargs = dict(epsilon=start_ray.lamb*1e-3, t_max=1e9, max_steps=100)
-        sphere_trace_kwargs.update(sphere_trace_kwargs_)
-
-        if num_deflections == 0:
-            return Branch(start_ray, None, [])
-        length, deflected_rays = self.process_ray(start_ray, sphere_trace_kwargs)
-        segments = []
-        if num_deflections is not None:
-            num_deflections -= 1
-        for ray in deflected_rays:
-            if min_flux is not None and ray.flux < min_flux:
-                continue
-            segments.append(self.nonseq_trace(ray, sphere_trace_kwargs, min_flux, num_deflections))
-        return Branch(start_ray, length, segments)
-
-    @classmethod
-    def make(cls, elements: Sequence[Element], exterior):
-        surface = UnionOp([e.surface for e in elements])
-        exterior = Medium.make(exterior)
-        return Assembly(surface, elements, exterior)
-
-    def make_ray(self, ox, oy, oz, vx, vy, vz, px, py, pz, lamb, flux=1, phase_origin=0):
-        x = to_vector((ox, oy, oz))
-        dielectric = self.get_dielectric(lamb, x)
-        assert is_isotropic(dielectric)
-        n = dielectric[0, 0]**0.5
-        return make_ray(ox, oy, oz, vx, vy, vz, px, py, pz, n, flux, phase_origin, lamb)
+@make_ray.register
+def _(self: Assembly, ox, oy, oz, vx, vy, vz, px, py, pz, lamb, flux=1, phase_origin=0):
+    x = to_vector((ox, oy, oz))
+    dielectric = get_dielectric_tensor(self, lamb, x)
+    assert is_isotropic(dielectric)
+    n = dielectric[0, 0]**0.5
+    return make_ray(ox, oy, oz, vx, vy, vz, px, py, pz, n, flux, phase_origin, lamb)
 
 
 

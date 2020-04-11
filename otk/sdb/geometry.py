@@ -7,8 +7,6 @@ from .. import v4
 from ..h4t import make_translation
 from . import bounding
 
-from ..v4b import *
-
 __all__ = ['Surface', 'Sphere', 'Box', 'Torus', 'Ellipsoid', 'InfiniteCylinder', 'Plane', 'Sag', 'SagFunction', 'UnionOp', 'IntersectionOp',
     'DifferenceOp', 'AffineOp', 'Compound', 'Primitive', 'SphericalSag', 'Hemisphere', 'InfiniteRectangularPrism',
     'FiniteRectangularArray', 'ToroidalSag', 'BoundedParaboloid', 'ZemaxConic', 'SegmentedRadial', 'get_root_to_local']
@@ -85,11 +83,15 @@ def get_box_vertices(center: Sequence[float], half_size: Sequence[float]) -> np.
 class Box(Primitive):
     def __init__(self, half_size:Sequence[float], center:Sequence[float]=None, radius: float = 0., parent: Surface = None):
         Primitive.__init__(self, parent)
-        assert len(half_size) == 3
-        self.half_size = np.asarray(half_size)
+        half_size = np.array(half_size, float)
+        assert half_size.shape == (3,)
+
         if center is None:
             center = 0, 0, 0
-        assert len(center) == 3
+        center = np.array(center, float)
+        assert center.shape == (3,)
+
+        self.half_size = half_size
         self.center = center
         self.radius = radius
 
@@ -154,9 +156,11 @@ class InfiniteRectangularPrism(Primitive):
             height = width
         if center is None:
             center = 0, 0
+        center = np.asarray(center, float)
+        assert center.shape == (2,)
         self.width = float(width)
         self.height = float(height)
-        self.center = np.asarray(center, float)
+        self.center = center
 
 class Plane(Primitive):
     """Half-space boundaried by infinite plane.
@@ -166,8 +170,9 @@ class Plane(Primitive):
     """
     def __init__(self, n:Sequence[float], c:float, parent: Surface = None):
         Primitive.__init__(self, parent)
-        assert len(n) == 3
-        self.n = normalize(n)
+        n = np.array(n, float)
+        assert n.shape == (3,)
+        self.n = v4.normalize(n)
         self.c = c
 
 class Hemisphere(Primitive):

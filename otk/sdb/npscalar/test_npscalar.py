@@ -1,6 +1,6 @@
 import numpy as np
 from otk.sdb import *
-from otk.sdb.scalar import *
+from otk.sdb.npscalar import *
 
 def is_traverse_equal(t1, t2):
     return all(s1 is s2 and np.isclose(d1, d2) for (s1, d1), (s2, d2) in zip(t1, t2))

@@ -5,7 +5,7 @@ import itertools
 from typing import Sequence, List
 import numpy as np
 from ..v4b import *
-from .scalar import spheretrace
+from .npscalar import spheretrace
 from . import bounding
 
 __all__ = ['orthographic', 'projection', 'lookat', 'ndc2ray', 'pix2norm', 'shade_distance', 'raster', 'Scene',
