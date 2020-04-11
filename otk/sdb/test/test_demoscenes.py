@@ -1,4 +1,4 @@
-from otk import sdb_qt as sdb
+from otk.sdb import sdb_qt as sdb
 from otk.sdb import demoscenes
 
 def test_demoscenes(qtbot):

@@ -4,11 +4,12 @@ from functools import singledispatch
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from otk import ri
-from ..sdb import Surface
+from ..sdb import Surface, UnionOp
 
 __all__ = ['Medium', 'UniformIsotropic', 'Element', 'SimpleElement', 'Deflector', 'SimpleInterface', 'ConstantInterface',
     'calc_amplitudes', 'perfect_reflector',
-    'FresnelInterface', 'SimpleDeflector', 'make_constant_deflector', 'make_fresnel_deflector', 'perfect_refractor']
+    'FresnelInterface', 'SimpleDeflector', 'make_constant_deflector', 'make_fresnel_deflector', 'perfect_refractor',
+    'Assembly']
 
 class Medium(ABC):
     @property
@@ -87,5 +88,17 @@ def make_fresnel_deflector(reflects:bool = True, refracts:bool = True):
 
 perfect_refractor = make_constant_deflector(0, 0, 1, 1, False, True)
 perfect_reflector = make_constant_deflector(1, 1, 0, 0, True, False)
+
+class Assembly:
+    def __init__(self, surface: Surface, elements:Sequence[Element], exterior: Medium):
+        self.surface = surface
+        self.elements = {e.surface:e for e in elements}
+        self.exterior = exterior
+
+    @classmethod
+    def make(cls, elements: Sequence[Element], exterior):
+        surface = UnionOp([e.surface for e in elements])
+        exterior = Medium.make(exterior)
+        return Assembly(surface, elements, exterior)
 
 
