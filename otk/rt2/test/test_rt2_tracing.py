@@ -3,6 +3,7 @@ from otk import ri
 from otk import math as omath
 from otk import paraxial
 from otk import sdb
+from otk.sdb import npscalar
 #from otk.sdb import *
 #from otk.sdb.npscalar import *
 from otk.rt2.scalar import _get_transformed_element, _process_ray
@@ -34,12 +35,12 @@ def test_tracing():
     assert (2**0.5 - epsilon) <= length  <= (2**0.5 + epsilon)
 
     (rp, rs), (tp, ts) = omath.calc_fresnel_coefficients(n0, n1, abs(v4.dot(incident_ray.line.vector, normal)))
-    assert 0 <= sdb.getsdb(surface, deflected_rays[0].line.origin) <= epsilon
+    assert 0 <= npscalar.getsdb(surface, deflected_rays[0].line.origin) <= epsilon
     assert np.array_equal(deflected_rays[0].line.vector, v4.normalize((0, 1, -1, 0)))
     assert np.isclose(deflected_rays[0].flux, rs**2)
 
     vy = 2**-0.5*n0/n1
-    assert 0 >= sdb.getsdb(surface, deflected_rays[1].line.origin) >= -epsilon
+    assert 0 >= npscalar.getsdb(surface, deflected_rays[1].line.origin) >= -epsilon
     assert np.allclose(deflected_rays[1].line.vector, (0, vy, (1 - vy**2)**0.5, 0))
     assert np.isclose(deflected_rays[1].flux, ts**2*n1/n0)
     #assert np.array_equal(deflected_rays[0].vector, (0, 0, -1, 0))
@@ -77,9 +78,9 @@ def test_biconvex_lens():
     r = 20e-3
     surface = lens.make_spherical_singlet(roc0, roc1, thickness, vertex0[:3], 'circle', r)
     # Vertices are on surface.
-    assert np.isclose(sdb.getsdb(surface, vertex0), 0)
-    assert np.isclose(sdb.getsdb(surface, vertex1), 0)
-    assert np.isclose(sdb.getsdb(surface, vertex0 + (0, 0, -thickness, 0)), thickness)
+    assert np.isclose(npscalar.getsdb(surface, vertex0), 0)
+    assert np.isclose(npscalar.getsdb(surface, vertex1), 0)
+    assert np.isclose(npscalar.getsdb(surface, vertex0 + (0, 0, -thickness, 0)), thickness)
 
 
     element = rt2.SimpleElement(surface, rt2.UniformIsotropic(n), rt2.perfect_refractor)

@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Sequence
+from typing import Sequence, Callable
 from dataclasses import dataclass
 from functools import singledispatch
 from ...v4 import norm, normalize
@@ -198,21 +198,7 @@ class SphereTrace:
     def __post_init__(self):
         self.xm, self.tm = sum_weighted(abs(self.last_d), (self.x, self.t), abs(self.d), (self.last_x, self.last_t))
 
-def spheretrace(surface:Surface, x0:Sequence[float], v:Sequence[float], t_max:float, epsilon:float, max_steps:int, sign:float=None, through:bool=False):
-    """Spheretrace scalar (no broadcasting).
-
-    Args:
-        getsdb:
-        x0: Initial position.
-        v:
-        t_max:
-        epsilon:
-        max_steps:
-        through:
-
-    Returns:
-
-    """
+def _spheretrace(getsdb:Callable, x0:Sequence[float], v:Sequence[float], t_max:float, epsilon:float, max_steps:int, sign:float=None, through:bool=False):
     x0 = np.asarray(x0)
     v = np.asarray(v)
     assert x0.shape == (4,)
@@ -222,18 +208,18 @@ def spheretrace(surface:Surface, x0:Sequence[float], v:Sequence[float], t_max:fl
     assert t_max > 0
 
     t = 0
-    steps = 0 # number of steps taken
+    steps = 0  # number of steps taken
     x = x0
     last_x = None
     last_dp = None
     last_t = None
     if sign is None:
-        d0 = getsdb(surface, x)
+        d0 = getsdb(x)
         sign = np.sign(d0)
     while True:
-        dp = getsdb(surface, x)*sign
+        dp = getsdb(x)*sign
         if dp < 0 and last_dp <= epsilon:
-            #assert last_dp <= epsilon, f'{last_dp}, {dp}'
+            # assert last_dp <= epsilon, f'{last_dp}, {dp}'
             assert through
             assert dp >= -epsilon
             break
@@ -251,4 +237,23 @@ def spheretrace(surface:Surface, x0:Sequence[float], v:Sequence[float], t_max:fl
         if t > t_max:
             break
 
-    return SphereTrace(dp*sign, t, x, steps, last_dp*sign, last_t, last_x)
+    return dp*sign, t, x, steps, last_dp*sign, last_t, last_x
+
+def spheretrace(surface:Surface, x0:Sequence[float], v:Sequence[float], t_max:float, epsilon:float, max_steps:int, sign:float=None, through:bool=False):
+    """Spheretrace scalar (no broadcasting).
+
+        Args:
+            getsdb:
+            x0: Initial position.
+            v:
+            t_max:
+            epsilon:
+            max_steps:
+            through:
+
+        Returns:
+
+        """
+    getsdb_surface = lambda x: getsdb(surface, x)
+    result = _spheretrace(getsdb_surface, x0, v, t_max, epsilon, max_steps, sign, through)
+    return SphereTrace(*result)

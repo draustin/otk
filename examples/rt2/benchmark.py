@@ -7,7 +7,8 @@ from PyQt5 import QtWidgets
 from otk.sdb import lookat, projection
 from otk import zemax, trains
 from otk import ri
-from otk import sdb
+from otk.sdb import npscalar
+from otk.sdb import numba as sdb_numba
 from otk.rt2 import rt2_scalar_qt as rt2
 
 # Load Zemax file.
@@ -31,15 +32,20 @@ traced_rays = []
 num_field_points = 3
 num_rays_side = 3
 
-t0 = time.time()
+times = []
 # Loop over field positions.
 for xy, color in zip(np.linspace(0, field_half_width, num_field_points), mcolors.TABLEAU_COLORS):
     # Loop over entrance pupil.
     for epx, epy in itertools.product(np.linspace(-stop_half_width, stop_half_width, num_rays_side), repeat=2):
         start_ray = rt2.make_ray(epx, epy, 0, xy, xy, f, 1, 0, 0, ri.air(lamb), 1, 0, lamb)
         # Trace ray and convert to sequence of points for plotting.
-        traced_rays.append(rt2.get_points(rt2.nonseq_trace(assembly, start_ray, dict(epsilon=1e-10)).flatten(), 10e-3)[:, :3])
-print(time.time() - t0)
+        times.append([])
+        for spheretrace in (npscalar.spheretrace, sdb_numba.spheretrace):
+            t0 = time.time()
+            rt2.nonseq_trace(assembly, start_ray, dict(epsilon=1e-10), spheretrace=spheretrace)
+            times[-1].append(time.time() - t0)
+
+print(times)
 
 
 

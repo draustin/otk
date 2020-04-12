@@ -252,7 +252,7 @@ class ZemaxConic(Primitive):
         self.radius = radius
         self.kappa = kappa
         self.alphas = alphas
-        self.lipshitz = (sag_lipschitz**2 + 1)**0.5
+        self.lipschitz = (sag_lipschitz**2 + 1)**0.5
         self.vertex = vertex
         self.side = side
 
