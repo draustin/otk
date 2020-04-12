@@ -95,7 +95,7 @@ def _(s:ZemaxConic, ids:Mapping) -> str:
         string += ''.join(f'    h = h*rho + {alpha};\n' for alpha in s.alphas[-2::-1])
         string += '    z += h*rho*rho;'
     string += dedent(f"""\
-        return {s.side}*(z - x.z)/{s.lipshitz};
+        return {s.side}*(z - x.z)/{s.lipschitz};
     }}\n\n""")
     return string
 

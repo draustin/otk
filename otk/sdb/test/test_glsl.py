@@ -35,7 +35,7 @@ def test_primitives():
     #     float getSDB0(in vec4 x) {{
     #         float rho = min(length(x.xy - vec2(0.5, 0.6)), 0.05);
     #         float z = 0.1 - 1*sqrt(
-    #         return -1.0*z/{s.lipshitz};
+    #         return -1.0*z/{s.lipschitz};
     #     }}\n\n""")
 
 def test_UnionOp():

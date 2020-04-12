@@ -55,3 +55,49 @@ def _(s: Sag):
         sag = getsag(x[:2] - origin[:2])
         return side*(sag + origin[2] - x[2])/lipschitz
     return g
+
+@gen_getsdb.register
+def _(s: ZemaxConic):
+    vertex = s.vertex
+    radius_sqd = s.radius**2
+    roc = s.roc
+    kappa = s.kappa
+    alphas = np.asarray(s.alphas)
+    side = s.side
+    lipschitz = s.lipschitz
+    @njit("f8(f8[:])")
+    def getsdb(x):
+        xp = x[:3] - vertex
+        rho2 = min(norm_squared(xp[:2]), radius_sqd)
+        rho = rho2**0.5
+        if np.isfinite(roc):
+            z = rho2/(roc*(1 + (1 - kappa*rho2/roc**2)**0.5))
+        else:
+            z = 0
+        if len(alphas) > 0:
+            h = alphas[-1]
+            for alpha in alphas[-2::-1]:
+                h = h*rho + alpha
+            z += h*rho2
+        return side*(z - xp[2])/lipschitz
+    return getsdb
+
+@gen_getsdb.register
+def _(s: SphericalSag):
+    roc = s.roc
+    side = s.side
+    center = s.center
+    vertexz = s.vertex[2]
+    inside = side*np.sign(roc)
+    @njit("f8(f8[:])")
+    def getsdb(x):
+        if np.isfinite(roc):
+            a = inside*(norm(x[:3] - center) - abs(roc))
+            b = -side*(x[2] - center[2])
+            if inside > 0:
+                return min(a, b)
+            else:
+                return max(a, b)
+        else:
+            return side*(vertexz - x[2])
+    return getsdb

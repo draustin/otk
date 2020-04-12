@@ -59,7 +59,7 @@ def _(s:ZemaxConic, x):
         for alpha in s.alphas[-2::-1]:
             h = h*rho + alpha
         z += h*rho2
-    return s.side*(z - xp[2])/s.lipshitz
+    return s.side*(z - xp[2])/s.lipschitz
 
 @getsdb.register
 def _(s:ToroidalSag, x):

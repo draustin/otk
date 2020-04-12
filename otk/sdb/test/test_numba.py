@@ -16,6 +16,10 @@ def test_primitives():
     check(sdb.InfiniteCylinder(2, (2, 3)))
     check(sdb.InfiniteRectangularPrism(2, 3, (1, 2)))
     check(sdb.Plane((1, 2, 3), 4))
+    check(sdb.ZemaxConic(1., 0.3, 1., 0.5, (0, 0.1, 0.2), (1., 2, 3)))
+    check(sdb.SphericalSag(1., -1., (1., 2, 3)))
+
+    check(sdb.SegmentedRadial((sdb.Plane((0, 0, 1), 2), sdb.SphericalSag(0.1, 1.)), (0.1,)))
 
 def test_sags():
     def test(sagfun):
@@ -33,8 +37,8 @@ def test_csgs():
     def test(op_cls):
         p0 = sdb.Box((1, 2, 3), (0, 1, 2), 0.5)
         p1 = sdb.InfiniteCylinder(1, (1, 0.5))
-        # p2 = sdb.Plane((1, 1, 1), 1)
-        surface = op_cls((p0, p1))
+        p2 = sdb.Plane((1, 1, 1), 1)
+        surface = op_cls((p0, p1, p2))
         check(surface)
 
     test(sdb.UnionOp)
