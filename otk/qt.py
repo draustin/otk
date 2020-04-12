@@ -1,7 +1,7 @@
 """Qt-related utilities."""
 import sys
 from contextlib import contextmanager
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtCore
 
 @contextmanager
 def application():
@@ -12,6 +12,7 @@ def application():
 
     Spyder setup: Preferences / IPython console / Graphics / Graphics backend: select Qt5.
     """
+    QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
     if QtWidgets.QApplication.instance():
         app = QtWidgets.QApplication.instance()
         exec_app = False
