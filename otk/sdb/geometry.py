@@ -1,4 +1,5 @@
 from typing import List
+from dataclasses import dataclass
 from  itertools import  product
 from abc import ABC, abstractmethod
 from typing import Sequence, Tuple
@@ -9,7 +10,8 @@ from . import bounding
 
 __all__ = ['Surface', 'Sphere', 'Box', 'Torus', 'Ellipsoid', 'InfiniteCylinder', 'Plane', 'Sag', 'SagFunction', 'UnionOp', 'IntersectionOp',
     'DifferenceOp', 'AffineOp', 'Compound', 'Primitive', 'SphericalSag', 'Hemisphere', 'InfiniteRectangularPrism',
-    'FiniteRectangularArray', 'ToroidalSag', 'BoundedParaboloid', 'ZemaxConic', 'SegmentedRadial', 'get_root_to_local']
+    'FiniteRectangularArray', 'ToroidalSag', 'BoundedParaboloid', 'ZemaxConic', 'SegmentedRadial', 'get_root_to_local',
+    'ISDB']
 
 class Surface:
     """
@@ -43,6 +45,30 @@ class Surface:
     def descendants(self):
         """Returns generator of descendants in depth-first traversal."""
         raise NotImplementedError(self)
+
+@dataclass
+class ISDB:
+    d: float
+    surface: Surface
+    face: int
+
+    def max(self, other):
+        if self.d >= other.d:
+            return self
+        else:
+            return other
+
+    def min(self, other):
+        if self.d <= other.d:
+            return self
+        else:
+            return other
+
+    def negate(self):
+        return ISDB(-self.d, self.surface, self.face)
+
+    def times(self, f: float):
+        return ISDB(self.d*f, self.surface, self.face)
 
 def get_root_to_local(self:Surface, x: np.ndarray) -> np.ndarray:
     ancestors = self.get_ancestors()
@@ -168,11 +194,10 @@ class Plane(Primitive):
      Signed distance equation:
         d = n.x + c
     """
+    # TODO get rid of normalize - make factory method instead
     def __init__(self, n:Sequence[float], c:float, parent: Surface = None):
         Primitive.__init__(self, parent)
-        n = np.array(n, float)
-        assert n.shape == (3,)
-        self.n = v4.normalize(n)
+        self.n = v4.normalize(v4.to_vector(n))[:3]
         self.c = c
 
 class Hemisphere(Primitive):

@@ -3,27 +3,13 @@ import numpy as np
 from typing import Sequence
 from numba import njit, typeof
 from functools import singledispatch
+from ... import v4
 from ..geometry import *
 from ..npscalar.base import SphereTrace
 
-__all__ = ['norm', 'dot', 'norm_squared', 'gen_getsdb', 'gen_getsag', 'spheretrace']
+__all__ = ['gen_getsdb', 'gen_getsag', 'spheretrace', 'identify', 'gen_identify', 'getnormal']
 
 logger = logging.getLogger(__name__)
-
-@njit("f8(f8[:], f8[:])")
-def dot(x, y):
-    s = 0
-    for i in range(len(x)):
-        s += x[i]*y[i]
-    return s
-
-@njit("f8(f8[:])")
-def norm_squared(x):
-    return dot(x, x)
-
-@njit("f8(f8[:])")
-def norm(x):
-    return norm_squared(x)**0.5
 
 @singledispatch
 def gen_getsdb(surface):
@@ -36,6 +22,22 @@ def gen_getsdb(surface):
 @singledispatch
 def gen_getsag(sagfun):
     raise NotImplementedError(sagfun)
+
+@singledispatch
+def gen_identify(surface):
+    raise NotImplementedError(surface)
+
+ks_getnormal = (
+    np.asarray((1, 1, 1, 0)),
+    np.asarray((1, -1, -1, 0)),
+    np.asarray((-1, 1, -1, 0)),
+    np.asarray((-1, -1, 1, 0))
+)
+
+@singledispatch
+def getnormal(surface:Surface, x, h=1e-9) -> np.ndarray:
+    getsdb = get_cached_getsdb(surface)
+    return v4.normalize(sum(k*getsdb(x + k*h) for k in ks_getnormal))
 
 def gen_reduce(op, funs):
     fun0 = funs[0]
@@ -78,10 +80,10 @@ def _(u: UnionOp):
     #     return d
     return gen_reduce(min, gs)
 
-# @gen_getsdbi.register
-# def _(u: UnionOp):
-#     gs = [get_cached_getsdbi(child) for child in u.surfaces]
-#     return gen_reduce(min_first, gs)
+@gen_identify.register
+def _(u: UnionOp):
+    gs = [get_cached_identify(child) for child in u.surfaces]
+    return gen_reduce(min_first, gs)
 
 
 @gen_getsdb.register
@@ -89,10 +91,10 @@ def _(surface: IntersectionOp):
     gs = tuple(get_cached_getsdb(child) for child in surface.surfaces)
     return gen_reduce(max, gs)
 
-# @gen_getsdbi.register
-# def _(surface: IntersectionOp):
-#     gs = tuple(get_cached_getsdbi(child) for child in surface.surfaces)
-#     return gen_reduce(max, gs)
+@gen_identify.register
+def _(surface: IntersectionOp):
+    gs = tuple(get_cached_identify(child) for child in surface.surfaces)
+    return gen_reduce(max_first, gs)
 
 @gen_getsdb.register
 def _(surface: DifferenceOp):
@@ -103,17 +105,17 @@ def _(surface: DifferenceOp):
         return max(g0(x), -g1(x))
     return g
 
-# @gen_getsdbi.register
-# def _(surface: DifferenceOp):
-#     g0 = get_cached_getsdbi(surface.surfaces[0])
-#     g1 = get_cached_getsdbi(surface.surfaces[1])
-#     @njit("f8(f8[:])")
-#     def g(x):
-#         di0 = g0(x)
-#         di1 = g1(x)
-#         di1 = -di1[0], di1[1]
-#         return max_first(di0, di1)
-#     return g
+@gen_identify.register
+def _(s: DifferenceOp):
+    g0 = get_cached_identify(s)
+    g1 = get_cached_identify(s)
+    @njit
+    def g(x):
+        di0 = g0(x)
+        di1 = g1(x)
+        di1 = (-di1[0],) + (di1[1:])
+        return max_first(di0, di1)
+    return g
 
 @gen_getsdb.register
 def _(s:SegmentedRadial):
@@ -122,11 +124,26 @@ def _(s:SegmentedRadial):
     getsdbs = tuple(get_cached_getsdb(child) for child in s.surfaces)
     @njit("f8(f8[:])")
     def g(x):
-        rho = norm(x[:2] - vertex)
+        rho = v4.norm(x[:2] - vertex)
         for getsdb, r in zip(getsdbs[:-1], radii):
             if rho <= r:
                 return getsdb(x)
         return getsdbs[-1](x)
+    return g
+
+@gen_identify.register
+def _(s:SegmentedRadial):
+    vertex = s.vertex
+    radii = s.radii
+    identifies = tuple(get_cached_identify(child) for child in s.surfaces)
+    @njit
+    def g(x):
+        rho = v4.norm(x[:2] - vertex)
+        for identify, r in zip(identifies[:-1], radii):
+            if rho <= r:
+                return identify(x)
+        return identifies[-1](x)
+
     return g
 
 @gen_getsdb.register
@@ -143,6 +160,20 @@ def _(s: FiniteRectangularArray):
         return getsdb_child(xp)
     return getsdb
 
+@gen_identify.register
+def _(s: FiniteRectangularArray):
+    identify_child = get_cached_identify(s.surfaces[0])
+    corner = s.corner
+    pitch = s.pitch
+    size = s.size
+    @njit
+    def identify(x):
+        index = np.minimum(np.maximum(np.floor((x[:2] - corner)/pitch), 0), size - 1)
+        center = (index + 0.5)*pitch + corner
+        xp = np.array((x[0] - center[0], x[1] - center[1], x[2], x[3]))
+        return identify_child(xp)
+    return identify
+
 def lookup_cache(cache: dict, key, calc_value):
     try:
         return cache[key]
@@ -153,9 +184,35 @@ def lookup_cache(cache: dict, key, calc_value):
 
 getsdb_cache = {}
 spheretrace_cache = {}
+identify_cache = {}
+
+class IntLabels:
+    def __init__(self):
+        self._objects = []
+        self._labels = {}
+
+    def get_label(self, obj: object) -> int:
+        try:
+            return self._labels[obj]
+        except KeyError:
+            label = len(self._objects)
+            self._objects.append(obj)
+            self._labels[obj] = label
+            return label
+
+    def get_object(self, label: int) -> object:
+        return self._objects[label]
+
+surface_labels = IntLabels()
 
 def get_cached_getsdb(surface: Surface):
     return lookup_cache(getsdb_cache, surface, lambda : gen_getsdb(surface))
+
+def get_cached_spheretrace(surface: Surface):
+    return lookup_cache(spheretrace_cache, surface, lambda : gen_spheretrace(surface))
+
+def get_cached_identify(surface: Surface):
+    return lookup_cache(identify_cache, surface, lambda : gen_identify(surface))
 
 def gen_spheretrace(surface: Surface):
     logger.info(f'Generating spheretrace for {surface}.')
@@ -206,6 +263,12 @@ def gen_spheretrace(surface: Surface):
     return spheretrace
 
 def spheretrace(surface:Surface, x0:Sequence[float], v:Sequence[float], t_max:float, epsilon:float, max_steps:int, sign:float=None, through:bool=False):
-    inner = lookup_cache(spheretrace_cache, surface, lambda : gen_spheretrace(surface))
+    inner = get_cached_spheretrace(surface)
     result = inner(x0, v, t_max, epsilon, max_steps, sign, through)
     return SphereTrace(*result)
+
+def identify(surface: Surface, x: Sequence[float]) -> ISDB:
+    fun = get_cached_identify(surface)
+    d, label, face = fun(x)
+    id_surface = surface_labels.get_object(label)
+    return ISDB(d, id_surface, face)

@@ -3,7 +3,7 @@ from collections import defaultdict
 import numpy as np
 from otk.h4t import make_translation, make_rotation
 from . import *
-from ..v4 import normalize
+from ..v4 import normalize, to_vector
 from .lens import *
 
 class Centers:
@@ -173,7 +173,7 @@ def make_combinations():
     sphere = Sphere(1)
     box = Box((0.5**0.5, 0.5**0.5, 0.5**0.5))
     center = next(centers)
-    transform = make_rotation(normalize((1, 1, 1)), np.pi/4).dot(make_translation(*center))
+    transform = make_rotation(normalize(to_vector((1, 1, 1))), np.pi/4).dot(make_translation(*center))
     surfaces.append(AffineOp(UnionOp((sphere, box)), transform))
     all_properties[sphere]['surface_color'] = (1, 0, 0)
 

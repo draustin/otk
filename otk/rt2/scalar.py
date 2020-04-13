@@ -17,10 +17,16 @@ from .. import geo3
 #from ..v4 import *
 from .. import v4
 from .. sdb import npscalar
+from .. sdb import numba as sdb_numba
 from . import *
 
 __all__ = ['Line', 'Ray', 'make_line', 'make_ray', 'perfect_refractor', 'Branch', 'get_points',
-    'get_deflector', 'intersect', 'Segment', 'nonseq_trace']
+    'get_deflector', 'intersect', 'Segment', 'nonseq_trace', 'set_backend']
+
+backend = npscalar
+def set_backend(module):
+    global backend
+    backend = module
 
 @dataclass
 class Line:
@@ -79,7 +85,7 @@ class TransformedElement:
 
     def getnormal(self, x:Sequence[float]) -> np.ndarray:
         xp = np.dot(x, self.root_to_local)
-        return np.dot(npscalar.getnormal(self.element.surface, xp), self.local_to_root)
+        return np.dot(backend.getnormal(self.element.surface, xp), self.local_to_root)
 
     def get_deflector(self, x:Sequence[float]) -> Deflector:
         xp = np.dot(x, self.root_to_local)
@@ -121,10 +127,10 @@ def _(ox: float, oy, oz, vx, vy, vz, px, py, pz, n, flux, phase_origin, lamb, el
         phase_origin: Phase at ray  origin.
         lamb: Wavelength.
     """
-    vector = v4.normalize((vx, vy, vz, 0))
+    vector = v4.normalize(v4.to_vector((vx, vy, vz)))
     line = Line(np.asarray((ox, oy, oz, 1.)), vector)
     # Make polarization perpendicular to vector.
-    y = v4.cross(vector, (px, py, pz, 0))
+    y = v4.cross(vector, v4.to_vector((px, py, pz)))
     pol = v4.normalize(v4.cross(y, vector))
 
     k = line.vector*n*2*np.pi/lamb
@@ -294,7 +300,7 @@ def _get_transformed_element(self: Assembly, x) -> TransformedElement:
     #         if surface0 in surface.descendants():
     #             return TransformedElement(sdb.get_root_to_local(surface, x), element)
 
-    isdb = npscalar.identify(self.surface, x)
+    isdb = backend.identify(self.surface, x)
     if isdb.d <= 0:
         for surface, element in self.elements.items():
             if isdb.surface in surface.descendants():
@@ -308,12 +314,12 @@ def _get_transformed_element(self: Assembly, x) -> TransformedElement:
     # else:
     #     raise ValueError(f'Point {x} is inside {len(insides)} elements.')
 
-def _process_ray(self: Assembly, ray:Ray, sphere_trace_kwargs:dict, spheretrace = npscalar.spheretrace) -> tuple:
+def _process_ray(self: Assembly, ray:Ray, sphere_trace_kwargs:dict) -> tuple:
     """Intersect ray with geometry, the deflect it."""
     # Ray travels from element/medium 0 to 1.
     element0 = ray.element
     if element0 is None:
-        trace = spheretrace(self.surface, ray.line.origin, ray.line.vector, sign=1., through=True,
+        trace = backend.spheretrace(self.surface, ray.line.origin, ray.line.vector, sign=1., through=True,
             **sphere_trace_kwargs)
         if trace.d >= 0:
             if trace.steps >= sphere_trace_kwargs['max_steps']:
@@ -329,7 +335,7 @@ def _process_ray(self: Assembly, ray:Ray, sphere_trace_kwargs:dict, spheretrace 
             deflector = element1.get_deflector(trace.x)
     else:
         line0 = ray.line.transform(element0.root_to_local)
-        trace = spheretrace(element0.element.surface, line0.origin, line0.vector, sign=-1., through=True,
+        trace = backend.spheretrace(element0.element.surface, line0.origin, line0.vector, sign=-1., through=True,
             **sphere_trace_kwargs)
         if trace.d <= 0:
             if trace.steps >= sphere_trace_kwargs['max_steps']:
@@ -361,7 +367,7 @@ def _process_ray(self: Assembly, ray:Ray, sphere_trace_kwargs:dict, spheretrace 
     deflected_rays = deflect_ray(deflector, ray, x0, x1, tensor0, normal, tensor1, element1)
     return trace.tm, deflected_rays
 
-def nonseq_trace(self: Assembly, start_ray:Ray, sphere_trace_kwargs_:dict=None, min_flux:float=None, num_deflections:int=None, spheretrace = npscalar.spheretrace) -> Branch:
+def nonseq_trace(self: Assembly, start_ray:Ray, sphere_trace_kwargs_:dict=None, min_flux:float=None, num_deflections:int=None) -> Branch:
     if sphere_trace_kwargs_ is None:
         sphere_trace_kwargs_ = {}
     sphere_trace_kwargs = dict(epsilon=start_ray.lamb*1e-3, t_max=1e9, max_steps=100)
@@ -369,14 +375,14 @@ def nonseq_trace(self: Assembly, start_ray:Ray, sphere_trace_kwargs_:dict=None, 
 
     if num_deflections == 0:
         return Branch(start_ray, None, [])
-    length, deflected_rays = _process_ray(self, start_ray, sphere_trace_kwargs, spheretrace)
+    length, deflected_rays = _process_ray(self, start_ray, sphere_trace_kwargs)
     segments = []
     if num_deflections is not None:
         num_deflections -= 1
     for ray in deflected_rays:
         if min_flux is not None and ray.flux < min_flux:
             continue
-        segments.append(nonseq_trace(self, ray, sphere_trace_kwargs, min_flux, num_deflections, spheretrace))
+        segments.append(nonseq_trace(self, ray, sphere_trace_kwargs, min_flux, num_deflections))
     return Branch(start_ray, length, segments)
 
 @make_ray.register

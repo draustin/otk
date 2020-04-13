@@ -1,7 +1,10 @@
 import numpy as np
+from warnings import warn
 from numba import njit
+from ... import v4
 from ..geometry import *
 from .base import  *
+from .base import get_cached_getsdb, surface_labels
 
 @gen_getsdb.register
 def _(s: Box):
@@ -11,8 +14,18 @@ def _(s: Box):
     @njit("f8(f8[:])")
     def g(x:np.ndarray):
         q = np.abs(x[:3] - center) - (half_size - radius)
-        return norm(np.maximum(q, 0.)) + min(max(q[0], max(q[1], q[2])), 0.0) - radius
+        return v4.norm(np.maximum(q, 0.)) + min(max(q[0], max(q[1], q[2])), 0.0) - radius
     return g
+
+@gen_identify.register(Box)
+def _(surface):
+    warn('Not identifying box face.')
+    getsdb = get_cached_getsdb(surface)
+    label = surface_labels.get_label(surface)
+    @njit
+    def identify(x):
+        return getsdb(x), label, 0
+    return identify
 
 @gen_getsdb.register
 def _(s: InfiniteCylinder):
@@ -20,7 +33,7 @@ def _(s: InfiniteCylinder):
     r = s.r
     @njit("f8(f8[:])")
     def g(x):
-        return norm(x[:2] - o) - r
+        return v4.norm(x[:2] - o) - r
     return g
 
 @gen_getsdb.register
@@ -30,8 +43,18 @@ def _(s: InfiniteRectangularPrism):
     @njit("f8(f8[:])")
     def g(x):
         q = np.abs(x[:2] - center) - half_size
-        return norm(np.maximum(q, 0.0)) + min(max(q[0], q[1]), 0.0)
+        return v4.norm(np.maximum(q, 0.0)) + min(max(q[0], q[1]), 0.0)
     return g
+
+@gen_identify.register(InfiniteRectangularPrism)
+def _(surface):
+    warn('Not identifying prism face.')
+    getsdb = get_cached_getsdb(surface)
+    label = surface_labels.get_label(surface)
+    @njit
+    def identify(x):
+        return getsdb(x), label, 0
+    return identify
 
 @gen_getsdb.register
 def _(s:Plane):
@@ -68,7 +91,7 @@ def _(s: ZemaxConic):
     @njit("f8(f8[:])")
     def getsdb(x):
         xp = x[:3] - vertex
-        rho2 = min(norm_squared(xp[:2]), radius_sqd)
+        rho2 = min(v4.norm_squared(xp[:2]), radius_sqd)
         rho = rho2**0.5
         if np.isfinite(roc):
             z = rho2/(roc*(1 + (1 - kappa*rho2/roc**2)**0.5))
@@ -92,7 +115,7 @@ def _(s: SphericalSag):
     @njit("f8(f8[:])")
     def getsdb(x):
         if np.isfinite(roc):
-            a = inside*(norm(x[:3] - center) - abs(roc))
+            a = inside*(v4.norm(x[:3] - center) - abs(roc))
             b = -side*(x[2] - center[2])
             if inside > 0:
                 return min(a, b)
@@ -101,3 +124,21 @@ def _(s: SphericalSag):
         else:
             return side*(vertexz - x[2])
     return getsdb
+
+# Primitives with only one face.
+@gen_identify.register(Sag)
+@gen_identify.register(ToroidalSag)
+@gen_identify.register(ZemaxConic)
+@gen_identify.register(BoundedParaboloid)
+@gen_identify.register(SphericalSag)
+@gen_identify.register(Hemisphere)
+@gen_identify.register(Plane)
+@gen_identify.register(InfiniteCylinder)
+@gen_identify.register(Sphere)
+def _(surface):
+    getsdb = get_cached_getsdb(surface)
+    label = surface_labels.get_label(surface)
+    @njit
+    def identify(x):
+        return getsdb(x), label, 0
+    return identify

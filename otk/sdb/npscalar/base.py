@@ -9,31 +9,6 @@ from ..geometry import *
 __all__ = ['getsdb', 'identify', 'spheretrace', 'getnormal', 'getsag',
     'traverse', 'ISDB']
 
-
-@dataclass
-class ISDB:
-    d: float
-    surface: Surface
-    face: int
-
-    def max(self, other):
-        if self.d >= other.d:
-            return self
-        else:
-            return other
-
-    def min(self, other):
-        if self.d <= other.d:
-            return self
-        else:
-            return other
-
-    def negate(self):
-        return ISDB(-self.d, self.surface, self.face)
-
-    def times(self, f: float):
-        return ISDB(self.d*f, self.surface, self.face)
-
 @singledispatch
 def getsdb(surface: Surface, x: Sequence[float]) -> float:
     """Get signed distance bound.

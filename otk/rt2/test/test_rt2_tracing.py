@@ -12,7 +12,7 @@ from otk.sdb import lens
 from otk import v4
 
 def test_tracing():
-    normal = 0, 0, -1
+    normal = v4.to_vector((0, 0, -1))
     constant = 0
     surface = sdb.Plane(normal, constant)
     deflector = rt2.make_fresnel_deflector()
@@ -25,8 +25,8 @@ def test_tracing():
     assert rt2.get_deflector(element, np.asarray((1, 2, 3, 1))) is deflector
 
     assembly = rt2.Assembly(element.surface, [element], rt2.UniformIsotropic(n0fun))
-    assert _get_transformed_element(assembly, (1, 2, -1, 1)) is None
-    assert _get_transformed_element(assembly, (1, 2, 1, 1)).element is element
+    assert _get_transformed_element(assembly, v4.to_point((1, 2, -1))) is None
+    assert _get_transformed_element(assembly, v4.to_point((1, 2, 1))).element is element
 
     lamb = 800e-9
     incident_ray = rt2.make_ray(assembly, 1., 2, -1, 0, 1, 1, 1, 0, 0, lamb)
@@ -36,7 +36,7 @@ def test_tracing():
 
     (rp, rs), (tp, ts) = omath.calc_fresnel_coefficients(n0, n1, abs(v4.dot(incident_ray.line.vector, normal)))
     assert 0 <= npscalar.getsdb(surface, deflected_rays[0].line.origin) <= epsilon
-    assert np.array_equal(deflected_rays[0].line.vector, v4.normalize((0, 1, -1, 0)))
+    assert np.array_equal(deflected_rays[0].line.vector, v4.normalize(v4.to_vector((0, 1, -1, 0))))
     assert np.isclose(deflected_rays[0].flux, rs**2)
 
     vy = 2**-0.5*n0/n1

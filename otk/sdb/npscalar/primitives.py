@@ -98,7 +98,7 @@ def _(s: Box, x):
 @identify.register(Plane)
 @identify.register(InfiniteCylinder)
 @identify.register(Sphere)
-def _(surface:Primitive, x):
+def _(surface, x):
     d = getsdb(surface, x)
     return ISDB(d, surface, 0)
 
