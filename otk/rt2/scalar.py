@@ -5,6 +5,7 @@ TODOs:
 #      * Absorptive media
 #      * diffraction grating
 """
+from warnings import warn
 import numpy as np
 from functools import singledispatch
 from dataclasses import dataclass
@@ -284,6 +285,8 @@ def _process_ray(self: Assembly, ray:Ray, sphere_trace_kwargs:dict, spheretrace 
         trace = spheretrace(self.surface, ray.line.origin, ray.line.vector, sign=1., through=True,
             **sphere_trace_kwargs)
         if trace.d >= 0:
+            if trace.steps >= sphere_trace_kwargs['max_steps']:
+                warn(f"Spheretrace reached max_steps ({sphere_trace_kwargs['max_steps']}.")
             return None, ()
         else:
             x0 = trace.last_x
@@ -298,6 +301,8 @@ def _process_ray(self: Assembly, ray:Ray, sphere_trace_kwargs:dict, spheretrace 
         trace = spheretrace(element0.element.surface, line0.origin, line0.vector, sign=-1., through=True,
             **sphere_trace_kwargs)
         if trace.d <= 0:
+            if trace.steps >= sphere_trace_kwargs['max_steps']:
+                warn(f"Spheretrace reached max_steps ({sphere_trace_kwargs['max_steps']}.")
             return None, ()
         else:
             # TODO some recomputation of transforms here
