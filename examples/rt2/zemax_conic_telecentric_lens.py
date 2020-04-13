@@ -34,7 +34,7 @@ num_rays_side = 3
 for xy, color in zip(np.linspace(0, field_half_width, num_field_points), mcolors.TABLEAU_COLORS):
     # Loop over entrance pupil.
     for epx, epy in itertools.product(np.linspace(-stop_half_width, stop_half_width, num_rays_side), repeat=2):
-        start_ray = rt2.make_ray(epx, epy, 0, xy, xy, f, 1, 0, 0, ri.air(lamb), 1, 0, lamb)
+        start_ray = rt2.make_ray(assembly, epx, epy, 0, xy, xy, f, 1, 0, 0, lamb)
         # Trace ray and convert to sequence of points for plotting.
         traced_rays.append(rt2.get_points(rt2.nonseq_trace(assembly, start_ray).flatten(), 10e-3)[:, :3])
         colors.append(mcolors.to_rgb(color))

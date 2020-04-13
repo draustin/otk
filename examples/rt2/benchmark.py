@@ -37,7 +37,7 @@ times = []
 for xy, color in zip(np.linspace(0, field_half_width, num_field_points), mcolors.TABLEAU_COLORS):
     # Loop over entrance pupil.
     for epx, epy in itertools.product(np.linspace(-stop_half_width, stop_half_width, num_rays_side), repeat=2):
-        start_ray = rt2.make_ray(epx, epy, 0, xy, xy, f, 1, 0, 0, ri.air(lamb), 1, 0, lamb)
+        start_ray = rt2.make_ray(assembly, epx, epy, 0, xy, xy, f, 1, 0, 0, lamb)
         # Trace ray and convert to sequence of points for plotting.
         times.append([])
         for spheretrace in (npscalar.spheretrace, sdb_numba.spheretrace):

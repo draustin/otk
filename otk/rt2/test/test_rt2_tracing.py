@@ -29,7 +29,7 @@ def test_tracing():
     assert _get_transformed_element(assembly, (1, 2, 1, 1)).element is element
 
     lamb = 800e-9
-    incident_ray = rt2.make_ray(1., 2, -1, 0, 1, 1, 1, 0, 0, n0fun(lamb), 1, 0, lamb)
+    incident_ray = rt2.make_ray(assembly, 1., 2, -1, 0, 1, 1, 1, 0, 0, lamb)
     epsilon = 1e-9
     length, deflected_rays = _process_ray(assembly, incident_ray, dict(epsilon=epsilon, t_max=1e9, max_steps=100))
     assert (2**0.5 - epsilon) <= length  <= (2**0.5 + epsilon)
@@ -58,7 +58,7 @@ def test_parabolic_mirror():
     epsilon = 1e-9
     focus = vertex + (0, 0, f)
 
-    incident_ray = rt2.make_ray(*focus, 1, 1, 0, 1, -1, 0, n(lamb), 1, 0, lamb)
+    incident_ray = rt2.make_ray(assembly, *focus, 1, 1, 0, 1, -1, 0, lamb)
     length, deflected_rays = _process_ray(assembly, incident_ray, dict(epsilon=epsilon, t_max=1e9, max_steps=100))
     assert len(deflected_rays) == 1
     assert np.allclose(deflected_rays[0].line.vector, (0, 0, 1, 0))
@@ -94,7 +94,7 @@ def test_biconvex_lens():
     image = vertex0 + (0, 0, zp_image, 0)
 
     # Trace on-axis ray from object point.
-    incident_ray0 = rt2.make_ray(*object[:3], 0, 0, 1, 0, 1, 0, ne(lamb), 1, 0, lamb)
+    incident_ray0 = rt2.make_ray(assembly, *object[:3], 0, 0, 1, 0, 1, 0, lamb)
     branch = rt2.nonseq_trace(assembly, incident_ray0, sphere_trace_kwargs)
     segments = branch.flatten()
     assert len(segments) == 3
@@ -111,7 +111,7 @@ def test_biconvex_lens():
     assert np.array_equal(segments[2].ray.k, ne(lamb)*segments[2].ray.line.vector*2*np.pi/lamb)
 
     # Trace ray at angle.
-    incident_ray1 = rt2.make_ray(*object[:3], 0.006, 0, 1, 0, 1, 0, ne(lamb), 1, 0, lamb)
+    incident_ray1 = rt2.make_ray(assembly, *object[:3], 0.006, 0, 1, 0, 1, 0, lamb)
     segments = rt2.nonseq_trace(assembly, incident_ray1, sphere_trace_kwargs).flatten()
     assert len(segments) == 3
     # Check ray passes close to image.
@@ -137,7 +137,7 @@ def test_hyperbolic_lens():
     sphere_trace_kwargs = dict(epsilon=1e-9, t_max=1e9, max_steps=100)
     focus = (0, 0, f, 1)
     for x0 in x0s:
-        ray = rt2.make_ray(x0, 0, -1, 0, 0, 1, 1, 0, 0, n1, 1, 0, 800e-9)
+        ray = rt2.make_ray(assembly, x0, 0, -1, 0, 0, 1, 1, 0, 0, 800e-9)
         segments = rt2.nonseq_trace(assembly, ray, sphere_trace_kwargs).flatten()
         assert len(segments) == 2
         assert v4.norm(segments[1].ray.line.pass_point(focus)[1].origin - focus) < 1e-6

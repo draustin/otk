@@ -66,6 +66,26 @@ def make_line(ox, oy, oz,  vx, vy, vz):
     return Line(np.array((ox, oy, oz, 1.)), np.array((vx, vy, vz, 0.)))
 
 @dataclass
+class TransformedElement:
+    root_to_local: np.ndarray
+    element: Element
+
+    def __post_init__(self):
+        self.local_to_root = np.linalg.inv(self.root_to_local)
+
+    def get_dielectric_tensor(self, lamb: float, x: Sequence[float]) -> np.ndarray:
+        xp = np.dot(x, self.root_to_local)
+        return get_dielectric_tensor(self.element.medium, lamb, xp)
+
+    def getnormal(self, x:Sequence[float]) -> np.ndarray:
+        xp = np.dot(x, self.root_to_local)
+        return np.dot(npscalar.getnormal(self.element.surface, xp), self.local_to_root)
+
+    def get_deflector(self, x:Sequence[float]) -> Deflector:
+        xp = np.dot(x, self.root_to_local)
+        return get_deflector(self.element, xp).transform(self.local_to_root)
+
+@dataclass
 class Ray:
     line: Line
     k: np.ndarray
@@ -73,6 +93,7 @@ class Ray:
     flux: float
     phase_origin: float
     lamb: float
+    element: TransformedElement
 
     def __post_init__(self):
         assert v4.is_vector(self.k)
@@ -81,14 +102,14 @@ class Ray:
 
     def advance(self, t: float):
         phi = self.phase_origin + np.dot(self.k, self.line.vector)*t
-        return Ray(self.line.advance(t), self.k, self.polarization, self.flux, phi, self.lamb)
+        return Ray(self.line.advance(t), self.k, self.polarization, self.flux, phi, self.lamb, self.element)
 
 @singledispatch
 def make_ray(*args, **kwargs) -> Ray:
     raise NotImplementedError(args[0])
 
 @make_ray.register
-def _(ox: float, oy, oz, vx, vy, vz, px, py, pz, n, flux, phase_origin, lamb):
+def _(ox: float, oy, oz, vx, vy, vz, px, py, pz, n, flux, phase_origin, lamb, element=None):
     """Make ray in isotropic medium.
 
     Args:
@@ -107,7 +128,7 @@ def _(ox: float, oy, oz, vx, vy, vz, px, py, pz, n, flux, phase_origin, lamb):
     pol = v4.normalize(v4.cross(y, vector))
 
     k = line.vector*n*2*np.pi/lamb
-    return Ray(line, k, pol, flux, phase_origin, lamb)
+    return Ray(line, k, pol, flux, phase_origin, lamb, element)
 
 @singledispatch
 def get_deflector(e: Element, x: Sequence[float]) -> Deflector:
@@ -135,11 +156,13 @@ def _(self:FresnelInterface, n0: float, n1:float, cos_theta0: float, lamb: float
     return omath.calc_fresnel_coefficients(n0, n1, cos_theta0)
 
 @singledispatch
-def deflect_ray(self:Deflector, ray: Ray, x0:np.ndarray, x1:np.ndarray, dielectric0, normal: np.ndarray, dielectric1) -> tuple:
+def deflect_ray(self:Deflector, ray: Ray, x0:np.ndarray, x1:np.ndarray, dielectric0: np.ndarray, normal: np.ndarray,
+    dielectric1: np.ndarray, element1: TransformedElement) -> tuple:
     raise NotImplementedError()
 
 @deflect_ray.register
-def deflect_ray(self: SimpleDeflector, ray: Ray, x0:np.ndarray, x1:np.ndarray, dielectric0, normal: np.ndarray, dielectric1) -> tuple:
+def deflect_ray(self: SimpleDeflector, ray: Ray, x0:np.ndarray, x1:np.ndarray, dielectric0: np.ndarray, normal: np.ndarray,
+    dielectric1: np.ndarray, element1: TransformedElement) -> tuple:
     assert is_isotropic(dielectric0)
     assert is_isotropic(dielectric1)
     n0 = dielectric0[0, 0]**0.5
@@ -161,21 +184,21 @@ def deflect_ray(self: SimpleDeflector, ray: Ray, x0:np.ndarray, x1:np.ndarray, d
     amplitudes = calc_amplitudes(self.interface, n0, n1, cos_theta0, ray.lamb)
     incident_components = [v4.dot(ray.polarization, i) for i in (incident_p_pol_vector, s_pol_vector)]
 
-    def calc_ray(origin, amplitudes, axis_vectors, ray_vector, n):
+    def calc_ray(origin, amplitudes, axis_vectors, ray_vector, n, element):
         pol_unnorm = sum(c*a*v for c, a, v in zip(incident_components, amplitudes, axis_vectors))
         pol_factor = v4.norm_squared(pol_unnorm)
         pol = pol_unnorm/pol_factor**0.5
         line = Line(origin, ray_vector)
         deflected_ray = Ray(line, n*2*np.pi/ray.lamb*ray_vector, pol, ray.flux*pol_factor*n/n0, ray.phase_origin,
-            ray.lamb)
+            ray.lamb, element)
         return deflected_ray
 
     rays = []
     if self.reflects:
         rays.append(
-            calc_ray(x0, amplitudes[0], (reflected_p_pol_vector, s_pol_vector), reflected_vector, n0))
+            calc_ray(x0, amplitudes[0], (reflected_p_pol_vector, s_pol_vector), reflected_vector, n0, ray.element))
     if self.refracts:
-        rays.append(calc_ray(x1, amplitudes[1], (refracted_p_pol_vector, s_pol_vector), refracted_vector, n1))
+        rays.append(calc_ray(x1, amplitudes[1], (refracted_p_pol_vector, s_pol_vector), refracted_vector, n1, element1))
 
     return tuple(rays)
 
@@ -236,25 +259,7 @@ class Branch:
         else:
             raise ValueError(f'{len(self.children)} - cannot flatten.')
 
-@dataclass
-class TransformedElement:
-    root_to_local: np.ndarray
-    element: Element
 
-    def __post_init__(self):
-        self.local_to_root = np.linalg.inv(self.root_to_local)
-
-    def get_dielectric_tensor(self, lamb: float, x: Sequence[float]) -> np.ndarray:
-        xp = np.dot(x, self.root_to_local)
-        return get_dielectric_tensor(self.element.medium, lamb, xp)
-
-    def getnormal(self, x:Sequence[float]) -> np.ndarray:
-        xp = np.dot(x, self.root_to_local)
-        return np.dot(npscalar.getnormal(self.element.surface, xp), self.local_to_root)
-
-    def get_deflector(self, x:Sequence[float]) -> Deflector:
-        xp = np.dot(x, self.root_to_local)
-        return get_deflector(self.element, xp).transform(self.local_to_root)
 
 @get_dielectric_tensor.register
 def _(self: Assembly, lamb: float, x: Sequence[float]) -> np.ndarray:
@@ -280,7 +285,7 @@ def _get_transformed_element(self: Assembly, x) -> TransformedElement:
 def _process_ray(self: Assembly, ray:Ray, sphere_trace_kwargs:dict, spheretrace = npscalar.spheretrace) -> tuple:
     """Intersect ray with geometry, the deflect it."""
     # Ray travels from element/medium 0 to 1.
-    element0 = _get_transformed_element(self, ray.line.origin)
+    element0 = ray.element
     if element0 is None:
         trace = spheretrace(self.surface, ray.line.origin, ray.line.vector, sign=1., through=True,
             **sphere_trace_kwargs)
@@ -327,7 +332,7 @@ def _process_ray(self: Assembly, ray:Ray, sphere_trace_kwargs:dict, spheretrace 
                 # TODO assert deflectors are equal
 
     ray = ray.advance(trace.tm)
-    deflected_rays = deflect_ray(deflector, ray, x0, x1, tensor0, normal, tensor1)
+    deflected_rays = deflect_ray(deflector, ray, x0, x1, tensor0, normal, tensor1, element1)
     return trace.tm, deflected_rays
 
 def nonseq_trace(self: Assembly, start_ray:Ray, sphere_trace_kwargs_:dict=None, min_flux:float=None, num_deflections:int=None, spheretrace = npscalar.spheretrace) -> Branch:
@@ -351,10 +356,12 @@ def nonseq_trace(self: Assembly, start_ray:Ray, sphere_trace_kwargs_:dict=None, 
 @make_ray.register
 def _(self: Assembly, ox, oy, oz, vx, vy, vz, px, py, pz, lamb, flux=1, phase_origin=0):
     x = v4.to_vector((ox, oy, oz))
+    # TODO tidy
     dielectric = get_dielectric_tensor(self, lamb, x)
     assert is_isotropic(dielectric)
     n = dielectric[0, 0]**0.5
-    return make_ray(ox, oy, oz, vx, vy, vz, px, py, pz, n, flux, phase_origin, lamb)
+    element = _get_transformed_element(self, x)
+    return make_ray(ox, oy, oz, vx, vy, vz, px, py, pz, n, flux, phase_origin, lamb, element)
 
 
 

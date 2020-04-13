@@ -34,7 +34,7 @@ def get_rays(theta, phi) -> np.ndarray:
     vx = np.sin(theta)*np.cos(phi)
     vy = np.sin(theta)*np.sin(phi)
     vz = np.cos(theta)
-    incident_ray0 = rt2.make_ray(*object[:3], vx, vy, vz, 0, 1, 0, ne(lamb), 1, 0, lamb)
+    incident_ray0 = rt2.make_ray(assembly, *object[:3], vx, vy, vz, 0, 1, 0, lamb)
     rays = rt2.get_points(rt2.nonseq_trace(assembly, incident_ray0, sphere_trace_kwargs).flatten(), 2*f)[:, :3]
     return rays
 
