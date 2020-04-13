@@ -270,17 +270,43 @@ def _(self: Assembly, lamb: float, x: Sequence[float]) -> np.ndarray:
         return element.get_dielectric_tensor(lamb, x)
 
 def _get_transformed_element(self: Assembly, x) -> TransformedElement:
-    insides = []
-    for surface, d in npscalar.traverse(self.surface, x):
-        if d <= 0 and surface in self.elements:
-            insides.append(surface)
-    if len(insides) == 0:
-        return None
-    elif len(insides) == 1:
-        element = self.elements[insides[0]]
-        return TransformedElement(sdb.get_root_to_local(element.surface, x), element)
-    else:
-        raise ValueError(f'Point {x} is inside {len(insides)} elements.')
+    # insides = []
+    # for surface, d in npscalar.traverse(self.surface, x):
+    #     if d <= 0 and surface in self.elements:
+    #         insides.append(surface)
+    # if len(insides) == 0:
+    #     return None
+    # elif len(insides) == 1:
+    #     element = self.elements[insides[0]]
+    #     return TransformedElement(sdb.get_root_to_local(element.surface, x), element)
+    # else:
+    #     raise ValueError(f'Point {x} is inside {len(insides)} elements.')
+
+    #insides = []
+    # d0 = np.inf
+    # surface0 = None
+    # for surface, d in npscalar.traverse(self.surface, x):
+    #     if d <= d0:
+    #         d0 = d
+    #         surface0 = surface
+    # if d0 <= 0:
+    #     for surface, element in self.elements.items():
+    #         if surface0 in surface.descendants():
+    #             return TransformedElement(sdb.get_root_to_local(surface, x), element)
+
+    isdb = npscalar.identify(self.surface, x)
+    if isdb.d <= 0:
+        for surface, element in self.elements.items():
+            if isdb.surface in surface.descendants():
+                return TransformedElement(sdb.get_root_to_local(surface, x), element)
+
+    # if len(insides) == 0:
+    #     return None
+    # elif len(insides) == 1:
+    #     element = self.elements[insides[0]]
+    #     return TransformedElement(sdb.get_root_to_local(element.surface, x), element)
+    # else:
+    #     raise ValueError(f'Point {x} is inside {len(insides)} elements.')
 
 def _process_ray(self: Assembly, ray:Ray, sphere_trace_kwargs:dict, spheretrace = npscalar.spheretrace) -> tuple:
     """Intersect ray with geometry, the deflect it."""

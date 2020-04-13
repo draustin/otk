@@ -1,4 +1,5 @@
 import numpy as np
+from warnings import warn
 from .. import *
 from .base import *
 from ...v4 import *
@@ -17,6 +18,12 @@ def _(s:InfiniteCylinder, x):
 def _(s:InfiniteRectangularPrism, x):
     q = abs(x[:2] - s.center) - (s.width/2, s.height/2)
     return norm(np.maximum(q, 0.0)) + np.minimum(np.maximum(q[..., 0], q[..., 1]), 0.0)
+
+@identify.register
+def _(s: InfiniteRectangularPrism, x):
+    d = getsdb(s, x)
+    warn('Face not identified')
+    return ISDB(d, s, 0)
 
 @getsdb.register
 def _(s:Plane, x):
@@ -74,4 +81,24 @@ def _(s:Sag, x):
 def _(s: Box, x):
     q = abs(x[:3] - s.center) - (s.half_size - s.radius)
     return norm(np.maximum(q, 0.)) + min(max(q[0], max(q[1], q[2])), 0.0) - s.radius
+
+@identify.register
+def _(s: Box, x):
+    d = getsdb(s, x)
+    warn('Face not identified')
+    return ISDB(d, s, 0)
+
+# Primitives with only one face.
+@identify.register(Sag)
+@identify.register(ToroidalSag)
+@identify.register(ZemaxConic)
+@identify.register(BoundedParaboloid)
+@identify.register(SphericalSag)
+@identify.register(Hemisphere)
+@identify.register(Plane)
+@identify.register(InfiniteCylinder)
+@identify.register(Sphere)
+def _(surface:Primitive, x):
+    d = getsdb(surface, x)
+    return ISDB(d, surface, 0)
 

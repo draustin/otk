@@ -29,6 +29,10 @@ def norm(x):
 def gen_getsdb(surface):
     raise NotImplementedError(surface)
 
+# @singledispatch
+# def gen_getsdbi(surface):
+#     raise NotImplementedError
+
 @singledispatch
 def gen_getsag(sagfun):
     raise NotImplementedError(sagfun)
@@ -47,6 +51,21 @@ def gen_reduce(op, funs):
             return op(fun0(x), fun1(x))
     return result
 
+@njit
+def min_first(a, b):
+    if a[0] <= b[0]:
+        return a
+    else:
+        return b
+
+@njit
+def max_first(a, b):
+    if a[0] >= b[0]:
+        return a
+    else:
+        return b
+
+
 @gen_getsdb.register
 def _(u: UnionOp):
     # List doesn't work for some reason.
@@ -59,18 +78,21 @@ def _(u: UnionOp):
     #     return d
     return gen_reduce(min, gs)
 
+# @gen_getsdbi.register
+# def _(u: UnionOp):
+#     gs = [get_cached_getsdbi(child) for child in u.surfaces]
+#     return gen_reduce(min_first, gs)
+
+
 @gen_getsdb.register
 def _(surface: IntersectionOp):
     gs = tuple(get_cached_getsdb(child) for child in surface.surfaces)
-    # @njit("f8(f8[:])")
-    # def g(x):
-    #     d = gs[0](x)
-    #     #for child_g in gs[1:]:
-    #     #    d = max(d, child_g(x))
-    #     for i in range(1, len(gs)):
-    #         d = max(d, gs[i](x))
-    #     return d
     return gen_reduce(max, gs)
+
+# @gen_getsdbi.register
+# def _(surface: IntersectionOp):
+#     gs = tuple(get_cached_getsdbi(child) for child in surface.surfaces)
+#     return gen_reduce(max, gs)
 
 @gen_getsdb.register
 def _(surface: DifferenceOp):
@@ -80,6 +102,18 @@ def _(surface: DifferenceOp):
     def g(x):
         return max(g0(x), -g1(x))
     return g
+
+# @gen_getsdbi.register
+# def _(surface: DifferenceOp):
+#     g0 = get_cached_getsdbi(surface.surfaces[0])
+#     g1 = get_cached_getsdbi(surface.surfaces[1])
+#     @njit("f8(f8[:])")
+#     def g(x):
+#         di0 = g0(x)
+#         di1 = g1(x)
+#         di1 = -di1[0], di1[1]
+#         return max_first(di0, di1)
+#     return g
 
 @gen_getsdb.register
 def _(s:SegmentedRadial):

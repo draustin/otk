@@ -7,7 +7,7 @@ from ...v4 import norm, normalize
 from ..geometry import *
 
 __all__ = ['getsdb', 'identify', 'spheretrace', 'getnormal', 'getsag',
-    'traverse']
+    'traverse', 'ISDB']
 
 
 @dataclass
@@ -15,6 +15,24 @@ class ISDB:
     d: float
     surface: Surface
     face: int
+
+    def max(self, other):
+        if self.d >= other.d:
+            return self
+        else:
+            return other
+
+    def min(self, other):
+        if self.d <= other.d:
+            return self
+        else:
+            return other
+
+    def negate(self):
+        return ISDB(-self.d, self.surface, self.face)
+
+    def times(self, f: float):
+        return ISDB(self.d*f, self.surface, self.face)
 
 @singledispatch
 def getsdb(surface: Surface, x: Sequence[float]) -> float:
@@ -32,7 +50,7 @@ def identify(surface: Surface, x: Sequence[float]) -> ISDB:
     Args:
         x: Position - see getsdb.
     """
-    raise NotImplementedError()
+    raise NotImplementedError(surface)
 
 @singledispatch
 def getsag(s, x: Sequence[float]) -> float:
@@ -50,21 +68,6 @@ def getnormal(surface:Surface, x, h=1e-9) -> np.ndarray:
         np.asarray((-1, 1, -1, 0)), np.asarray((-1, -1, 1, 0)))
     return normalize(sum(k*getsdb(surface, x + k*h) for k in ks))
 
-@identify.register
-def _(surface:Primitive, x):
-    d = getsdb(surface, x)
-    return ISDB(d, surface, 0)
-
-@identify.register
-def _(s:Compound, x: np.ndarray) -> ISDB:
-    isdbs = [s.identify(x) for s in s.surfaces]
-    index = s.which(isdbs)
-    return isdbs[index]
-
-@singledispatch
-def which(s:Compound, isdbs: Sequence[ISDB]) -> int:
-    raise NotImplementedError()
-
 @getsdb.register
 def _(self:UnionOp, p):
     d = getsdb(self.surfaces[0], p)
@@ -72,15 +75,22 @@ def _(self:UnionOp, p):
         d = min(d, getsdb(surface, p))
     return d
 
-@which.register
-def _(self:UnionOp, isdbs: Sequence[ISDB]) -> int:
-    d0 = isdbs[0].d
-    index0 = 0
-    for index, isdb in zip(range(1, len(isdbs)), isdbs[1:]):
-        if isdb.d < d0:
-            d0 = isdb.d
-            index0 = index
-    return index0
+@identify.register
+def _(s: UnionOp, x):
+    isdb0 = identify(s.surfaces[0], x)
+    for child in s.surfaces[1:]:
+        isdb0 = isdb0.min(identify(child, x))
+    return isdb0
+
+# @which.register
+# def _(self:UnionOp, isdbs: Sequence[ISDB]) -> int:
+#     d0 = isdbs[0].d
+#     index0 = 0
+#     for index, isdb in zip(range(1, len(isdbs)), isdbs[1:]):
+#         if isdb.d < d0:
+#             d0 = isdb.d
+#             index0 = index
+#     return index0
 
 @singledispatch
 def traverse(s:Surface, x:Sequence[float]):
@@ -114,18 +124,25 @@ def _(self:DifferenceOp, x:Sequence[float]):
 def _(self:IntersectionOp, x):
     d = getsdb(self.surfaces[0], x)
     for surface in self.surfaces[1:]:
-        d = np.maximum(d, getsdb(surface, x))
+        d = max(d, getsdb(surface, x))
     return d
 
-@which.register
-def _(self:IntersectionOp, isdbs: Sequence[ISDB]) -> int:
-    d0 = isdbs[0].d
-    index0 = 0
-    for index, isdb in zip(range(1, len(isdbs)), isdbs[1:]):
-        if isdb.d > d0:
-            d0 = isdb.d
-            index0 = index
-    return index0
+@identify.register
+def _(s: IntersectionOp, x):
+    isdb0 = identify(s.surfaces[0], x)
+    for child in s.surfaces[1:]:
+        isdb0 = isdb0.max(identify(child, x))
+    return isdb0
+
+# @which.register
+# def _(self:IntersectionOp, isdbs: Sequence[ISDB]) -> int:
+#     d0 = isdbs[0].d
+#     index0 = 0
+#     for index, isdb in zip(range(1, len(isdbs)), isdbs[1:]):
+#         if isdb.d > d0:
+#             d0 = isdb.d
+#             index0 = index
+#     return index0
 
 @traverse.register
 def _(self:IntersectionOp, x:Sequence[float]):
@@ -142,6 +159,12 @@ def _(self:DifferenceOp, p) -> np.ndarray:
     d1 = getsdb(self.surfaces[1], p)
     return max(d0, -d1)
 
+@identify.register
+def _(s: DifferenceOp, x):
+    isdb0 = identify(s.surfaces[0], x)
+    isdb1 = identify(s.surfaces[1], x)
+    return isdb0.max(isdb1.negate())
+
 @getsdb.register
 def _(self:AffineOp, p:Sequence[float]) -> int:
     d = getsdb(self.surfaces[0], np.dot(p, self.invm))
@@ -151,6 +174,10 @@ def _(self:AffineOp, p:Sequence[float]) -> int:
 def _(self:AffineOp, x:Sequence[float]):
     d = yield from traverse(self.surfaces[0], np.dot(x, self.invm))
     return d*self.scale
+
+@identify.register
+def _(self: AffineOp, x):
+    return identify(self.surfaces[0], np.dot(x, self.invm)).times(self.scale)
 
 @getsdb.register
 def _(s:SegmentedRadial, x):
@@ -172,6 +199,14 @@ def _(s:SegmentedRadial, x):
         d = ds
     return d
 
+@identify.register
+def _(s: SegmentedRadial, x):
+    rho = norm(x[:2] - s.vertex)
+    for ss, r in zip(s.surfaces[:-1], s.radii):
+        if rho <= r:
+            return identify(ss, x)
+    return identify(s.surfaces[-1], x)
+
 @getsdb.register
 def _(s:FiniteRectangularArray, x):
     return getsdb(s.surfaces[0], s.transform(x))
@@ -179,6 +214,10 @@ def _(s:FiniteRectangularArray, x):
 @traverse.register
 def _(s:FiniteRectangularArray, x):
     return (yield from traverse(s.surfaces[0], s.transform(x)))
+
+@identify.register
+def _(s: FiniteRectangularArray, x):
+    return identify(s.surfaces[0], s.transform(x))
 
 def sum_weighted(w1, x1s, w2, x2s):
     a1 = w2/(w1 + w2)
