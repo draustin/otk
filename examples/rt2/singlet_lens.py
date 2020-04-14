@@ -47,7 +47,4 @@ rays_list = [get_rays(theta, phi) for theta, phi in itertools.product(thetas, ph
 
 with rt2.application():
     w = rt2.view_assembly(assembly)
-    w.eye_to_world = sdb.lookat((0, 0, 5*f), (0, 0, 0))
-    w.projection = sdb.Orthographic(4*r, 10*f)
-    w.epsilon = 1e-7 # mysterious artefacts for smaller values
     w.set_rays(rays_list)

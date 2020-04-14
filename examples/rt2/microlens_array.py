@@ -16,10 +16,8 @@ for y in np.linspace(-height/2, height/2, num_rays):
     rays = rt2.get_points(segments, 10e-3)[:, :3]
     rays_list.append(rays)
 
+# TODO after better (per-element?) rendering control is supported, make lenslets more visible by exaggerating lighting.
 with rt2.application():
-    w = rt2.view_assembly(assembly)
-    w.projection = sdb.Orthographic(8e-3, 0.1)
-    w.eye_to_world = sdb.lookat((-20e-3, 0, 2e-3), (0, 0, 2e-3))
-    w.epsilon = 1e-7 # mysterious artefacts for smaller values
+    w = rt2.view_assembly(assembly, projection_type='perspective')
     w.display_widget.set_rays(rays_list)
     w.show()

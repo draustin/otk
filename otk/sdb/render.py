@@ -2,14 +2,15 @@ from dataclasses import dataclass
 from functools import singledispatch
 from abc import ABC, abstractmethod
 import itertools
-from typing import Sequence, List
+from typing import Sequence, List, Tuple
 import numpy as np
-from ..v4b import *
+from .. import v4
+#from ..v4b import *
 from .npscalar import spheretrace
-from . import bounding
+from . import bounding, Surface
 
 __all__ = ['orthographic', 'projection', 'lookat', 'ndc2ray', 'pix2norm', 'shade_distance', 'raster', 'Scene',
-    'WireframeModel', 'make_wireframe', 'Projection', 'Orthographic', 'Perspective']
+    'WireframeModel', 'make_wireframe', 'Projection', 'Orthographic', 'Perspective', 'lookat_surface']
 
 # TODO rename to make_orthographic, and possibly move to h4
 """
@@ -41,8 +42,8 @@ def lookat(eye:Sequence[float], center:Sequence[float], y:Sequence[float]=(0.0, 
     center = np.asarray(center)
 
     # eye to center is -z axis.
-    z = normalize(eye - center)
-    x = normalize(np.cross(y, z))
+    z = v4.normalize(eye - center)
+    x = v4.normalize(np.cross(y, z))
     y = np.cross(z, x)
 
     return np.asarray((
@@ -87,7 +88,7 @@ def ndc2ray(nx:float, ny:float, invP:Sequence[Sequence[float]]):
     wf = wfp / wfp[3]
 
     vp = wf - w0
-    d_max = norm(vp)
+    d_max = v4.norm(vp)
     v = vp/d_max
 
     return w0, v, d_max
@@ -191,3 +192,35 @@ class Scene:
     eye: np.ndarray
     center: np.ndarray
     wireframe_models: List[WireframeModel]
+
+def lookat_surface(surface: Surface, projection_type: str, zhat: Sequence[float], aspect: float) -> Tuple[Projection, np.ndarray]:
+    """Generate projection and eye to world transformation for viewing a surface in its entirety.
+
+    The projection type is either 'orthographic' or 'perspective'. The eye is displaced from the center of the surface
+    along the positive zhat direction. The aspect ratio of the display (height/width in pixels) ensures the surface
+    fits verticallly as well as horizontally.
+    """
+    zhat = v4.normalize(v4.to_vector(zhat))
+    xhat = v4.cross(v4.yhat, zhat)
+    if np.isclose(v4.norm(xhat), 0):
+        xhat = np.cross(zhat, v4.zhat)
+    xhat = v4.normalize(xhat)
+    yhat = v4.cross(zhat, xhat)
+    e2w0 = np.stack((xhat, yhat, zhat, v4.origin))
+    w2e0 = np.linalg.inv(e2w0)
+    box = surface.get_aabb(w2e0)
+    center = box.center.dot(e2w0)
+    diag = v4.norm(box.size)
+    extra = diag*3
+    half_width = max(box.size[0]/2, box.size[1]/2/aspect)
+    if projection_type == 'orthographic':
+        projection = Orthographic(half_width, diag + 2*extra)
+        eye_to_world = np.stack((xhat, yhat, zhat, center + (diag/2 + extra)*zhat))
+    elif projection_type == 'perspective':
+        fov = np.pi/3
+        z = max(diag/2, box.size[2]/2 + half_width/np.tan(fov/2))
+        projection = Perspective(fov, diag/10, z + diag/2 + extra)
+        eye_to_world = np.stack((xhat, yhat, zhat, center + z*zhat))
+    else:
+        raise ValueError(f'Unknown projection type {projection_type}.')
+    return projection, eye_to_world

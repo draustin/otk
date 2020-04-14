@@ -44,12 +44,7 @@ cutout = sdb.IntersectionOp((sdb.Plane((1, 0, 0), 0), sdb.Plane((0, 1, 0), 0)))
 view_surface = sdb.DifferenceOp(assembly.surface, cutout, assembly.surface)
 
 with rt2.application():
-    # Create viewing widget.
     viewer = rt2.view_elements(elements, surface=view_surface)
-    size = singlet_sequence.center_length
-    viewer.projection = sdb.Orthographic(size*0.6, 1)
-    viewer.eye_to_world = lookat((-size*1.5, 0, size/2), (0, 0, size/2))
-    viewer.epsilon = 1e-4
     viewer.set_rays(traced_rays, colors)
 
 

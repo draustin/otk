@@ -6,11 +6,6 @@ try:
 except ImportError:
     numba = None
 
-xhat = np.asarray([1, 0, 0, 0])
-yhat = np.asarray([0, 1, 0, 0])
-zhat = np.asarray([0, 0, 1, 0])
-unit_vectors = xhat, yhat, zhat
-
 if numba is None:
     def dot(a, b):
         return np.dot(a[:3], b[:3])
@@ -87,3 +82,9 @@ def to_vector(x: Sequence[float]) -> np.ndarray:
         x = np.r_[x, 0.]
     assert is_vector(x)
     return x
+
+xhat = to_vector((1, 0, 0))
+yhat = to_vector((0, 1, 0))
+zhat = to_vector((0, 0, 1))
+origin = to_point((0, 0, 0))
+unit_vectors = xhat, yhat, zhat
