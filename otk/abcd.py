@@ -22,7 +22,16 @@ def curved_interface(n1, n2, R):
         n2: final refractive index
         R: radius of curvature, >0 for convex
     """
-    return [[1, 0], [(n1 - n2)/(R*n2), n1/n2]]
+    return np.asarray([[1, 0], [(n1 - n2)/(R*n2), n1/n2]])
+
+def interface(n1, n2):
+    """
+    Args:
+        n1: incident refractive index
+        n2: final refractive index
+        R: radius of curvature, >0 for convex
+    """
+    return np.asarray([[1, 0], [0, n1/n2]])
 
 
 def thick_lens(n2, r1, r2, t, n1=1):
