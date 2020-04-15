@@ -5,14 +5,14 @@ from ..draw2.draw2_cairo import draw
 
 __all__ = ['draw_ray_trace', 'draw_elements']
 
-def draw_ray_trace(r0: Sequence[float], elements: Sequence[Element], ctx: cairo.Context):
+def draw_ray_trace(r0: Sequence[float], elements: Sequence[Element], ctx: cairo.Context, scale: float):
     ctx.save()
     r = r0
     for element in elements:
-        ctx.move_to(0, r[0])
-        ctx.translate(element.thickness, 0)
+        ctx.move_to(0, r[0]*scale)
+        ctx.translate(element.thickness*scale, 0)
         rp = element.matrix.dot(r)
-        ctx.line_to(0, rp[0])
+        ctx.line_to(0, rp[0]*scale)
         ctx.stroke()
         r = rp
     ctx.restore()
