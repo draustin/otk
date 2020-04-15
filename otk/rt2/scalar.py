@@ -21,7 +21,7 @@ from .. sdb import numba as sdb_numba
 from . import *
 
 __all__ = ['Line', 'Ray', 'make_line', 'make_ray', 'perfect_refractor', 'Branch', 'get_points',
-    'get_deflector', 'intersect', 'Segment', 'nonseq_trace', 'set_backend']
+    'get_deflector', 'intersect', 'Segment', 'nonseq_trace', 'set_backend', 'form_ray']
 
 backend = npscalar
 def set_backend(module):
@@ -145,8 +145,8 @@ def _(r:SimpleElement, x:Sequence[float]) -> Deflector:
     return r.deflector
 
 @singledispatch
-def get_dielectric_tensor(self:Medium, lamb: float, x: Sequence[float]) -> np.ndarray:
-    raise NotImplementedError(self)
+def get_dielectric_tensor(obj, lamb: float, x: Sequence[float]) -> np.ndarray:
+    raise NotImplementedError(obj)
 
 @get_dielectric_tensor.register
 def _(self:UniformIsotropic, lamb: float, x: Sequence[float]) -> np.ndarray:
@@ -394,6 +394,15 @@ def _(self: Assembly, ox, oy, oz, vx, vy, vz, px, py, pz, lamb, flux=1, phase_or
     n = dielectric[0, 0]**0.5
     element = _get_transformed_element(self, x)
     return make_ray(ox, oy, oz, vx, vy, vz, px, py, pz, n, flux, phase_origin, lamb, element)
+
+def form_ray(assembly: Assembly, line: Line, pol: np.ndarray, lamb: float, flux: float=1., phase_origin: float=0.):
+    dielectric = get_dielectric_tensor(assembly, lamb, line.origin)
+    assert is_isotropic(dielectric)
+    n = dielectric[0, 0]**0.5
+    k = line.vector*n*2*np.pi/lamb
+    element = _get_transformed_element(assembly, line.origin)
+    return Ray(line, k, pol, flux, phase_origin, lamb, element)
+
 
 
 
