@@ -193,6 +193,15 @@ class Scene:
     center: np.ndarray
     wireframe_models: List[WireframeModel]
 
+    @classmethod
+    def make(cls, name: str, sdb_glsl: str, z_near: float, z_far: float, eye: Sequence[float], center: Sequence[float], wireframe_models: Sequence[WireframeModel]):
+        eye = np.array(eye, float)
+        assert eye.shape == (3,)
+        center = np.array(center, float)
+        assert center.shape == (3,)
+        wireframe_models = list(wireframe_models)
+        return cls(name, sdb_glsl, z_near, z_far, eye, center, wireframe_models)
+
 def lookat_surface(surface: Surface, projection_type: str, zhat: Sequence[float], aspect: float) -> Tuple[Projection, np.ndarray]:
     """Generate projection and eye to world transformation for viewing a surface in its entirety.
 

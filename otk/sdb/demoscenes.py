@@ -59,7 +59,7 @@ def make_primitives():
     z_eye = max(centers.num_columns - 1, centers.row)*centers.spacing*2
     center = centers.center
     eye = center + (0, 0, z_eye)
-    return Scene('primitives', sdb_glsl, 0.01, z_eye*5, eye, center, wireframe_models)
+    return Scene.make('primitives', sdb_glsl, 0.01, z_eye*5, eye, center, wireframe_models)
 
 def make_spherical_singlets():
     centers = Centers(3, 2)
@@ -82,14 +82,14 @@ def make_spherical_singlets():
     z_eye = max(centers.num_columns - 1, centers.row)*centers.spacing*1.5
     center = centers.center
     eye = center + (0, 0, z_eye)
-    return Scene('spherical singlets', sdb_glsl, 0.01, z_eye*5, eye, center, wireframe_models)
+    return Scene.make('spherical singlets', sdb_glsl, 0.01, z_eye*5, eye, center, wireframe_models)
 
 def make_lens_array():
     surface = make_spherical_singlet_square_array(1, -1.5, 0.8, (0.5, 1), (16, 8))
     all_properties = {s:dict(edge_width=0.01, edge_color=(0.3, 0.3, 0.3), surface_color=(0, 0.5, 1)) for s in surface.descendants()}
     sdb_glsl = gen_get_all_recursive(surface, all_properties)
     wireframe_model = make_wireframe(surface.get_aabb(np.eye(4)), (0, 0, 0))
-    return Scene('lens array', sdb_glsl, 0.01, 64, np.asarray((0, -8, 16)), np.asarray((0, 0, 0)), [wireframe_model])
+    return Scene.make('lens array', sdb_glsl, 0.01, 64, np.asarray((0, -8, 16)), np.asarray((0, 0, 0)), [wireframe_model])
 
 def make_sags():
     centers = Centers(2, 3)
@@ -149,7 +149,7 @@ def make_sags():
 
     #wireframe_models = [make_wireframe(s.get_aabb(np.eye(4)), (0, 0, 0)) for s in surfaces]
 
-    return Scene('sag functions', sdb_glsl, 0.01, 16, center + np.asarray((0, -4, 8)), center, [])
+    return Scene.make('sag functions', sdb_glsl, 0.01, 16, center + np.asarray((0, -4, 8)), center, [])
 
 def make_conic_singlets():
     # all combinations of convex/concave/plano on both sides, alternating square and round
@@ -204,7 +204,7 @@ def make_combinations():
 
     wireframe_models = [make_wireframe(s.get_aabb(np.eye(4)), (0, 0, 0)) for s in surfaces]
 
-    return Scene('combinations', sdb_glsl, 0.01, z_eye*5, eye, center, wireframe_models)
+    return Scene.make('combinations', sdb_glsl, 0.01, z_eye*5, eye, center, wireframe_models)
 
 def make_conic():
     surfaces = []
@@ -228,7 +228,7 @@ def make_conic():
 
     wireframe_models = [make_wireframe(s.get_aabb(np.eye(4)), (0, 0, 0)) for s in surfaces]
 
-    return Scene('conic', sdb_glsl, 0.01, 10, np.asarray((0, 0, 5)), np.asarray((0, 0, 0)), wireframe_models)
+    return Scene.make('conic', sdb_glsl, 0.01, 10, np.asarray((0, 0, 5)), np.asarray((0, 0, 0)), wireframe_models)
 
 def make_all_scenes():
     return [make_primitives(), make_spherical_singlets(), make_lens_array(), make_combinations(), make_conic(), make_sags()]

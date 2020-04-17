@@ -14,9 +14,7 @@ with open(os.path.join(os.path.dirname(__file__), 'sdf.glsl'), 'rt') as f:
 with open(os.path.join(os.path.dirname(__file__), 'trace.glsl'), 'rt') as f:
     trace_glsl = f.read()
 
-trace_vertex_source = """
-#version 120
-
+trace_vertex_source = """\
 attribute vec2 position;
 void main (void)
 {
@@ -25,7 +23,6 @@ void main (void)
 """
 
 ray_vertex_source = """
-#version 120
 uniform mat4 world_to_clip;
 
 attribute vec3 position;
@@ -35,7 +32,6 @@ void main (void) {
 """
 
 ray_fragment_source = """
-#version 120
 uniform vec3 color;
 void main() {
     gl_FragColor = vec4(color, 1);
@@ -117,7 +113,7 @@ vec3 getColor{id}(in vec4 x) {{
     dp = getSDB{ids[sp]:d}(x);
     normalp = getNormal{ids[sp]}(x);
     costheta = dot(normal, normalp);
-    if (abs(dp) + abs(d) < {edge_width}*sqrt(1 - costheta*costheta))
+    if (abs(dp) + abs(d) < {edge_width}*sqrt(1. - costheta*costheta))
         color = {gen_vec3(edge_color)};
     else if (dp < d)
         color = getColor{ids[sp]}(x);
@@ -159,7 +155,7 @@ vec3 getColor{id}(in vec4 x) {{
     dp = getSDB{ids[sp]:d}(x);
     normalp = getNormal{ids[sp]}(x);
     costheta = dot(normal, normalp);
-    if (abs(dp) + abs(d) < {edge_width}*sqrt(1 - costheta*costheta))
+    if (abs(dp) + abs(d) < {edge_width}*sqrt(1. - costheta*costheta))
         color = {gen_vec3(edge_color)};
     else if (dp > d)
         color = getColor{ids[sp]}(x);
@@ -194,7 +190,7 @@ def _(s:DifferenceOp, ids:Mapping, properties:Mapping) -> str:
             float costheta = dot(getNormal{id0}(x), getNormal{id1}(x));
             if (dd < {-edge_width})
                 return getColor{id1}(x);
-            else if (abs(d0) + abs(d1) <= {edge_width}*sqrt(1 - costheta*costheta))
+            else if (abs(d0) + abs(d1) <= {edge_width}*sqrt(1. - costheta*costheta))
                 return {gen_vec3(edge_color)};
             else
                 return getColor{id0}(x);

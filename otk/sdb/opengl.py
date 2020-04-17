@@ -74,7 +74,7 @@ def setup_trace_position_buffer():
 
 def make_sphere_trace_program(sdb_glsl: str):
     fragment_source = glsl.sdf_glsl + sdb_glsl + glsl.trace_glsl
-    program = link_program(glsl.trace_vertex_source, fragment_source)
+    program = link_program('#version 120\n\n' + glsl.trace_vertex_source, '#version 120\n\n' + fragment_source)
     position_buffer = setup_trace_position_buffer()
     return SphereTraceProgram(program, position_buffer)
 
@@ -125,7 +125,7 @@ class RayProgram:
 
 
 def make_ray_program(max_num_points:int):
-    program = link_program(glsl.ray_vertex_source, glsl.ray_fragment_source)
+    program = link_program('#version 120\n\n' + glsl.ray_vertex_source, '#version 120\n\n' + glsl.ray_fragment_source)
 
     point_buffer = GL.glGenBuffers(1)
     GL.glBindBuffer(GL.GL_ARRAY_BUFFER, point_buffer)
