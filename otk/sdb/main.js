@@ -26,7 +26,7 @@ function init() {
     canvas.addEventListener('mousedown', handleMouseDown, false);
     canvas.addEventListener('mousemove', handleMouseMove, false);
     canvas.addEventListener('mouseup', handleMouseUp, false);
-    //canvas.addEventListener("mousewheel", handleMouseWheel, false); // mousewheel duplicates dblclick function
+    canvas.addEventListener("wheel", handleMouseWheel, false); // mousewheel duplicates dblclick function
     //canvas.addEventListener("DOMMouseScroll", handleMouseWheel, false); // for Firefox
 
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
@@ -93,24 +93,40 @@ function handleMouseDown(event) {
 
 function handleMouseMove(event) {
     if (mouse_press_event != null) {
-        var dx_p = event.clientX - mouse_press_event.clientX;
-        var dy_p = event.clientY - mouse_press_event.clientY;
+        var dx_p = event.screenX - mouse_press_event.screenX;
+        var dy_p = event.screenY - mouse_press_event.screenY;
         var viewport = gl.getParameter(gl.VIEWPORT);
-        var dx_ndc = 2*(dx_p - viewport[0])/viewport[2];
-        var dy_ndc = 2*(dy_p - viewport[1])/viewport[3];
+        var dx_ndc = 2*dx_p/viewport[2];
+        var dy_ndc = -2*dy_p/viewport[3];
+        var delta_ndc = vec4.fromValues(dx_ndc, dy_ndc, 0., 0.0);
+        var delta_eye = vec4.create();
+        mulVecMat4(delta_eye, delta_ndc, clip_to_eye);
 
-        if (mouse_press_event.which == 1) {
-            var ndc = event_to_ndc(event);
-            ndc[2] = mouse_press_ndc[2];
-            eye = ndc_to_eye(ndc);
-            delta = eye - mouse_press_eye;
-            transform = mat4.make_translation(-delta[0], -delta[1], 0.);
+        if (mouse_press_event.which == 1) {    
+            var transform = make_translation(-delta_eye[0], -delta_eye[1], -delta_eye[2]);
             mat4.mul(eye_to_world, transform, mouse_press_eye_to_world);
-            window.requestAnimationFrame(render, canvas);
+        } else if (mouse_press_event.which == 2) {
+           var len = Math.sqrt(dx_ndc*dx_ndc + dy_ndc*dy_ndc);
+           var axis = vec3.fromValues(-dy_ndc/len, dx_ndc/len, 0);
+           var transform = mat4.create();
+           mat4.fromRotation(transform, len*2, axis);
+           mat4.mul(eye_to_world, transform, mouse_press_eye_to_world);
         }
+        window.requestAnimationFrame(render, canvas);
     }
 }
 
 function handleMouseUp(event) {
     mouse_press_event = null;
+}
+
+function handleMouseWheel(event) {
+    var by = 1.5;
+    var factor;
+    if (event.deltaY > 0)
+        factor = by;
+    else if (event.deltaY < 0)
+        factor = 1/by;
+    projection = projection.zoom(factor);
+    window.requestAnimationFrame(render, canvas);
 }

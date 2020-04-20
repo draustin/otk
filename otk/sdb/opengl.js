@@ -107,3 +107,8 @@ Perspective.prototype.eye_to_clip = function(aspect) {
     var m = mat4.create();
     return mat4.transpose(m, mat4.frustum(m, -half_width, half_width, -half_height, half_height, this.z_near, this.z_far));
 }
+
+Perspective.prototype.zoom = function(factor) {
+    var fovp = Math.atan(Math.tan(this.fov/2)/factor)*2;
+    return new Perspective(fovp, this.z_near, this.z_far);
+}
