@@ -15,7 +15,12 @@ with open(os.path.join(os.path.dirname(__file__), 'trace.glsl'), 'rt') as f:
     trace_glsl = f.read()
 
 trace_vertex_source = """\
-attribute vec2 position;
+#if __VERSION__ == 300
+    in vec2 position;
+#else
+    attribute vec2 position;
+#endif
+
 void main (void)
 {
     gl_Position = vec4(position, 0.0, 1.0);

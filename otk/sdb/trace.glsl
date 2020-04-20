@@ -39,6 +39,10 @@ SphereTrace sphereTrace(in vec4 x0, in vec4 v, in float t_max)
 uniform vec3 light_direction;
 uniform vec4 background_color;
 
+#if __VERSION__ == 300
+    out vec4 FragColor;
+#endif
+
 void main()
 {
     vec2 ndc = 2.0*gl_FragCoord.xy/iResolution.xy - 1.0;
@@ -55,13 +59,23 @@ void main()
     {
         vec3 surface_color = getColor0(trace.x);
         vec4 normal_world = getNormal(trace.x);
-        gl_FragColor = vec4((max(dot(normal_world.xyz, light_direction), 0.) + 0.1)*surface_color, 1.);
+        #if __VERSION__ == 300
+            FragColor
+        #else
+            gl_FragColor
+        #endif
+        = vec4((max(dot(normal_world.xyz, light_direction), 0.) + 0.1)*surface_color, 1.);
         vec4 x_clip = trace.x*world_to_clip;
         // gl_FragDepth is in window-space coordinates, so its range is gl_DepthRange.near to gl_DepthRange.far.
         gl_FragDepth = (x_clip.z/x_clip.w*gl_DepthRange.diff + gl_DepthRange.near + gl_DepthRange.far)/2.;
     }
     else {
-        gl_FragColor = background_color;
+        #if __VERSION__ == 300
+            FragColor
+        #else
+            gl_FragColor
+        #endif
+        = background_color;
         gl_FragDepth = gl_DepthRange.far;
     }
 //    float ss = float(trace.steps)/max_steps;

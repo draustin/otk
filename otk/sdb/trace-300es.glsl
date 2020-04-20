@@ -66,6 +66,4 @@ void main()
         FragColor = background_color;
         gl_FragDepth = gl_DepthRange.far;
     }
-//    float ss = float(trace.steps)/max_steps;
-//    gl_FragColor = vec4(ss, ss, ss, 1.0);
 }

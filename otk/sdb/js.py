@@ -1,127 +1,85 @@
 """Display models in web pages using WebGL."""
 import os
+import shutil
+from typing import Sequence
+from functools import singledispatch
+import numpy as np
 from textwrap import dedent
-from . import glsl
+from . import glsl, render
 
-def gen_html(sdb_glsl: str):
+@singledispatch
+def gen_js_expr(obj) -> str:
+    raise NotImplementedError(obj)
+
+@gen_js_expr.register
+def _(obj: render.Orthographic):
+    return f'new Orthographic({obj.half_width}, {obj.z_far})'
+
+@gen_js_expr.register
+def _(obj: render.Perspective):
+    return f'new Perspective({obj.fov}, {obj.z_near}, {obj.z_far})'
+
+@gen_js_expr.register
+def _(obj: np.ndarray):
+    if obj.shape == (4, 4):
+        return 'glMatrix.mat4.fromValues(' + ', '.join(str(e) for e in obj.flatten(order='F')) + ')'
+    elif obj.shape == (4,):
+        return 'glMatrix.vec4.fromValues(' + ', '.join(str(e) for e in obj) + ')'
+    else:
+        raise NotImplementedError(obj)
+
+def gen_html(sdb_glsl: str, eye_to_world: Sequence[Sequence[float]], projection: render.Projection, max_steps: int, epsilon: float, background_color: Sequence[float], filename: str):
     """Under construction.
 
     Next step is to adapt opengl.py to Javascript to enable camera movement.
     Would be nice for most of the Javascript to be in a separate file.
     """
+    eye_to_world = np.asarray(eye_to_world, float)
+    assert eye_to_world.shape == (4, 4)
+    background_color = np.asarray(background_color, float)
+    assert background_color.shape == (4,)
 
-    # TODO would be nice to only have one file... maybe GLSL preprocessor switches?
-    with open(os.path.join(os.path.dirname(__file__), 'trace-300es.glsl'), 'rt') as f:
-        trace_glsl = f.read()
+    js_path = os.path.splitext(filename)[0] + '-js'
+    os.makedirs(js_path, exist_ok=True)
+    with open(os.path.join(js_path, 'scene.js'), 'wt') as f:
+        f.write(f'// Generated scene data and shader codes for {filename}.\n')
+        f.write(f'var eye_to_world = {gen_js_expr(eye_to_world)};\n')
+        f.write(f'var projection = {gen_js_expr(projection)};\n')
+        f.write(f'var max_steps = {max_steps};\n')
+        f.write(f'var epsilon = {epsilon};\n')
+        f.write(f'var background_color = {gen_js_expr(background_color)};\n')
+        f.write('var trace_vertex_source = `\n')
+        f.write(glsl.trace_vertex_source)
+        f.write('`;\n')
+        f.write('var sdf_glsl = `\n')
+        f.write(glsl.sdf_glsl)
+        f.write('`;\n')
+        f.write('var trace_glsl = `\n')
+        f.write(glsl.trace_glsl)
+        f.write('`;\n')
+        f.write('var sdb_glsl = `\n')
+        f.write(sdb_glsl)
+        f.write('`;\n')
 
-    fragment_source = glsl.sdf_glsl + sdb_glsl + trace_glsl
-    return (dedent("""\
-    
+    shutil.copy(os.path.join(os.path.dirname(__file__), 'opengl.js'), js_path)
+    shutil.copy(os.path.join(os.path.dirname(__file__), 'gl-matrix-min.js'), js_path)
+    shutil.copy(os.path.join(os.path.dirname(__file__), 'gl-matrix-ext.js'), js_path)
+    shutil.copy(os.path.join(os.path.dirname(__file__), 'main.js'), js_path)
+
+    js_dir = os.path.basename(js_path)
+
+    with open(filename, 'wt') as f:
+        f.write(dedent(f"""\
     <!DOCTYPE html>
 
     <html>
     <body>
-
-    <script type="text/javascript">// <![CDATA[
-
-    var gl;
-    var canvas;
-    var buffer;
     
-    var shaderScript;
-    var shaderSource;
-    var vertexShader;
-    var fragmentShader;
-    
-    window.onload = init;
-    
-    function init() {
-    
-    canvas        = document.getElementById('glscreen');
-    gl            = canvas.getContext('webgl2');
-    canvas.width  = 640;
-    canvas.height = 480;
-    
-    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
-    
-    buffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.bufferData(
-    gl.ARRAY_BUFFER,
-    new Float32Array([
-      -1.0, -1.0,
-       1.0, -1.0,
-      -1.0,  1.0,
-      -1.0,  1.0,
-       1.0, -1.0,
-       1.0,  1.0]),
-    gl.STATIC_DRAW
-    );
-    
-    shaderScript = document.getElementById("2d-vertex-shader");
-    shaderSource = shaderScript.text;
-    vertexShader = gl.createShader(gl.VERTEX_SHADER);
-    gl.shaderSource(vertexShader, shaderSource);
-    gl.compileShader(vertexShader);
-    var compilationLog = gl.getShaderInfoLog(vertexShader);
-    console.log('Vertex shader compiler log: ' + compilationLog);
-    
-    shaderScript   = document.getElementById("2d-fragment-shader");
-    shaderSource   = shaderScript.text;
-    fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fragmentShader, shaderSource);
-    gl.compileShader(fragmentShader);
-    var compilationLog = gl.getShaderInfoLog(fragmentShader);
-    console.log('Fragment shader compiler log: ' + compilationLog);
-    
-    program = gl.createProgram();
-    gl.attachShader(program, vertexShader);
-    gl.attachShader(program, fragmentShader);
-    gl.linkProgram(program);
-    gl.useProgram(program);
-    
-    
-    
-    render();
-    
-    }
-    
-    function render() {
-    
-    window.requestAnimationFrame(render, canvas);
-    
-    gl.clearColor(1.0, 0.0, 0.0, 1.0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    positionLocation = gl.getAttribLocation(program, "a_position");
-    gl.enableVertexAttribArray(positionLocation);
-    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-    
-    }
-
-    // ]]>
-    </script>
-    
-
-    <script id="2d-vertex-shader" type="x-shader/x-vertex">#version 300 es
-    in vec2 a_position;
-    void main() {
-        gl_Position = vec4(a_position, 0, 1);
-    }
-    </script>
-    
-    <script id="2d-fragment-shader" type="x-shader/x-fragment">#version 300 es
-    
-    #ifdef GL_FRAGMENT_PRECISION_HIGH
-      precision highp float;
-    #else
-      precision mediump float;
-    #endif
-    precision mediump int;\n\n""") +
-    fragment_source +
-    dedent(f"""\
-    
-    </script>
+    <script type="text/javascript" src="{js_dir}/gl-matrix-min.js"></script>
+    <script type="text/javascript" src="{js_dir}/gl-matrix-ext.js"></script>
+    <script type="text/javascript" src="{js_dir}/opengl.js"></script>
+    <script type="text/javascript" src="{js_dir}/scene.js"></script>
+    <script type="text/javascript" src="{js_dir}/main.js"></script>
     
     <canvas id="glscreen"></canvas>
     
