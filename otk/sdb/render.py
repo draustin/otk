@@ -24,7 +24,7 @@ def orthographic(l:float, r:float, b:float, t:float, n:float, f:float):
         (0,         0,          -2/(f - n),  -(f + n)/(f - n)),
         (0,         0,          0,           1))).T
 
-# TODO rename to make_perspective, and possibly move to h4
+# TODO rename to make_perspective or frustum, and possibly move to h4
 """
 https://lmb.informatik.uni-freiburg.de/people/reisert/opengl/doc/glFrustum.html
 http://www.songho.ca/opengl/gl_projectionmatrix.html
