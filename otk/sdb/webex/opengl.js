@@ -80,8 +80,46 @@ SphereTraceProgram.prototype.draw = function(eye_to_world, eye_to_clip, resoluti
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
 
-// function orthographic(l, r, b, t, n, f) {
-//     return mat4.fromValues(2*(r - l), 0, 0, 0, 0, 2/(t -b), 0, 0, 0, 0, -2/(f - n), 0, -(r + l)/(r - l), -(t + b)/(t - b), -(f + n)/(f - n), 1); 
+function RayProgram(max_num_points) {
+    var fragment_source = `#version 300 es
+
+    #ifdef GL_FRAGMENT_PRECISION_HIGH
+        precision highp float;
+    #else
+        precision mediump float;
+    #endif
+    precision mediump int;
+    ` + ray_fragment_source;
+    this.program = link_program('#version 300 es\n\n' + ray_vertex_source, fragment_source);
+    this.point_buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, point_buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, max_num_points*12, gl.STATIC_DRAW);
+
+    this.max_num_points = max_num_points;
+}
+
+// Started writing this, then decided that it's too much work for now.
+// RayProgram.prototype.set_rays = function(rays, colors) {
+//     // rays is array of array of vec3.
+//     // colors is array.
+// var buffer_data = [];
+//     var num_points = 0;
+//     for (ray in rays) {
+//         num_points += ray.length;
+//     }
+//     if (num_points > this.max_num_points) {
+//         console.warn('Number of points exceeds maximum.')
+//     }
+//     var buffer_data = Float32Array(num_points*3);
+//     var first = 0;
+//     var indices = [];
+//     for (ray of rays) {
+//         for (point of ray) {
+//             for 
+//         }
+//         buffer_data[first]
+
+//     }
 // }
 
 function Orthographic(half_width, z_far) {

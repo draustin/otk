@@ -27,6 +27,7 @@ void main (void)
 }
 """
 
+# TODO putting combining these into RayProgram.
 ray_vertex_source = """
 uniform mat4 world_to_clip;
 

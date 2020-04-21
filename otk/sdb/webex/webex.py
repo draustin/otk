@@ -1,11 +1,10 @@
-"""Display models in web pages using WebGL."""
 import os
 import shutil
 from typing import Sequence
 from functools import singledispatch
 import numpy as np
 from textwrap import dedent
-from . import glsl, render
+from .. import glsl, render
 
 @singledispatch
 def gen_js_expr(obj) -> str:
@@ -29,10 +28,9 @@ def _(obj: np.ndarray):
         raise NotImplementedError(obj)
 
 def gen_html(sdb_glsl: str, eye_to_world: Sequence[Sequence[float]], projection: render.Projection, max_steps: int, epsilon: float, background_color: Sequence[float], filename: str):
-    """Under construction.
+    """Generate HTML & supporting files for displaying a scene with given signed distance bound GLSL.
 
-    Next step is to adapt opengl.py to Javascript to enable camera movement.
-    Would be nice for most of the Javascript to be in a separate file.
+    The GLSL containing getSDB0 and getColor0 is given by sdb_glsl.
     """
     eye_to_world = np.asarray(eye_to_world, float)
     assert eye_to_world.shape == (4, 4)
@@ -48,18 +46,31 @@ def gen_html(sdb_glsl: str, eye_to_world: Sequence[Sequence[float]], projection:
         f.write(f'var max_steps = {max_steps};\n')
         f.write(f'var epsilon = {epsilon};\n')
         f.write(f'var background_color = {gen_js_expr(background_color)};\n')
+
         f.write('var trace_vertex_source = `\n')
         f.write(glsl.trace_vertex_source)
         f.write('`;\n')
+
         f.write('var sdf_glsl = `\n')
         f.write(glsl.sdf_glsl)
         f.write('`;\n')
+
         f.write('var trace_glsl = `\n')
         f.write(glsl.trace_glsl)
         f.write('`;\n')
+
         f.write('var sdb_glsl = `\n')
         f.write(sdb_glsl)
         f.write('`;\n')
+
+        f.write('var ray_vertex_source = `\n')
+        f.write(glsl.ray_vertex_source)
+        f.write('`;\n')
+
+        f.write('var ray_fragment_source = `\n')
+        f.write(glsl.ray_fragment_source)
+        f.write('`;\n')
+
 
     shutil.copy(os.path.join(os.path.dirname(__file__), 'opengl.js'), js_path)
     shutil.copy(os.path.join(os.path.dirname(__file__), 'gl-matrix-min.js'), js_path)
