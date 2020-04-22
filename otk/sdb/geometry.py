@@ -242,10 +242,10 @@ class SagFunction(ABC):
         pass
 
 class Sag(Primitive):
-    def __init__(self, sagfun: SagFunction, side: float = 1, origin: Sequence[float] = None, parent: Surface = None):
+    def __init__(self, sagfun: SagFunction, side: float = 1., origin: Sequence[float] = None, parent: Surface = None):
         Primitive.__init__(self, parent)
         self.sagfun = sagfun
-        self.side = side
+        self.side = float(side)
         if origin is None:
             origin = 0, 0, 0
         origin = np.array(origin, float)
