@@ -43,6 +43,9 @@ for xy, color in zip(np.linspace(0, field_half_width, num_field_points), mcolors
 cutout = sdb.IntersectionOp((sdb.Plane((1, 0, 0), 0), sdb.Plane((0, 1, 0), 0)))
 view_surface = sdb.DifferenceOp(assembly.surface, cutout, assembly.surface)
 
+# Create HTML of scene.
+rt2.gen_scene_html('conic_telecentric_lens.html', elements, surface=view_surface, rays=traced_rays, colors=colors)
+
 with rt2.application():
     viewer = rt2.view_elements(elements, surface=view_surface)
     viewer.set_rays(traced_rays, colors)

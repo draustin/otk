@@ -18,10 +18,10 @@ window.onload = init;
 function init() {
     canvas        = document.getElementById('glscreen');
     // https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/getContext
-    // preserve for picking depth
+    // TODO preserve for picking depth??
     gl            = canvas.getContext('webgl2', {depth: true, preserveDrawingBuffer: true});
-    canvas.width  = 640;
-    canvas.height = 480;
+    // canvas.width  = 640;
+    // canvas.height = 480;
     
     // https://www.cs.colostate.edu/~anderson/newsite/javascript-zoom.html
     canvas.addEventListener('mousedown', handleMouseDown, false);
@@ -30,17 +30,28 @@ function init() {
     canvas.addEventListener("wheel", handleMouseWheel, false); // mousewheel duplicates dblclick function
     //canvas.addEventListener("DOMMouseScroll", handleMouseWheel, false); // for Firefox
 
-    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
-
     trace_program = new SphereTraceProgram(sdb_glsl);
     ray_program = new RayProgram();
     ray_program.set_rays(rays);
 
     render();
+    //resizeCanvas();
+}
+
+function resizeCanvas() {
+    var width = canvas.clientWidth;
+    var height = canvas.clientHeight;
+    if (canvas.width != width ||
+        canvas.height != height) {
+      canvas.width = width;
+      canvas.height = height;
+  }
 }
 
 // Port of ShereTraceRender.paintGL.
 function render() {
+    resizeCanvas();
+    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
 
     //window.requestAnimationFrame(render, canvas);
 

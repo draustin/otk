@@ -198,7 +198,7 @@ class Plane(Primitive):
     def __init__(self, n:Sequence[float], c:float, parent: Surface = None):
         Primitive.__init__(self, parent)
         self.n = v4.normalize(v4.to_vector(n))[:3]
-        self.c = c
+        self.c = float(c)
 
 class Hemisphere(Primitive):
     def __init__(self, r:float, o:Sequence[float]=None, sign:float=1, parent: Surface = None):

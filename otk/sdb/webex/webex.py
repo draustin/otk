@@ -28,9 +28,14 @@ def gen_js_vec4(v: Sequence[float]) -> str:
     assert v.shape == (4,)
     return 'glMatrix.vec4.fromValues(' + ', '.join(str(e) for e in v) + ')'
 
+def gen_js_vec3(v: Sequence[float]) -> str:
+    v = np.asarray(v, float)
+    assert v.shape == (3,)
+    return 'glMatrix.vec3.fromValues(' + ', '.join(str(e) for e in v) + ')'
+
 def gen_js_Float32Array(a: np.ndarray) -> str:
     assert a.ndim == 1
-    return 'Float32Array([' + ', '.join(str(e) for e in a) + '])'
+    return 'new Float32Array([' + ', '.join(str(e) for e in a) + '])'
 
 def gen_js_ray(points: Sequence[Sequence[float]], color: Sequence[float]) -> str:
     points = np.asarray(points, float)
@@ -38,7 +43,8 @@ def gen_js_ray(points: Sequence[Sequence[float]], color: Sequence[float]) -> str
     assert points.shape[1] == 3
     color = np.asarray(color, float)
     assert color.shape == (3,)
-    return f'{{points: {gen_js_Float32Array(points.ravel())}, color: {gen_js_Float32Array(color)}}}'
+    points_str = '[' + ', '.join(gen_js_vec3(point) for point in points) + ']'
+    return f'{{points: {points_str}, color: {gen_js_Float32Array(color)}}}'
 
 # TODO here and elsewhere - combine rays and colors.
 def gen_html(filename: str, sdb_glsl: str, eye_to_world: Sequence[Sequence[float]], projection: render.Projection, max_steps: int,
@@ -108,6 +114,24 @@ def gen_html(filename: str, sdb_glsl: str, eye_to_world: Sequence[Sequence[float
     <!DOCTYPE html>
 
     <html>
+    
+    <head>
+    <style>
+      /* remove the border */
+      body {{
+        border: 0;
+        margin: 0;
+        background-color: white;
+      }}
+      /* make the canvas the size of the viewport */
+      canvas {{
+        width: 100vw;
+        height: 100vh;
+        display: block;
+      }}
+    </style>
+    </head>
+
     <body>
     
     <script type="text/javascript" src="{js_dir}/gl-matrix-min.js"></script>
@@ -116,7 +140,7 @@ def gen_html(filename: str, sdb_glsl: str, eye_to_world: Sequence[Sequence[float
     <script type="text/javascript" src="{js_dir}/scene.js"></script>
     <script type="text/javascript" src="{js_dir}/main.js"></script>
     
-    <canvas id="glscreen"></canvas>
+    <canvas id="glscreen" ></canvas>
     
     </body>
     </html>\n\n"""))
