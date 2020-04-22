@@ -112,19 +112,25 @@ function handleMouseMove(event) {
         var viewport = gl.getParameter(gl.VIEWPORT);
         var dx_ndc = 2*dx_p/viewport[2];
         var dy_ndc = -2*dy_p/viewport[3];
-        var delta_ndc = vec4.fromValues(dx_ndc, dy_ndc, 0., 0.0);
-        var delta_eye = vec4.create();
-        mulVecMat4(delta_eye, delta_ndc, clip_to_eye);
-
+    
         if (mouse_press_event.which == 1) {    
-            var transform = make_translation(-delta_eye[0], -delta_eye[1], -delta_eye[2]);
+            const delta_ndc = vec4.fromValues(dx_ndc, dy_ndc, 0., 0.0);
+            const delta_eye = vec4.create();
+            mulVecMat4(delta_eye, delta_ndc, clip_to_eye);
+            const transform = make_translation(-delta_eye[0], -delta_eye[1], -delta_eye[2]);
             mat4.mul(eye_to_world, transform, mouse_press_eye_to_world);
         } else if (mouse_press_event.which == 2) {
-           var len = Math.sqrt(dx_ndc*dx_ndc + dy_ndc*dy_ndc);
-           var axis = vec3.fromValues(-dy_ndc/len, dx_ndc/len, 0);
-           var transform = mat4.create();
-           mat4.fromRotation(transform, len*2, axis);
-           mat4.mul(eye_to_world, transform, mouse_press_eye_to_world);
+            const len = Math.sqrt(dx_ndc*dx_ndc + dy_ndc*dy_ndc);
+            const axis_ndc = vec3.fromValues(-dy_ndc/len, dx_ndc/len, 0);
+            
+            const axis_eye = vec4.create();
+            mulVecMat4(axis_eye, axis_ndc, clip_to_eye);
+            const axis_world = vec4.create();
+            mulVecMat4(axis_world, axis_ndc, eye_to_world);
+           
+            var transform = mat4.create();
+            mat4.fromRotation(transform, len*2, axis_ndc);
+            mat4.mul(eye_to_world, transform, mouse_press_eye_to_world);
         }
         window.requestAnimationFrame(render, canvas);
     }
