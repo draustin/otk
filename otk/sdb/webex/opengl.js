@@ -80,7 +80,7 @@ SphereTraceProgram.prototype.draw = function(eye_to_world, eye_to_clip, resoluti
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
 
-function RayProgram(max_num_points) {
+function RayProgram() {
     var fragment_source = `#version 300 es
 
     #ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -92,35 +92,58 @@ function RayProgram(max_num_points) {
     ` + ray_fragment_source;
     this.program = link_program('#version 300 es\n\n' + ray_vertex_source, fragment_source);
     this.point_buffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, point_buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, max_num_points*12, gl.STATIC_DRAW);
-
-    this.max_num_points = max_num_points;
+    this.point_indices = [];
+    this.colors = [];
 }
 
-// Started writing this, then decided that it's too much work for now.
-// RayProgram.prototype.set_rays = function(rays, colors) {
-//     // rays is array of array of vec3.
-//     // colors is array.
-// var buffer_data = [];
-//     var num_points = 0;
-//     for (ray in rays) {
-//         num_points += ray.length;
-//     }
-//     if (num_points > this.max_num_points) {
-//         console.warn('Number of points exceeds maximum.')
-//     }
-//     var buffer_data = Float32Array(num_points*3);
-//     var first = 0;
-//     var indices = [];
-//     for (ray of rays) {
-//         for (point of ray) {
-//             for 
-//         }
-//         buffer_data[first]
+//Started writing this, then decided that it's too much work for now.
+RayProgram.prototype.set_rays = function(rays) {
+    // rays is array of array of vec3.
+    // colors is array.
+    var buffer_data = [];
+    var num_points = 0;
+    for (var ray of rays) {
+        num_points += ray.points.length;
+    }
+    var buffer_data = new Float32Array(num_points*3);
+    var point_indices = [];
+    var point_index = 0;
+    var index = 0;
+    var colors = [];
+    for (ray of rays) {
+        colors.push(ray.color);
+        point_indices.push(point_index);
+        point_index += ray.points.length;
+        for (var point of ray.points) {
+            for (var c = 0; c < 3; c++) {
+                buffer_data[index++] = point[c];
+            }
+        }
+    }
+    point_indices.push(point_index);
 
-//     }
-// }
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.point_buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, buffer_data, gl.STATIC_DRAW);
+
+    this.point_indices = point_indices;
+    this.colors = colors;
+}
+
+RayProgram.prototype.draw = function(world_to_clip) {
+    gl.useProgram(this.program);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.point_buffer);
+    var loc = gl.getAttribLocation(this.program, "position");
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc, 3, gl.FLOAT, false, 0, 0);
+    gl.uniformMatrix4fv(gl.getUniformLocation(this.program, "world_to_clip"), false, world_to_clip);
+    const color_loc = gl.getUniformLocation(this.program, "color");
+    for (var ray_index = 0; ray_index < this.point_indices.length-1; ray_index++) {
+        gl.uniform3fv(color_loc, this.colors[ray_index]);
+        const first = this.point_indices[ray_index];
+        const count = this.point_indices[ray_index + 1] - first;
+        gl.drawArrays(gl.LINE_STRIP, first, count);
+    }
+}
 
 function Orthographic(half_width, z_far) {
     this.half_width = half_width;
@@ -131,6 +154,10 @@ Orthographic.prototype.eye_to_clip = function(aspect) {
     var half_height = this.half_width*aspect;
     var m = mat4.create();
     return mat4.transpose(m, mat4.ortho(m, -this.half_width, this.half_width, -half_height, half_height, 0., this.z_far));
+}
+
+Orthographic.prototype.zoom = function(factor) {
+    return new Orthographic(this.half_width/factor, this.z_far);
 }
 
 function Perspective(fov, z_near, z_far) {

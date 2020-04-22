@@ -89,7 +89,7 @@ def _(s:ZemaxConic, ids:Mapping) -> str:
             float rho = min(length(x.xy - {gen_vec2(s.vertex[:2])}), {s.radius});
             float z = {s.vertex[2]};\n""")
     if np.isfinite(s.roc):
-        string += f'    z += rho*rho/({s.roc}*(1 + sqrt(1 - {s.kappa}*rho*rho/{s.roc**2})));\n'
+        string += f'    z += rho*rho/({s.roc}*(1. + sqrt(1. - {s.kappa}*rho*rho/{s.roc**2})));\n'
     if len(s.alphas) > 0:
         string += f'    float h = {s.alphas[-1]};\n'
         string += ''.join(f'    h = h*rho + {alpha};\n' for alpha in s.alphas[-2::-1])

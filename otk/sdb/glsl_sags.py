@@ -16,7 +16,7 @@ def _(s:ZemaxConicSagFunction, id):
             float rho = min(length(x.xy), {s.radius});
             float z;\n""")
     if np.isfinite(s.roc):
-        string += f'    z = rho*rho/({s.roc}*(1 + sqrt(1 - {s.kappa}*rho*rho/{s.roc**2})));\n'
+        string += f'    z = rho*rho/({s.roc}*(1. + sqrt(1. - {s.kappa}*rho*rho/{s.roc**2})));\n'
     else:
         string += '     z = 0.;'
     if len(s.alphas) > 0:
