@@ -5,6 +5,7 @@ var canvas;
 var buffer;
 
 var trace_program;
+var ray_program;
 var clip_to_eye = mat4.create();
 
 var mouse_press_event = null;
@@ -32,6 +33,8 @@ function init() {
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
 
     trace_program = new SphereTraceProgram(sdb_glsl);
+    ray_program = new RayProgram();
+    ray_program.set_rays(rays);
 
     render();
 }
@@ -55,7 +58,7 @@ function render() {
     gl.depthFunc(gl.ALWAYS);
     trace_program.draw(eye_to_world, eye_to_clip, [width, height], max_steps, epsilon, background_color);
     gl.depthFunc(gl.LESS);
-    // TODO ray program
+    ray_program.draw(world_to_clip);
     // TODO wire frame program
 }
 

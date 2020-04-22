@@ -31,16 +31,29 @@ void main (void)
 ray_vertex_source = """
 uniform mat4 world_to_clip;
 
-attribute vec3 position;
+#if __VERSION__ == 300
+    in vec3 position;
+#else
+    attribute vec3 position;
+#endif
+
 void main (void) {
     gl_Position = vec4(position, 1.0)*world_to_clip;
 }
 """
 
 ray_fragment_source = """
+#if __VERSION__ == 300
+    out vec4 FragColor;
+#endif
 uniform vec3 color;
 void main() {
-    gl_FragColor = vec4(color, 1);
+    #if __VERSION__ == 300
+        FragColor
+    #else
+        gl_FragColor
+    #endif
+    = vec4(color, 1);
 }
 """
 
