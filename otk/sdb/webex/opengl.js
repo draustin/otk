@@ -37,7 +37,7 @@ function SphereTraceProgram(sdb_glsl) {
 precision mediump int;
 `
         + sdf_glsl + sdb_glsl + trace_glsl;
-
+    
     var program = link_program('#version 300 es\n\n' + trace_vertex_source, fragment_source)
     var position_buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, position_buffer);
@@ -54,7 +54,7 @@ precision mediump int;
     this.position_buffer = position_buffer;
 }
 
-SphereTraceProgram.prototype.draw = function(eye_to_world, eye_to_clip, resolution, max_steps, epsilon, background_color) {
+SphereTraceProgram.prototype.draw = function(eye_to_world, eye_to_clip, viewport, max_steps, epsilon, background_color, depth_out) {
     gl.bindBuffer(gl.ARRAY_BUFFER, this.position_buffer);
     var loc = gl.getAttribLocation(this.program, "position");
     gl.enableVertexAttribArray(loc);
@@ -68,7 +68,7 @@ SphereTraceProgram.prototype.draw = function(eye_to_world, eye_to_clip, resoluti
     mat4.invert(world_to_clip, clip_to_world);
 
     gl.useProgram(this.program);
-    gl.uniform2f(gl.getUniformLocation(this.program, 'iResolution'), resolution[0], resolution[1]);
+    gl.uniform4iv(gl.getUniformLocation(this.program, 'viewport'), viewport);
     gl.uniformMatrix4fv(gl.getUniformLocation(this.program, 'clip_to_world'), false, clip_to_world);
     gl.uniformMatrix4fv(gl.getUniformLocation(this.program, 'world_to_clip'), false, world_to_clip);
     // glMatrix.mat4 is in column-major order. Light to be coming from behind eye, in world coordinates. So want 3rd row.
@@ -76,6 +76,7 @@ SphereTraceProgram.prototype.draw = function(eye_to_world, eye_to_clip, resoluti
     gl.uniform4f(gl.getUniformLocation(this.program, 'background_color'), background_color[0], background_color[1], background_color[2], background_color[3]);
     gl.uniform1i(gl.getUniformLocation(this.program, 'max_steps'), max_steps);
     gl.uniform1f(gl.getUniformLocation(this.program, 'epsilon'), epsilon);
+    gl.uniform1i(gl.getUniformLocation(this.program, 'depth_out'), depth_out);
     
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }

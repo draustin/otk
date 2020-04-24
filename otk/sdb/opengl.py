@@ -35,7 +35,7 @@ class SphereTraceProgram:
         self.program = program
         self.position_buffer = position_buffer
 
-    def draw(self, eye_to_world: np.ndarray, eye_to_clip: np.ndarray, resolution:Tuple[int,int], max_steps:float,
+    def draw(self, eye_to_world: np.ndarray, eye_to_clip: np.ndarray, max_steps:float,
         epsilon:float, background_color:Sequence[float]):
         assert len(background_color) == 4
 
@@ -50,8 +50,8 @@ class SphereTraceProgram:
         world_to_clip = np.linalg.inv(clip_to_world)
 
         GL.glUseProgram(self.program)
-        loc = GL.glGetUniformLocation(self.program, "iResolution")
-        GL.glUniform2f(loc, *resolution)
+        viewport = GL.glGetFloatv(GL.GL_VIEWPORT)
+        GL.glUniform4i(GL.glGetUniformLocation(self.program, "viewport"), *viewport)
 
         GL.glUniformMatrix4fv(GL.glGetUniformLocation(self.program, "clip_to_world"), 1, GL.GL_TRUE, clip_to_world)
         GL.glUniformMatrix4fv(GL.glGetUniformLocation(self.program, "world_to_clip"), 1, GL.GL_TRUE, world_to_clip)

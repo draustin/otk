@@ -10,8 +10,10 @@ var clip_to_eye = mat4.create();
 
 var mouse_press_event = null;
 var mouse_press_eye_to_world;
-// var mouse_press_eye;
-// var mouse_press_ndc;
+
+var pick_framebffer;
+var mouse_press_eye;
+var mouse_press_ndc;
 
 window.onload = init;
 
@@ -34,6 +36,15 @@ function init() {
     ray_program = new RayProgram();
     ray_program.set_rays(rays);
 
+    pick_framebffer = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, pick_framebffer);
+    const pick_renderbuffer = gl.createRenderbuffer();
+    gl.bindRenderbuffer(gl.RENDERBUFFER, pick_renderbuffer);
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.RGBA4, 1, 1);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, pick_renderbuffer);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
     render();
     //resizeCanvas();
 }
@@ -54,7 +65,10 @@ function render() {
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
 
     //window.requestAnimationFrame(render, canvas);
+    render_(false);
+}
 
+function render_(depth_out) {
     var height = gl.drawingBufferHeight;
     var width = gl.drawingBufferWidth;
     var eye_to_clip = projection.eye_to_clip(height/width);
@@ -64,67 +78,89 @@ function render() {
     var world_to_clip = mat4.create()
     mat4.invert(world_to_clip, clip_to_world);
 
+    const viewport = gl.getParameter(gl.VIEWPORT);
+
     gl.depthMask(gl.TRUE);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.ALWAYS);
-    trace_program.draw(eye_to_world, eye_to_clip, [width, height], max_steps, epsilon, background_color);
+    trace_program.draw(eye_to_world, eye_to_clip, viewport, max_steps, epsilon, background_color, depth_out);
     gl.depthFunc(gl.LESS);
     ray_program.draw(world_to_clip);
     // TODO wire frame program
 }
 
-// function event_to_ndc(event) {
-//     console.log(event);
-//     var x_window = event.clientX;
-//     var  y_window = event.clientY;
-//     var viewport = gl.getParameter(gl.VIEWPORT);
-//     var depth_range = gl.getParameter(gl.DEPTH_RANGE);
-//     var zs = new Float32Array(1);
-//     //var z_window = gl.readPixels(x_window, y_window, 1, 1, gl.DEPTH_COMPONENT, gl.FLOAT, zs);
-//     console.log(zs);
-//     // https://www.khronos.org/opengl/wiki/Compute_eye_space_from_window_space
-//     var ndc = vec4.fromValues((2*(x_window - viewport[0])/viewport[2] - 1, 2*(y_window - viewport[1])/viewport[3] - 1,
-//         (2*z_window - (depth_range[1] + depth_range[0]))/(depth_range[1] - depth_range[0]), 1))
-//     return ndc;
-// }
+function event_to_ndc(event) {
+    const x_window = event.clientX;
+    const y_window = gl.drawingBufferHeight - event.clientY - 1;
+    const viewport = gl.getParameter(gl.VIEWPORT);
+    //const depth_range = gl.getParameter(gl.DEPTH_RANGE);
 
-// function ndc_to_eye(ndc) {
-//     var eyep = vec4.create();
-//     mulVecMat4(eyep, ndc, clip_to_eye);
-//     var eye =  vec4.create();   
-//     eye = vec4.multiplyScalar(eye, eyep, 1/eyep[3]);
-//     return eye;
-// }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, pick_framebffer);
+    gl.viewport(-x_window, -y_window, gl.drawingBufferWidth, gl.drawingBufferHeight);
+    render_(true);
+    let packed = new Uint8Array(4);
+    //packed[3] = 1;
+    //packed[2] = 3;
+    gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, packed);
+    const z0to1 = unpack(packed);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+
+    // https://www.khronos.org/opengl/wiki/Compute_eye_space_from_window_space
+    const x_ndc = 2*(x_window - viewport[0])/viewport[2] - 1;
+    const y_ndc = 2*(y_window - viewport[1])/viewport[3] - 1;
+    const z_ndc = z0to1*2 - 1;
+    var ndc = vec4.fromValues(x_ndc, y_ndc, z_ndc, 1);
+    return ndc;
+}
+
+function ndc_to_eye(ndc) {
+    let eyep = vec4.create();
+    mulVecMat4(eyep, ndc, clip_to_eye);
+    let eye =  vec4.create();   
+    eye = vec4.scale(eye, eyep, 1/eyep[3]);
+    return eye;
+}
+
+function unpack(packed) {
+    const factors = [1/256, 1/(256*256), 1/(256*256*256), 1/(256*256*256*256)];
+    let v = 0;
+    for (let i = 0; i < 4; i++) {
+        v += packed[i]*factors[i];
+    }
+    return v;
+}
 
 function handleMouseDown(event) {
     if (mouse_press_event == null) {
         mouse_press_event = event;
         mouse_press_eye_to_world = mat4.clone(eye_to_world);
-        // mouse_press_ndc = event_to_ndc(event);
-        // mouse_press_eye = ndc_to_eye(mose_press_ndc);
+        mouse_press_ndc = event_to_ndc(event);
+        mouse_press_eye = ndc_to_eye(mouse_press_ndc);
     }
 }
 
 function handleMouseMove(event) {
     if (mouse_press_event != null) {
-        var dx_p = event.screenX - mouse_press_event.screenX;
-        var dy_p = event.screenY - mouse_press_event.screenY;
-        var viewport = gl.getParameter(gl.VIEWPORT);
-        var dx_ndc = 2*dx_p/viewport[2];
-        var dy_ndc = -2*dy_p/viewport[3];
-        var delta_ndc = vec4.fromValues(dx_ndc, dy_ndc, 0., 0.0);
-        var delta_eye = vec4.create();
-        mulVecMat4(delta_eye, delta_ndc, clip_to_eye);
-
         if (mouse_press_event.which == 1) {    
-            var transform = make_translation(-delta_eye[0], -delta_eye[1], -delta_eye[2]);
+            let ndc = event_to_ndc(event);
+            ndc[2] = mouse_press_ndc[2];
+            const eye = ndc_to_eye(ndc);
+            let delta_eye = vec4.create();
+            vec4.subtract(delta_eye, eye, mouse_press_eye);
+            const transform = make_translation(-delta_eye[0], -delta_eye[1], -delta_eye[2]);
             mat4.mul(eye_to_world, transform, mouse_press_eye_to_world);
         } else if (mouse_press_event.which == 2) {
-           var len = Math.sqrt(dx_ndc*dx_ndc + dy_ndc*dy_ndc);
-           var axis = vec3.fromValues(-dy_ndc/len, dx_ndc/len, 0);
-           var transform = mat4.create();
-           mat4.fromRotation(transform, len*2, axis);
-           mat4.mul(eye_to_world, transform, mouse_press_eye_to_world);
+            const viewport = gl.getParameter(gl.VIEWPORT);
+            const dx_ndc = 2*(event.screenX - mouse_press_event.screenX)/viewport[2];
+            const dy_ndc = -2*(event.screenY - mouse_press_event.screenY)/viewport[3];
+            const phi = dx_ndc*4*Math.PI;
+            const theta = dy_ndc*4*Math.PI;
+            let transform = make_translation(-mouse_press_eye[0], -mouse_press_eye[1], -mouse_press_eye[2]);
+            mat4.mul(transform, transform, make_y_rotation(phi));
+            mat4.mul(transform, transform, make_x_rotation(theta));
+            mat4.mul(transform, transform, make_translation(mouse_press_eye[0], mouse_press_eye[1], mouse_press_eye[2]));
+            mat4.mul(eye_to_world, transform, mouse_press_eye_to_world);
         }
         window.requestAnimationFrame(render, canvas);
     }

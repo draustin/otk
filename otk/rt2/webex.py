@@ -15,7 +15,7 @@ from ..sdb import webex
 
 def gen_scene_html(filename: str, elements: Sequence[Element], all_properties: Dict[sdb.Surface, Dict] = None,
     surface: sdb.Surface = None, default_edge_width: float = None, projection_type: str = 'orthographic',
-    zhat: Sequence[float]=None, rays: Sequence[np.ndarray] = None, colors: Iterable = None):
+    zhat: Sequence[float]=None, rays: Sequence[np.ndarray] = None, colors: Iterable = None, epsilon: float=None):
     if all_properties is None:
         all_properties = {}
     all_properties = defaultdict(dict, all_properties)
@@ -23,7 +23,8 @@ def gen_scene_html(filename: str, elements: Sequence[Element], all_properties: D
     if surface is None:
         surface = sdb.UnionOp([e.surface for e in elements])
 
-    epsilon = v4.norm(surface.get_aabb(np.eye(4)).size)*1e-3
+    if epsilon is None:
+        epsilon = v4.norm(surface.get_aabb(np.eye(4)).size)*1e-3
 
     if default_edge_width is None:
         default_edge_width = epsilon*2

@@ -15,3 +15,16 @@ function make_translation(x, y, z) {
     return mat4.fromValues(1., 0., 0., x, 0., 1., 0., y, 0., 0., 1., z, 0., 0., 0., 1);
 }
 
+function make_x_rotation(rad) {
+    const s = Math.sin(rad);
+    const c = Math.cos(rad);
+    return mat4.fromValues(1., 0., 0., 0., 0., c, -s, 0., 0., s, c, 0., 0., 0., 0., 1.);
+}
+
+function make_y_rotation(rad) {
+    const s = Math.sin(rad);
+    const c = Math.cos(rad);
+    return mat4.fromValues(c, 0., s, 0., 0., 1., 0., 0., -s, 0., c, 0., 0., 0., 0., 1.);
+}
+
+

@@ -1,6 +1,6 @@
 uniform int max_steps;
 uniform float epsilon;
-uniform vec2 iResolution;
+uniform ivec4 viewport;
 uniform mat4 clip_to_world;
 uniform mat4 world_to_clip;
 
@@ -38,14 +38,37 @@ SphereTrace sphereTrace(in vec4 x0, in vec4 v, in float t_max)
 
 uniform vec3 light_direction;
 uniform vec4 background_color;
+uniform bool depth_out;
 
 #if __VERSION__ == 300
     out vec4 FragColor;
 #endif
 
+const vec4 bitSh = vec4(1., 256., 256. * 256., 256. * 256. * 256.);
+const vec4 bitMsk = vec4(vec3(1./256.0), 0.);
+const vec4 bitShifts = vec4(1.) / bitSh;
+
+vec4 pack_0to1 (float value) {
+    if (value >= 1.)
+        return vec4(1., 1., 1., 1.);
+    else if (value <= 0.)
+        return vec4(0., 0., 0., 0.);
+    else {
+        vec4 comp = fract(value * bitSh);
+        comp -= comp.yzww * bitMsk;
+        return comp;
+    }
+}
+
+// https://stackoverflow.com/questions/34963366/encode-floating-point-data-in-a-rgba-texture
+vec4 pack(float value, float rangeMin, float rangeMax) {
+    float zeroToOne = (value - rangeMin) / (rangeMax - rangeMin);
+    return pack_0to1(value);
+}
+
 void main()
 {
-    vec2 ndc = 2.0*gl_FragCoord.xy/iResolution.xy - 1.0;
+    vec2 ndc = 2.0*(gl_FragCoord.xy - vec2(viewport.xy))/vec2(viewport.zw) - 1.0;
 
     vec4 x0_world;
     vec4 v_world;
@@ -54,30 +77,35 @@ void main()
     ndc2ray(ndc, clip_to_world, x0_world, v_world, t_max);
 
     SphereTrace trace = sphereTrace(x0_world, v_world, t_max);
-
-    if (trace.d < epsilon)
-    {
-        vec3 surface_color = getColor0(trace.x);
-        vec4 normal_world = getNormal(trace.x);
-        #if __VERSION__ == 300
-            FragColor
-        #else
-            gl_FragColor
-        #endif
-        = vec4((max(dot(normal_world.xyz, light_direction), 0.) + 0.1)*surface_color, 1.);
-        vec4 x_clip = trace.x*world_to_clip;
+    vec4 x_clip = trace.x*world_to_clip;
+    
+    if (trace.d < epsilon) {
         // gl_FragDepth is in window-space coordinates, so its range is gl_DepthRange.near to gl_DepthRange.far.
         gl_FragDepth = (x_clip.z/x_clip.w*gl_DepthRange.diff + gl_DepthRange.near + gl_DepthRange.far)/2.;
-    }
-    else {
-        #if __VERSION__ == 300
-            FragColor
-        #else
-            gl_FragColor
-        #endif
-        = background_color;
+    } else {
         gl_FragDepth = gl_DepthRange.far;
     }
-//    float ss = float(trace.steps)/max_steps;
-//    gl_FragColor = vec4(ss, ss, ss, 1.0);
+
+    vec4 color;
+
+    if (depth_out) {
+        color = pack(gl_FragDepth, gl_DepthRange.near, gl_DepthRange.far);
+    } else {
+        if (trace.d < epsilon)
+        {
+            vec3 surface_color = getColor0(trace.x);
+            vec4 normal_world = getNormal(trace.x);
+            color = vec4((max(dot(normal_world.xyz, light_direction), 0.) + 0.1)*surface_color, 1.);
+            
+        }
+        else {
+            color = background_color;
+        }
+    }
+    #if __VERSION__ == 300
+        FragColor
+    #else
+        gl_FragColor
+    #endif
+    = color;
 }

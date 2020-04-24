@@ -59,7 +59,7 @@ def make_primitives():
     z_eye = max(centers.num_columns - 1, centers.row)*centers.spacing*2
     center = centers.center
     eye = center + (0, 0, z_eye)
-    return Scene.make('primitives', sdb_glsl, 0.01, z_eye*5, eye, center, wireframe_models)
+    return Scene.make('primitives', sdb_glsl, 0.5, z_eye*5, eye, center, wireframe_models)
 
 def make_spherical_singlets():
     centers = Centers(3, 2)
