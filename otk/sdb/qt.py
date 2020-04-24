@@ -126,7 +126,7 @@ class SphereTraceRender(QtWidgets.QOpenGLWidget):
         GL.glDepthMask(GL.GL_TRUE) # Defensive - appears to be default.
         GL.glEnable(GL.GL_DEPTH_TEST)
         GL.glDepthFunc(GL.GL_ALWAYS)
-        self.trace_programs[self.program_num].draw(self.eye_to_world, eye_to_clip, (width, height), self._max_steps,
+        self.trace_programs[self.program_num].draw(self.eye_to_world, eye_to_clip, self._max_steps,
             self._epsilon, self.background_color)
         GL.glDepthFunc(GL.GL_LESS)
         self.ray_program.draw(world_to_clip)
