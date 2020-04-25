@@ -85,7 +85,7 @@ function render_(depth_out) {
 
     const viewport = gl.getParameter(gl.VIEWPORT);
 
-    gl.depthMask(gl.TRUE);
+    gl.depthMask(true);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.ALWAYS);
     trace_program.draw(eye_to_world, eye_to_clip, viewport, max_steps, epsilon, background_color, depth_out);
