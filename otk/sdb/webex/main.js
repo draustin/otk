@@ -24,6 +24,11 @@ function init() {
     gl            = canvas.getContext('webgl2', {depth: true, preserveDrawingBuffer: true});
     // canvas.width  = 640;
     // canvas.height = 480;
+
+    canvas.oncontextmenu = function(e) {
+        e.preventDefault();
+        return false;
+    }
     
     // https://www.cs.colostate.edu/~anderson/newsite/javascript-zoom.html
     canvas.addEventListener('mousedown', handleMouseDown, false);
@@ -142,7 +147,8 @@ function handleMouseDown(event) {
 
 function handleMouseMove(event) {
     if (mouse_press_event != null) {
-        if (mouse_press_event.which == 1) {    
+        // https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/button
+        if (mouse_press_event.button == 0 && !mouse_press_event.ctrlKey) { // "main" button, usually left
             let ndc = event_to_ndc(event);
             ndc[2] = mouse_press_ndc[2];
             const eye = ndc_to_eye(ndc);
@@ -150,9 +156,10 @@ function handleMouseMove(event) {
             vec4.subtract(delta_eye, eye, mouse_press_eye);
             const transform = make_translation(-delta_eye[0], -delta_eye[1], -delta_eye[2]);
             mat4.mul(eye_to_world, transform, mouse_press_eye_to_world);
-        } else if (mouse_press_event.which == 2) {
+        } else if (mouse_press_event.button == 2 || (mouse_press_event.button == 0 && mouse_press_event.ctrlKey)) { 
+            // secondary button, usually right, or left & control (for Mac Touchpad)
             const viewport = gl.getParameter(gl.VIEWPORT);
-            const dx_ndc = 2*(event.screenX - mouse_press_event.screenX)/viewport[2];
+            const dx_ndc = -2*(event.screenX - mouse_press_event.screenX)/viewport[2];
             const dy_ndc = -2*(event.screenY - mouse_press_event.screenY)/viewport[3];
             const phi = dx_ndc*4*Math.PI;
             const theta = dy_ndc*4*Math.PI;
