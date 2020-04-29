@@ -46,7 +46,6 @@ uniform bool depth_out;
 
 const vec4 bitSh = vec4(1., 256., 256. * 256., 256. * 256. * 256.);
 const vec4 bitMsk = vec4(vec3(1./256.0), 0.);
-const vec4 bitShifts = vec4(1.) / bitSh;
 
 vec4 pack_0to1 (float value) {
     if (value >= 1.)

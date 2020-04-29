@@ -1,5 +1,12 @@
-"""Tools for dealing with 1D ray transfer ("ABCD") matrices."""
+"""Tools for dealing with 1D ray transfer ("ABCD") matrices.
+
+Rays are column vectors (x, theta).
+
+TODO consistent capitalization.
+"""
 from typing import Tuple
+import dataclasses
+from dataclasses import dataclass
 import numpy as np
 import mathx
 
@@ -48,6 +55,11 @@ def Gaussian_wR_to_q(w, R, lamb, m=1):
 
 def fourier_transform(f):
     return np.asarray([[0, f], [-1/f, 0]])
+
+def fractional_fourier_transform(f, theta):
+    c = np.cos(theta)
+    s = np.sin(theta)
+    return np.asarray([[c, f*s], [-s/f, c]])
 
 def Gaussian_q_to_wR(q, lamb, m=1):
     iq = 1/q
@@ -105,3 +117,30 @@ def reverse(m):
     #assert np.isclose(np.linalg.det(m), 1)
     return np.linalg.inv(m)*[[1, -1], [-1, 1]]
     #return np.asarray(((m[1, 1], m[0, 1]), (m[1, 0], m[0, 0])))
+
+@dataclass
+class FundamentalGaussian:
+    x: float
+    theta: float
+    w: float
+    roc: float
+    lamb: float
+    m: float = 1
+
+    @property
+    def q(self):
+        return Gaussian_wR_to_q(self.w, self.roc, self.lamb, self.m)
+
+    @property
+    def ray(self):
+        return np.array((self.x, self.theta))
+
+    def transform(self, matrix: np.ndarray) -> 'FundamentalGaussian':
+        assert matrix.shape == (2, 2)
+        ray = matrix@self.ray
+        q = transform_Gaussian(matrix, self.q)
+        w, roc = Gaussian_q_to_wR(q, self.lamb, self.m)
+        return FundamentalGaussian(ray[0], ray[1], w, roc, self.lamb, self.m)
+
+    def translate(self, dx) -> 'FundamentalGaussian':
+        return dataclasses.replace(self, x=(self.x + dx))
