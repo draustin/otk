@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Iterable, Sequence
 
 import otk.h4t
 import otk.rt1.lines
@@ -6,8 +6,8 @@ import scipy.optimize
 import numpy as np
 from .. import ri
 from . import profiles, boundaries, interfaces
-from .. import v4b
-from .. import geo3
+from .. import v4b, geo3, trains
+import mathx
 from .lines import Line
 
 
@@ -291,3 +291,45 @@ def make_spherical_lens_surfaces(roc1, roc2, thickness, n, n_out=ri.vacuum, boun
     s1 = Surface(profiles.SphericalProfile(roc1), otk.h4t.make_translation(0, 0, -thickness/2), '', boundary, None, interface)
     s2 = Surface(profiles.SphericalProfile(roc2), otk.h4t.make_translation(0, 0, thickness/2), '', boundary, None, interface.flip())
     return s1, s2
+
+def make_surface(self: trains.Interface, shape:str, matrix:np.ndarray=None, name:str=None) -> rt1.Surface:
+    if matrix is None:
+        matrix = np.eye(4)
+    profile = self.make_profile()
+    if shape == 'circle':
+        boundary = boundaries.CircleBoundary(self.radius/2)
+    elif shape == 'square':
+        boundary = boundaries.SquareBoundary(self.radius*2**0.5)
+    else:
+        boundary = None
+    surface = Surface(profile, matrix, name, boundary, None, interfaces.FresnelInterface(self.n1, self.n2))
+    return surface
+
+def make_surfaces_lattice(self:trains.Train, lattice: mathx.Lattice, boundary: boundaries.Boundary = None, names: Sequence[str] = None):
+    """Make optical surface for each interface with lattice surface profiles.
+
+    The surfaces are placed along the z axis.
+
+    Args:
+        lattice: Surface profile is given by train interfaces repeated on the lattice.
+        boundary: Boundary for all surfaces.
+        names (sequence of str): Names to give to surfaces.
+
+
+    Returns:
+        list of surfaces
+    """
+    if names is None:
+        names = [None]*len(self.interfaces)
+    assert len(names) == len(self.interfaces)
+    surfaces = []
+    z = self.spaces[0]
+    for num, (interface, space, name) in enumerate(zip(self.interfaces, self.spaces[1:], names)):
+        profile = interface.make_profile()
+        if lattice is not None:
+            profile = profiles.LatticeProfile(lattice, profile)
+        matrix = otk.h4t.make_translation(0, 0, z)
+        surface = Surface(profile, matrix, name, boundary, None, interfaces.FresnelInterface(interface.n1, interface.n2))
+        surfaces.append(surface)
+        z += space
+    return surfaces

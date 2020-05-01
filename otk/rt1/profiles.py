@@ -1,12 +1,12 @@
 import math
+from functools import singledispatch
 from typing import Sequence, Tuple
 import numpy as np
 import mathx
 from .. import math as omath
 from .. import v4b
-from .. import geo3
+from .. import geo3, trains
 from . import boundaries
-
 
 class Profile:
     def intersect_line(self, line):
@@ -498,3 +498,18 @@ class SphericalSquareArrayProfile(SquareArrayProfile):
 
     def __str__(self):
         return 'SphericalSquareArrayProfile(roc = %.3f mm,  pitch = %.3f mm)'%(self.roc*1e3, self.pitch*1e3)
+
+@singledispatch
+def to_profile(obj) -> Profile:
+    raise NotImplementedError(obj)
+
+@to_profile.register
+def _(self: trains.Interface):
+    if np.isfinite(self.roc):
+        return SphericalProfile(self.roc)
+    else:
+        return PlanarProfile()
+
+@to_profile.register
+def _(self: trains.ConicInterface):
+    return ConicProfile(self.roc, self.kappa, self.alphas)
