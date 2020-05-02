@@ -2,7 +2,7 @@ from typing import Sequence, Union
 from dataclasses import dataclass
 import numpy as np
 from . import *
-from ..vectors import norm
+from ..functions import norm
 
 __all__ = ['ZemaxConicSagFunction', 'RectangularArraySagFunction', 'SinusoidSagFunction', "RectangularArrayLevel"]
 

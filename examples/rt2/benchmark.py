@@ -40,9 +40,10 @@ for xy, color in zip(np.linspace(0, field_half_width, num_field_points), mcolors
         start_ray = rt2.make_ray(assembly, epx, epy, 0, xy, xy, f, 1, 0, 0, lamb)
         # Trace ray and convert to sequence of points for plotting.
         times.append([])
-        for spheretrace in (npscalar.spheretrace, sdb_numba.spheretrace):
+        for backend in (npscalar, sdb_numba):
+            rt2.set_backend(backend)
             t0 = time.time()
-            rt2.nonseq_trace(assembly, start_ray, dict(epsilon=1e-10), spheretrace=spheretrace)
+            rt2.nonseq_trace(assembly, start_ray, dict(epsilon=1e-10))
             times[-1].append(time.time() - t0)
 
 print(times)

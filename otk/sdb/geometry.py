@@ -4,7 +4,7 @@ from  itertools import  product
 from abc import ABC, abstractmethod
 from typing import Sequence, Tuple
 import numpy as np
-from .. import v4h, vectors
+from .. import v4h
 from ..h4t import make_translation
 from . import bounding
 

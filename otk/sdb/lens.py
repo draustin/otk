@@ -1,9 +1,9 @@
 """Functions for making lens-shaped surfaces."""
 from dataclasses import dataclass
-from abc import ABC, abstractmethod
 from typing import Sequence, Tuple, Callable
 import numpy as np
-from .. import vectors, functions
+from .. import functions
+from ..types import Sequence2, Sequence3
 from ..sdb import *
 
 __all__ = ['make_spherical_singlet', 'make_toroidal_singlet', 'make_spherical_singlet_square_array', 'make_circle', 'make_rectangle']
@@ -11,8 +11,8 @@ __all__ = ['make_spherical_singlet', 'make_toroidal_singlet', 'make_spherical_si
 @dataclass
 class LensShape:
     max_radius: float
-    make_edge: Callable[[vectors.Sequence2V], Surface]
-    make_bound: Callable[[vectors.Sequence3V], Primitive]
+    make_edge: Callable[[Sequence2[float]], Surface]
+    make_bound: Callable[[Sequence3[float]], Primitive]
 
 def make_circle(radius: float) -> LensShape:
     def make_edge(vertex0):
@@ -30,7 +30,7 @@ def make_rectangle(width: float, height: float) -> LensShape:
         return Box((width/2, height/2, (z1 - z0)/2), (vertex0[0], vertex0[1], vertex0[2] + (z1 + z0)/2))
     return LensShape(max_radius, make_edge, make_bound)
 
-def make_spherical_singlet(roc0: float, roc1: float, thickness: float, shape: LensShape, vertex0: vectors.Sequence3V) -> Surface:
+def make_spherical_singlet(roc0: float, roc1: float, thickness: float, shape: LensShape, vertex0: Sequence3[float]) -> Surface:
     """Make circular or rectangular spherical singlet with given radii of curvatures and vertex coordinate.
 
     Radii of curvatures obey normal optics convention i.e. biconvex is roc0 > 0, roc1 < 0.

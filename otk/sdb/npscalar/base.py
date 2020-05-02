@@ -2,7 +2,7 @@ import numpy as np
 from typing import Sequence, Callable
 from dataclasses import dataclass
 from functools import singledispatch
-from ...vectors import norm, normalize
+from ...functions import norm, normalize
 
 from ..geometry import *
 

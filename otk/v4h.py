@@ -7,7 +7,7 @@ except ImportError:
     numba = None
 
 # Include these in namespace for convenience.
-from .vectors import dot, norm_squared, norm, normalize
+from .functions import dot, norm_squared, norm, normalize
 
 if numba is None:
     def cross(a, b):

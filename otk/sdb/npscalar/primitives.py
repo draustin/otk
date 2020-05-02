@@ -2,7 +2,7 @@ import numpy as np
 from warnings import warn
 from .. import *
 from .base import *
-from ...vectors import *
+from ...functions import norm, norm_squared
 
 __all__ = []
 
