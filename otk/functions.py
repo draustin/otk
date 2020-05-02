@@ -15,10 +15,11 @@ try:
 except ImportError:
     numba = None
 
-from .types import Sequence3, Vector3
+from .types import Sequence3, Vector3, Vectors4, Scalars, Matrix4
 
 if numba is None:
     def dot(a: Sequence, b: Sequence):
+        """Dot product with second argument conjugated."""
         return np.dot(a, np.conj(b))
 
     def norm_squared(x: Sequence):
@@ -28,23 +29,22 @@ if numba is None:
         return dot(x, x)**0.5
 
     def normalize(x: Sequence):
-        return x/norm(x)
+        return np.asarray(x)/norm(x)
 else:
-    @numba.njit # ("f8(f8[:], f8[:])")  # TODO function signature necessary?
-    def dot(x, y):
-        # TODO can use np.dot?
+    @numba.njit
+    def dot(x: Sequence, y: Sequence):
+        """Dot product with second argument conjugated."""
         s = 0.
         for i in range(len(x)):
             s += x[i]*np.conj(y[i])
         return s
 
-
-    @numba.njit#("f8(f8[:])")
+    @numba.njit
     def norm_squared(x):
         return dot(x, x)
 
 
-    @numba.njit#("f8(f8[:])")
+    @numba.njit
     def norm(x):
         return norm_squared(x)**0.5
 
@@ -269,46 +269,39 @@ def intersect_spherical_surface(ox, oy, oz, vx, vy, vz, roc):
     return d
 
 
-def refract_vector(incident, normal, n_ratio):
-    """Calculate refracted wave vector.
+def refract_vector(incident: Vectors4, normal: Vectors4, n_ratio: Scalars) -> Vectors4:
+    """Calculate refracted wave vector given incident, normal and ratio of refractive indices.
 
-    TODO complex refractive indices?
+    Broadcasting fully supported.
 
-    Args:
-        incident (...x4 array): Incident vector.
-        normal (...x4 array): Surface normal (normalized).
+    Surface normal must be normalized.
 
-    Returns:
-        ...x4 array: Refracted vector, with length n_ratio times that of incident vector.
+    Result has length n_ratio times that of incident vector.
     """
     incident_normal_component = v4hb.dot(incident, normal)
     projected = incident - normal*incident_normal_component
     refracted_normal_component = np.sign(incident_normal_component)*(n_ratio**2*v4hb.dot(incident) - v4hb.dot(projected))**0.5
     refracted = refracted_normal_component*normal + projected
-    #refracted = normalize(refracted_unnorm)
     return refracted
 
 
-def reflect_vector(incident, normal):
+def reflect_vector(incident: Vectors4, normal: Vectors4) -> Vectors4:
     """Reflect incident vector given mirror normal.
 
-    Args:
-        incident (...x4 array): Incident vector(s).
-        normal (...x4 array): Normal vector(s).
-
-    Returns:
-        ...x4 array: Reflected vector(s).
+    Mirror normal must be normalized.
     """
     incident_normal_component = v4hb.dot(incident, normal)
     reflected = incident - 2*normal*incident_normal_component
     return reflected
 
 
-def calc_mirror_matrix(matrix):
-    return np.matmul(np.linalg.inv(matrix), np.matmul(np.diag((1, 1, -1, 1)), matrix))
+def calc_mirror_matrix(matrix: Matrix4) -> Matrix4:
+    """Calculate matrix which reflects about local z=0 plane given local-to-parent matrix."""
+    return np.linalg.inv(matrix) @ np.diag((1, 1, -1, 1)) @ matrix
+#    return np.matmul(np.linalg.inv(matrix), np.matmul(np.diag((1, 1, -1, 1)), matrix))
 
 
-def make_perpendicular(u, v):
+def make_perpendicular(u: Vectors4, v: Vectors4) -> Vectors4:
     """Make unit vector perpendicular to a pair of unit vectors, handling degeneracy and broadcasting."""
     w = v4hb.cross(u, v)
     m = v4hb.dot(w)

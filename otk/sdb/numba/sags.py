@@ -1,9 +1,9 @@
-from typing import Sequence
-from numba import njit
 import numpy as np
-from ...functions import norm_squared
-from .. import *
+from numba import njit
+
 from .base import *
+from .. import *
+from ...functions import norm_squared
 
 __all__ = []
 

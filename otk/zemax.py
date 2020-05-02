@@ -1,12 +1,11 @@
 import numpy as np
-from collections import defaultdict
-from typing import TextIO
+from typing import TextIO, Tuple
 from . import ri, trains
 
 # Translate from Zemax glass database to ri module.
 glasses = {'PMMA':ri.PMMA_Zemax, 'F_SILICA':ri.fused_silica, 'BK7':ri.N_BK7, 'K-VC89':ri.KVC89}
 
-def read_interface(file:TextIO, n1=ri.air):
+def read_interface(file:TextIO, n1=ri.air) -> Tuple[trains.Interface, float, float]:
     commands = {}
     parms = {}
     while True:
@@ -67,7 +66,13 @@ def read_interface(file:TextIO, n1=ri.air):
     interface = surface.to_interface(n1, n2)
     return interface, n2, thickness
 
-def read_train(filename:str, n=ri.air, encoding='utf-16le') -> trains.Train:
+def read_train(filename:str, n: ri.Index = ri.air, encoding: str = 'utf-16le') -> trains.Train:
+    """Read optical train from Zemax file.
+
+    The given refractive index defines the surrounding medium.
+
+    If it doesn't read properly, try changing the encoding to 'ascii'.
+    """
     surface_num = 0
     spaces = [0]
     interfaces = []
