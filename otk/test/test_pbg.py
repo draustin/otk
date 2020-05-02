@@ -5,7 +5,7 @@ from numpy import testing
 from otk import beams
 import mathx
 from otk import rt1, pbg, ri
-from otk import math as omath
+from otk import functions as omath
 
 def test_pbg_calc_field():
     origin = rt1.stack_xyzw(0, 0, 0, 1)

@@ -1,6 +1,6 @@
 import numpy as np
 from numpy import testing
-from otk import trains, paraxial, ri, math
+from otk import trains, paraxial, ri, functions
 
 
 def test_Train_make_singlet():
@@ -103,10 +103,10 @@ def test_Interface_calc_mask():
     interface = trains.Interface(n1, n2, roc, 10e-3)
     f, gradf = interface.calc_mask(lamb, rho, True)
 
-    sag = math.calc_sphere_sag(roc, rho)
+    sag = functions.calc_sphere_sag(roc, rho)
     k = 2*np.pi/lamb
     deltan = n1(lamb) - n2(lamb)
     assert np.isclose(f, np.exp(1j*sag*k*deltan))
 
-    grad_sag = math.calc_sphere_sag(roc, rho, True)
+    grad_sag = functions.calc_sphere_sag(roc, rho, True)
     assert np.isclose(gradf, 1j*k*deltan*grad_sag*f)

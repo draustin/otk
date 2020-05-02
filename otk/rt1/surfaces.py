@@ -1,4 +1,4 @@
-from typing import Iterable, Sequence
+from typing import Iterable, Sequence, List
 
 import otk.h4t
 import otk.rt1.lines
@@ -6,7 +6,7 @@ import scipy.optimize
 import numpy as np
 from .. import ri
 from . import profiles, boundaries, interfaces
-from .. import v4b, geo3, trains
+from .. import v4hb, geo3, trains
 import mathx
 from .lines import Line
 
@@ -59,10 +59,10 @@ class MutableTransform(MutableTransformable):
         self.set_matrix(matrix)
 
     def to_global(self, r):
-        return v4b.transform(r, self.matrix)
+        return v4hb.transform(r, self.matrix)
 
     def to_local(self, r):
-        return v4b.transform(r, self.inverse_matrix)
+        return v4hb.transform(r, self.inverse_matrix)
 
 class CompoundMutableTransform(MutableTransformable):
     def __init__(self, elements: Iterable[MutableTransform]):
@@ -108,7 +108,7 @@ class Surface(MutableTransform):
 
     def __repr__(self):
         return 'Surface(%r, %r, %r, %r, %r, %r)'%(
-        self.profile, v4b.repr_transform(self.matrix), self.name, self.boundary, self.mask, self.interface)
+        self.profile, v4hb.repr_transform(self.matrix), self.name, self.boundary, self.mask, self.interface)
 
     def intersect_global_curve(self, calc_point, d0):
         """Intersect parameterized curve with surface.
@@ -203,10 +203,10 @@ class Surface(MutableTransform):
         inverse_matrix = np.linalg.inv(matrix)
 
         # Create normalized vector which lies on the surface plane and the cross section plane.
-        vector = v4b.normalize(v4b.cross(self.matrix[2], matrix[2]))
+        vector = v4hb.normalize(v4hb.cross(self.matrix[2], matrix[2]))
 
         # Get a point on both planes.
-        origin = v4b.intersect_planes(self.matrix[2], self.matrix[3], matrix[2], matrix[3])
+        origin = v4hb.intersect_planes(self.matrix[2], self.matrix[3], matrix[2], matrix[3])
 
         vector_local = self.to_local(vector)[:2]
         origin_local = self.to_local(origin)[:2]
@@ -214,8 +214,8 @@ class Surface(MutableTransform):
         d = np.linspace(*interval, num_points)
         x, y = origin_local[:, None] + vector_local[:, None]*d
         z = self.profile.calc_z(x, y)
-        points_local = v4b.stack_xyzw(x, y, z, 1)
-        points_projected = v4b.transform(points_local, np.matmul(self.matrix, inverse_matrix))
+        points_local = v4hb.stack_xyzw(x, y, z, 1)
+        points_projected = v4hb.transform(points_local, np.matmul(self.matrix, inverse_matrix))
         assert np.allclose(points_projected[..., 2], 0)
         return points_projected[..., :2]
 
@@ -258,7 +258,7 @@ class Surface(MutableTransform):
 #         self.calc_k_filter = None
 #
 #     def __repr__(self):
-#         matrix = v4b.repr_transform(self.matrix)
+#         matrix = v4hb.repr_transform(self.matrix)
 #         s = 'OpticalSurface(%r, n_next=(%r, %r), %s, reflects=%r, %s, %r, %s, samples_beam=%r, %r)'
 #         return s%(self.profile, *self.n_nexts, matrix, self.reflects, self.name, self.boundary, self.boundary_mode,
 #                   self.samples_beam, self.calc_k_filter)
@@ -292,17 +292,17 @@ def make_spherical_lens_surfaces(roc1, roc2, thickness, n, n_out=ri.vacuum, boun
     s2 = Surface(profiles.SphericalProfile(roc2), otk.h4t.make_translation(0, 0, thickness/2), '', boundary, None, interface.flip())
     return s1, s2
 
-def make_surface(self: trains.Interface, shape:str, matrix:np.ndarray=None, name:str=None) -> rt1.Surface:
+def make_surface(interface: trains.Interface, shape:str, matrix:np.ndarray=None, name:str=None) -> Surface:
     if matrix is None:
         matrix = np.eye(4)
-    profile = self.make_profile()
+    profile = profiles.to_profile(interface)
     if shape == 'circle':
-        boundary = boundaries.CircleBoundary(self.radius/2)
+        boundary = boundaries.CircleBoundary(interface.radius/2)
     elif shape == 'square':
-        boundary = boundaries.SquareBoundary(self.radius*2**0.5)
+        boundary = boundaries.SquareBoundary(interface.radius*2**0.5)
     else:
         boundary = None
-    surface = Surface(profile, matrix, name, boundary, None, interfaces.FresnelInterface(self.n1, self.n2))
+    surface = Surface(profile, matrix, name, boundary, None, interfaces.FresnelInterface(interface.n1, interface.n2))
     return surface
 
 def make_surfaces_lattice(self:trains.Train, lattice: mathx.Lattice, boundary: boundaries.Boundary = None, names: Sequence[str] = None):
@@ -333,3 +333,67 @@ def make_surfaces_lattice(self:trains.Train, lattice: mathx.Lattice, boundary: b
         surfaces.append(surface)
         z += space
     return surfaces
+
+def make_analysis_surfaces(train: trains.Train):
+    lens_surfaces = make_surfaces(train)
+    image_surface = Surface(profiles.PlanarProfile(), otk.h4t.make_translation(0, 0, train.length))
+    keys = ['transmitted']*len(lens_surfaces) + ['incident']
+    surfaces = lens_surfaces + [image_surface]
+    return surfaces, keys
+
+def make_surfaces(train: trains.Train, names: Sequence[str] = None, shape: str = 'circle') -> List[Surface]:
+    """Make optical surface for each interface.
+
+    The surfaces are placed along the z axis.
+
+    Args:
+        names (sequence of str): Names to give to surfaces.
+        shape (str): Determines surface boundary. Can be 'circle', 'square', or None. If None, then surfaces are
+            created with default boundary.
+
+    Returns:
+        list of surfaces
+    """
+    if names is None:
+        names = [None]*len(train.interfaces)
+    assert len(names) == len(train.interfaces)
+    assert shape in ('circle', 'square', None)
+    surfaces = []
+    z = train.spaces[0]
+    for num, (interface, space, name) in enumerate(zip(train.interfaces, train.spaces[1:], names)):
+        matrix = otk.h4t.make_translation(0, 0, z)
+        # profile = interface.make_profile()
+        # if shape == 'circle':
+        #     boundary = rt.CircleBoundary(interface.radius/2)
+        # elif shape == 'square':
+        #     boundary = rt.SquareBoundary(interface.radius*2**0.5)
+        # else:
+        #     boundary = None
+        # surface = rt.Surface(profile, matrix, name, boundary, None, rt.FresnelInterface(interface.n1, interface.n2))
+        surface = make_surface(interface, shape, matrix, name)
+        surfaces.append(surface)
+        z += space
+    return surfaces
+
+    # def make_analysis_surfaces(self, stop_z: float = 0):
+    #     # Create stop and image surfaces.
+    #     stop_surface = rt.Surface(rt.PlanarProfile(), rt.make_translation(0, 0, stop_z))
+    #     image_surface = rt.Surface(rt.PlanarProfile(), rt.make_translation(0, 0, self.length))
+    #
+    #     # Create lens surfaces.
+    #     lens_surfaces = self.make_surfaces()
+    #
+    #     keys = ['transmitted']*len(lens_surfaces) + ['incident']
+    #     surfaces = lens_surfaces + [image_surface]
+    #     trace_fun = lambda ray: ray.trace_surfaces(surfaces, keys)
+    #
+    #     return stop_surface, image_surface, trace_fun, lens_surfaces
+
+    # TODO resurrect
+    # def trace_distortion(self, lamb: float, stop_size: float, num_rays: int, thetas: Sequence[float],
+    #         stop_shape: str = 'circle') -> np.ndarray:
+    #     surfaces, keys = self.make_analysis_surfaces()
+    #     stop_surface = rt1.Surface(rt1.PlanarProfile())
+    #     trace_fun = lambda ray: ray.trace_surfaces(surfaces, keys)[0]
+    #     xs = rt1.trace_distortion(stop_surface, surfaces[-1], trace_fun, lamb, stop_size, num_rays, thetas, stop_shape)
+    #     return xs

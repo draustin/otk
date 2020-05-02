@@ -3,7 +3,7 @@
 Spatial vectors are rows.
 """
 import numpy as np
-from otk.v4b import normalize
+from otk.vectors import normalize
 from scipy.spatial.transform import Rotation
 
 __all__ = ['make_x_rotation', 'make_y_rotation', 'make_z_rotation', 'make_translation', 'make_rotation',
@@ -91,6 +91,7 @@ def make_frame(z, up=None, right=None, origin=(0, 0, 0, 1)):
     Returns:
 
     """
+    # TOOD tidy
     z = np.asarray(z)
     assert z.ndim == 1
     z = normalize(z[:3])

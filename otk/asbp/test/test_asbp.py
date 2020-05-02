@@ -1,6 +1,6 @@
 import mathx
 import numpy as np
-from otk import asbp, math, bvar
+from otk import asbp, bvar
 
 
 def test_misc_variance_funs():

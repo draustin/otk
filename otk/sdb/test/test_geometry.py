@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from otk.h4t import make_translation
 from otk import sdb
-from otk.v4b import *
+from otk.v4hb import *
 
 # def assert_isaabb(b):
 #     assert len(b) == 2

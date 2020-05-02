@@ -1,4 +1,4 @@
-"""Operations on spatial 4 vectors with broadcasting.
+"""Definitions and operations for  homogeneous vectors in 3D with broadcasting.
 
 Transformation matrices are applied on the right i.e. we use row vectors.
 
@@ -251,3 +251,13 @@ def concatenate_xyzw(x, y, z, w):
 def repr_transform(matrix):
     # return '(%s, %s, %s, %.0f), (%s, %s, %s, %.0f), (%s, %s, %s, %.0f),(%s, %s, %s, %.0f)'%tuple('%.3f'%e for e in matrix.ravel())
     return '[' + ', '.join('(' + ', '.join('%.3f'%(element*1e3) for element in row) + ')' for row in matrix) + '] mm'
+
+def apply_bundle_fourier_transform(bundle0, n, f):
+    xo0, yo0 = to_xy(bundle0.origin)
+    xo1, yo1 = to_xy(bundle0.vector)/bundle0.vector[..., 2]*f
+    origin1 = stack_xyzw(xo1, yo1, 0, 1)
+    vector1 = normalize(stack_xyzw(-xo0, -yo0, f, 0))
+    bundle1 = Line(origin1, vector1)
+    # See Dane's logbook 2 p159.
+    opl = -dot(bundle0.origin, bundle0.vector)*n
+    return bundle1, opl

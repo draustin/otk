@@ -1,6 +1,6 @@
 import numpy as np
 from otk import ri
-from otk import math as omath
+from otk import functions
 from otk import paraxial
 from otk import sdb
 from otk.sdb import npscalar
@@ -9,10 +9,10 @@ from otk.sdb import npscalar
 from otk.rt2.scalar import _get_transformed_element, _process_ray
 from otk.rt2 import rt2_scalar as rt2
 from otk.sdb import lens
-from otk import v4
+from otk import v4h, functions
 
 def test_tracing():
-    normal = v4.to_vector((0, 0, -1))
+    normal = v4h.to_vector((0, 0, -1))
     constant = 0
     surface = sdb.Plane(normal, constant)
     deflector = rt2.make_fresnel_deflector()
@@ -25,8 +25,8 @@ def test_tracing():
     assert rt2.get_deflector(element, np.asarray((1, 2, 3, 1))) is deflector
 
     assembly = rt2.Assembly(element.surface, [element], rt2.UniformIsotropic(n0fun))
-    assert _get_transformed_element(assembly, v4.to_point((1, 2, -1))) is None
-    assert _get_transformed_element(assembly, v4.to_point((1, 2, 1))).element is element
+    assert _get_transformed_element(assembly, v4h.to_point((1, 2, -1))) is None
+    assert _get_transformed_element(assembly, v4h.to_point((1, 2, 1))).element is element
 
     lamb = 800e-9
     incident_ray = rt2.make_ray(assembly, 1., 2, -1, 0, 1, 1, 1, 0, 0, lamb)
@@ -34,9 +34,9 @@ def test_tracing():
     length, deflected_rays = _process_ray(assembly, incident_ray, dict(epsilon=epsilon, t_max=1e9, max_steps=100))
     assert (2**0.5 - epsilon) <= length  <= (2**0.5 + epsilon)
 
-    (rp, rs), (tp, ts) = omath.calc_fresnel_coefficients(n0, n1, abs(v4.dot(incident_ray.line.vector, normal)))
+    (rp, rs), (tp, ts) = functions.calc_fresnel_coefficients(n0, n1, abs(v4h.dot(incident_ray.line.vector, normal)))
     assert 0 <= npscalar.getsdb(surface, deflected_rays[0].line.origin) <= epsilon
-    assert np.array_equal(deflected_rays[0].line.vector, v4.normalize(v4.to_vector((0, 1, -1, 0))))
+    assert np.array_equal(deflected_rays[0].line.vector, v4h.normalize(v4h.to_vector((0, 1, -1, 0))))
     assert np.isclose(deflected_rays[0].flux, rs**2)
 
     vy = 2**-0.5*n0/n1
@@ -76,7 +76,7 @@ def test_biconvex_lens():
     assert np.isclose(f_, f)
 
     r = 20e-3
-    surface = lens.make_spherical_singlet(roc0, roc1, thickness, vertex0[:3], 'circle', r)
+    surface = lens.make_spherical_singlet(roc0, roc1, thickness, lens.make_circle(r), vertex0[:3])
     # Vertices are on surface.
     assert np.isclose(npscalar.getsdb(surface, vertex0), 0)
     assert np.isclose(npscalar.getsdb(surface, vertex1), 0)
@@ -115,7 +115,7 @@ def test_biconvex_lens():
     segments = rt2.nonseq_trace(assembly, incident_ray1, sphere_trace_kwargs).flatten()
     assert len(segments) == 3
     # Check ray passes close to image.
-    assert v4.norm(segments[2].ray.line.pass_point(image)[1].origin - image) < 1e-6
+    assert v4h.norm(segments[2].ray.line.pass_point(image)[1].origin - image) < 1e-6
 
     # TODO check phase
 
@@ -140,7 +140,7 @@ def test_hyperbolic_lens():
         ray = rt2.make_ray(assembly, x0, 0, -1, 0, 0, 1, 1, 0, 0, 800e-9)
         segments = rt2.nonseq_trace(assembly, ray, sphere_trace_kwargs).flatten()
         assert len(segments) == 2
-        assert v4.norm(segments[1].ray.line.pass_point(focus)[1].origin - focus) < 1e-6
+        assert v4h.norm(segments[1].ray.line.pass_point(focus)[1].origin - focus) < 1e-6
 
 
 

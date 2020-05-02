@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from functools import singledispatch
 from typing import Sequence, Tuple
 import numpy as np
-from .. import v4, v3
+from .. import v4h, v3h
 
 __all__ = ['union', 'intersection', 'difference', 'isclose', 'Interval', 'AABR', 'AABB']
 
@@ -68,8 +68,8 @@ class AABR:
     corner1: np.ndarray
 
     def __post_init__(self):
-        assert v3.is_point(self.corner0)
-        assert v3.is_point(self.corner1)
+        assert v3h.is_point(self.corner0)
+        assert v3h.is_point(self.corner1)
 
     def split(self) -> Tuple[Interval, Interval]:
         return Interval(self.corner0[0], self.corner1[0]), Interval(self.corner0[1], self.corner1[1])
@@ -123,8 +123,8 @@ class AABB:
 
     def __post_init__(self):
         assert len(self.corners) == 2
-        assert v4.is_point(self.corners[0])
-        assert v4.is_point(self.corners[1])
+        assert v4h.is_point(self.corners[0])
+        assert v4h.is_point(self.corners[1])
 
     @property
     def empty(self) -> bool:
@@ -152,8 +152,8 @@ class AABB:
 
     @classmethod
     def make(cls, corner0: Sequence[float], corner1: Sequence[float]):
-        corner0 = v4.to_point(corner0)
-        corner1 = v4.to_point(corner1)
+        corner0 = v4h.to_point(corner0)
+        corner1 = v4h.to_point(corner1)
         return cls((corner0, corner1))
 
     @classmethod

@@ -2,7 +2,7 @@
 from typing import Tuple
 import numpy as np
 import mathx
-from . import abcd, math, ri
+from . import abcd, functions, ri
 
 def calc_image_distance(object_distance, focal_length):
     """Calculate image distance using imaging equation."""
@@ -290,6 +290,6 @@ def calc_rocs(curvature, shape_factor):
 
 def calc_center_thickness(rocs: tuple, radius: float, min_thickness: float):
     """Calc. center thickness of lens given ROCs, radius, and minimum thickness."""
-    sags = tuple(math.calc_sphere_sag(roc, radius) for roc in rocs)
+    sags = tuple(functions.calc_sphere_sag(roc, radius) for roc in rocs)
     return max(sags[0] - sags[1], 0) + min_thickness
 

@@ -1,7 +1,7 @@
 from typing import Sequence
 from numba import njit
 import numpy as np
-from ... import v4
+from ... import v4h
 from .. import *
 from .base import *
 
@@ -15,7 +15,7 @@ def _(s:ZemaxConicSagFunction):
     alphas = np.asarray(s.alphas)
     @njit("f8(f8[:])")
     def g(x):
-        rho2 = min(v4.norm_squared(x[:2]), radius_sqd)
+        rho2 = min(v4h.norm_squared(x[:2]), radius_sqd)
         rho = rho2**0.5
         if np.isfinite(roc):
             z = rho2/(roc*(1 + (1 - kappa*rho2/roc**2)**0.5))

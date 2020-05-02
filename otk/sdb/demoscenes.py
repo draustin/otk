@@ -3,7 +3,7 @@ from collections import defaultdict
 import numpy as np
 from otk.h4t import make_translation, make_rotation
 from . import *
-from ..v4 import normalize, to_vector
+from ..v4h import normalize, to_vector
 from .lens import *
 
 class Centers:
@@ -70,8 +70,8 @@ def make_spherical_singlets():
     thickness = 0.2
     surfaces = []
     for num, (sign0, sign1) in enumerate(itertools.product((-1, np.inf, 1), repeat=2)):
-        kwargs = dict(shape='circle', radius=0.4) if num % 2 else dict(shape='rectangle', side_lengths=(0.8, 0.6))
-        surfaces.append(make_spherical_singlet(roc*sign0, roc*sign1, thickness, next(centers) - (0, 0, thickness/2), **kwargs))
+        shape = make_circle(0.4) if num % 2 else make_rectangle(0.8, 0.6)
+        surfaces.append(make_spherical_singlet(roc*sign0, roc*sign1, thickness, shape, next(centers) - (0, 0, thickness/2)))
 
     surface = UnionOp(surfaces)
     all_properties = {s: dict(edge_width=0.01, edge_color=(0.3, 0.3, 0.3), surface_color=(0, 0.5, 1)) for s in surface.descendants()}

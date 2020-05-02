@@ -1,8 +1,11 @@
-"""3D geometry functions building on v4b.py."""
-import numpy as np
-from . import v4b, v4
+"""3D geometry functions building on v4b.py.
 
-from .v4b import dot, normalize, to_xy
+TODO move to functions
+"""
+import numpy as np
+from . import v4h, v4hb
+# TODO distinguish between broadcasted & not versions
+from .v4hb import dot, normalize, to_xy
 
 __all__ = ['refract_vector', 'reflect_vector', 'make_perpendicular']
 
@@ -116,28 +119,17 @@ def calc_mirror_matrix(matrix):
     return np.matmul(np.linalg.inv(matrix), np.matmul(np.diag((1, 1, -1, 1)), matrix))
 
 
-def apply_bundle_fourier_transform(bundle0, n, f):
-    xo0, yo0 = to_xy(bundle0.origin)
-    xo1, yo1 = to_xy(bundle0.vector)/bundle0.vector[..., 2]*f
-    origin1 = stack_xyzw(xo1, yo1, 0, 1)
-    vector1 = normalize(stack_xyzw(-xo0, -yo0, f, 0))
-    bundle1 = Line(origin1, vector1)
-    # See Dane's logbook 2 p159.
-    opl = -dot(bundle0.origin, bundle0.vector)*n
-    return bundle1, opl
-
-
 def make_perpendicular(u, v):
     """Make unit vector perpendicular to a pair of unit vectors, handling degeneracy and broadcasting."""
-    w = v4b.cross(u, v)
-    m = v4b.dot(w)
+    w = v4hb.cross(u, v)
+    m = v4hb.dot(w)
     zero = np.isclose(m[...,0], 0, atol=1e-15)
 
     uzero = u[zero]
     if uzero.size > 0:
         # Degenerate case (u & v parallel). Calculate cross product of u with each unit vector.
-        uzerocs = [v4b.cross(uzero, chat) for chat in v4.unit_vectors]
-        mzerocs = [v4b.dot(v) for v in uzerocs]
+        uzerocs = [v4hb.cross(uzero, chat) for chat in v4h.unit_vectors]
+        mzerocs = [v4hb.dot(v) for v in uzerocs]
         mzeros = np.concatenate(mzerocs, -1)
         index = mzeros.argmax(-1)[..., None]
 

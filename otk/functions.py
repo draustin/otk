@@ -1,8 +1,65 @@
-"""Optics-specific math functions."""
+"""Miscellaneous optics-specific functions.
+
+TODO better distinguishing and handling of (i) numba not installed and (ii) numba not installed but not wanted due to
+compilation time. I don't remember why I used numba.vectorize for some routines below... maybe can replace with numba.njit
+everywhere? Could also make a decorator that applies njit if numba is installed.
+
+"""
 import cmath
-import numba
-from typing import Tuple
+from typing import Tuple, Sequence
 import numpy as np
+
+try:
+    import numba
+except ImportError:
+    numba = None
+
+if numba is not None:
+    @numba.vectorize([numba.complex64(numba.float64, numba.float64, numba.float64)], cache=True)
+    def calc_ideal_lens_phase_paraxial(x, y, k_on_f):
+        return cmath.exp(-0.5j*(x**2 + y**2)*k_on_f)
+
+
+    @numba.vectorize([numba.complex64(numba.float64, numba.float64, numba.float64, numba.float64)], cache=True)
+    def calc_ideal_lens_phase(x, y, k, f):
+        return cmath.exp(-1j*k*((x**2 + y**2 + f**2)**0.5 - f))
+
+
+    @numba.vectorize([numba.complex64(numba.float64, numba.float64, numba.float64, numba.float64)], cache=True)
+    def calc_ideal_square_lens_array_phase_paraxial(x, y, pitch, k_on_f):
+        half_pitch = pitch/2
+        u = (x%pitch) - half_pitch
+        v = (y%pitch) - half_pitch
+        return cmath.exp(-0.5j*(u**2 + v**2)*k_on_f)
+
+
+    @numba.vectorize([numba.complex64(numba.float64, numba.float64, numba.float64, numba.float64, numba.float64)],
+        cache=True)
+    def calc_ideal_square_lens_array_phase(x, y, pitch, k, f):
+        half_pitch = pitch/2
+        u = (x%pitch) - half_pitch
+        v = (y%pitch) - half_pitch
+        return cmath.exp(-1j*k*((u**2 + v**2 + f**2)**0.5 - f))
+
+
+    @numba.vectorize([numba.float64(numba.complex128, numba.complex128, numba.complex128, numba.float64)],
+        nopython=True)
+    def unwrap_quadratic_phase(a, b, c, x):
+        """Evaluate phase of quadratic on same Riemann surface as constant term.
+
+        Args:
+            a: Qudratic coefficient.
+            b: Linnar coefficient.
+            c: Constant.
+            x (real): Value at which to evaluate quadratic.
+
+        Returns:
+            Phase of ax^2 + bx + c with no branch cuts on trajectory from x=0.
+        """
+        root_det = cmath.sqrt(b**2 - 4*a*c)
+        x1 = (-b + root_det)/(2*a)
+        x2 = (-b - root_det)/(2*a)
+        return np.angle(x - x1) - np.angle(-x1) + np.angle(x - x2) - np.angle(-x2) + np.angle(c)
 
 def calc_sphere_sag_normal_xy(roc, x, y, clip=False):
     """Calculate the sag of a spherical surface.
@@ -74,7 +131,6 @@ def calc_sphere_sag(roc, r, derivative:bool=False):
 # Want it to work for array ROC.
 calc_sphere_sag = np.vectorize(calc_sphere_sag, excluded=['r', 'derivative'])
 
-
 def calc_conic_sag(roc, kappa, alphas, rho, derivative:bool=False):
     """Calculate sag of a conic asphere surface.
 
@@ -93,37 +149,6 @@ def calc_conic_sag(roc, kappa, alphas, rho, derivative:bool=False):
         return rho/(roc*(1 - kappa*(rho/roc)**2)**0.5) + np.polyval(alphaps[::-1], rho)*rho
     else:
         return rho ** 2/(roc*(1 + (1 - kappa*(rho/roc) ** 2) ** 0.5)) + np.polyval(alphas[::-1], rho)*rho ** 2
-
-
-
-@numba.vectorize([numba.complex64(numba.float64, numba.float64, numba.float64)], cache=True)
-def calc_ideal_lens_phase_paraxial(x, y, k_on_f):
-    return cmath.exp(-0.5j*(x**2 + y**2)*k_on_f)
-
-
-
-
-@numba.vectorize([numba.complex64(numba.float64, numba.float64, numba.float64, numba.float64)], cache=True)
-def calc_ideal_lens_phase(x, y, k, f):
-    return cmath.exp(-1j*k*((x**2 + y**2 + f**2)**0.5 - f))
-
-
-@numba.vectorize([numba.complex64(numba.float64, numba.float64, numba.float64, numba.float64)], cache=True)
-def calc_ideal_square_lens_array_phase_paraxial(x, y, pitch, k_on_f):
-    half_pitch = pitch/2
-    u = (x%pitch) - half_pitch
-    v = (y%pitch) - half_pitch
-    return cmath.exp(-0.5j*(u**2 + v**2)*k_on_f)
-
-
-@numba.vectorize([numba.complex64(numba.float64, numba.float64, numba.float64, numba.float64, numba.float64)],
-    cache=True)
-def calc_ideal_square_lens_array_phase(x, y, pitch, k, f):
-    half_pitch = pitch/2
-    u = (x%pitch) - half_pitch
-    v = (y%pitch) - half_pitch
-    return cmath.exp(-1j*k*((u**2 + v**2 + f**2)**0.5 - f))
-
 
 def calc_fresnel_coefficients(n1, n2, cos_theta1, cos_theta2 = None) -> Tuple:
     """
@@ -147,21 +172,3 @@ def calc_fresnel_coefficients(n1, n2, cos_theta1, cos_theta2 = None) -> Tuple:
     t_s = 2*n1*cos_theta1/(n1*cos_theta1 + n2*cos_theta2)
     t_p = 2*n1*cos_theta1/(n2*cos_theta1 + n1*cos_theta2)
     return (r_p, r_s), (t_p, t_s)
-
-@numba.vectorize([numba.float64(numba.complex128, numba.complex128, numba.complex128, numba.float64)], nopython=True)
-def unwrap_quadratic_phase(a, b, c, x):
-    """Evaluate phase of quadratic on same Riemann surface as constant te
-
-    Args:
-        a: Qudratic coefficient.
-        b: Linnar coefficient.
-        c: Constant.
-        x (real): Value at which to evaluate quadratic.
-
-    Returns:
-        Phase of ax^2 + bx + c with no branch cuts on trajectory from x=0.
-    """
-    root_det = cmath.sqrt(b**2 - 4*a*c)
-    x1 = (-b + root_det)/(2*a)
-    x2 = (-b - root_det)/(2*a)
-    return np.angle(x - x1) - np.angle(-x1) + np.angle(x - x2) - np.angle(-x2) + np.angle(c)

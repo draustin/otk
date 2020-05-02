@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 import itertools
 from typing import Sequence, List, Tuple
 import numpy as np
-from .. import v4
+from .. import v4h
 #from ..v4b import *
 from .npscalar import spheretrace
 from . import bounding, Surface
@@ -37,14 +37,14 @@ def projection(l:float, r:float, b:float, t:float, n:float, f:float):
         (0,           0,           -1,              0))).T
 
 """Produce camera to world transform."""
-def lookat(eye:Sequence[float], center:Sequence[float], y:Sequence[float]=(0.0, 1.0, 0.0)):
-    eye = np.asarray(eye)
-    center = np.asarray(center)
+def lookat(eye: Sequence[float], center: Sequence[float], y: Sequence[float] = (0.0, 1.0, 0.0)):
+    eye = v4h.to_point(eye)
+    center = v4h.to_point(center)
 
     # eye to center is -z axis.
-    z = v4.normalize(eye - center)
-    x = v4.normalize(np.cross(y, z))
-    y = np.cross(z, x)
+    z = v4h.normalize(eye - center)
+    x = v4h.normalize(v4h.cross(y, z))
+    y = v4h.cross(z, x)
 
     return np.asarray((
         (x[0], y[0], z[0], eye[0]),
@@ -88,7 +88,7 @@ def ndc2ray(nx:float, ny:float, invP:Sequence[Sequence[float]]):
     wf = wfp / wfp[3]
 
     vp = wf - w0
-    d_max = v4.norm(vp)
+    d_max = v4h.norm(vp)
     v = vp/d_max
 
     return w0, v, d_max
@@ -209,17 +209,17 @@ def lookat_surface(surface: Surface, projection_type: str, zhat: Sequence[float]
     along the positive zhat direction. The aspect ratio of the display (height/width in pixels) ensures the surface
     fits verticallly as well as horizontally.
     """
-    zhat = v4.normalize(v4.to_vector(zhat))
-    xhat = v4.cross(v4.yhat, zhat)
-    if np.isclose(v4.norm(xhat), 0):
-        xhat = np.cross(zhat, v4.zhat)
-    xhat = v4.normalize(xhat)
-    yhat = v4.cross(zhat, xhat)
-    e2w0 = np.stack((xhat, yhat, zhat, v4.origin))
+    zhat = v4h.normalize(v4h.to_vector(zhat))
+    xhat = v4h.cross(v4h.yhat, zhat)
+    if np.isclose(v4h.norm(xhat), 0):
+        xhat = np.cross(zhat, v4h.zhat)
+    xhat = v4h.normalize(xhat)
+    yhat = v4h.cross(zhat, xhat)
+    e2w0 = np.stack((xhat, yhat, zhat, v4h.origin))
     w2e0 = np.linalg.inv(e2w0)
     box = surface.get_aabb(w2e0)
     center = box.center.dot(e2w0)
-    diag = v4.norm(box.size)
+    diag = v4h.norm(box.size)
     extra = diag*3
     half_width = max(box.size[0]/2, box.size[1]/2/aspect)
     if projection_type == 'orthographic':

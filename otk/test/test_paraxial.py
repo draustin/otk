@@ -1,6 +1,7 @@
 import numpy as np
 from numpy import testing
-from otk import paraxial, math
+from otk import paraxial
+from otk import functions as math
 
 def test_design_spherical_inverse_lens():
     roc, d = paraxial.design_spherical_inverse_lens(1.45, 1e-6, 4e-3, 200e-6)

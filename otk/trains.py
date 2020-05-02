@@ -8,7 +8,7 @@ import numpy as np
 import otk.h4t
 import scipy.optimize
 import mathx
-from . import abcd, paraxial, math, ri
+from . import abcd, paraxial, functions, ri
 
 # TODO Make Interface composition of Surface and refractive indeices.
 
@@ -28,7 +28,7 @@ class Interface:
     radius: float
 
     def __post_init__(self):
-        self.sag = math.calc_sphere_sag(self.roc, self.radius)
+        self.sag = functions.calc_sphere_sag(self.roc, self.radius)
 
     def __str__(self):
         return '%s - ROC %.3g mm, radius %.3g mm - %s'%(self.n1, self.roc*1e3, self.radius*1e3, self.n2)
@@ -66,9 +66,9 @@ class Interface:
             derivative: If True, derivative is returned as well.
 
         """
-        sag = math.calc_sphere_sag(self.roc, rho)
+        sag = functions.calc_sphere_sag(self.roc, rho)
         if derivative:
-            grad_sag = math.calc_sphere_sag(self.roc, rho, True)
+            grad_sag = functions.calc_sphere_sag(self.roc, rho, True)
             return sag, grad_sag
         else:
             return sag
@@ -146,9 +146,9 @@ class ConicInterface(Interface):
             rho: Distance from center.
             derivative: If True, tuple of sag and its derivative is returned.
         """
-        sag = math.calc_conic_sag(self.roc, self.kappa, self.alphas, rho, False)
+        sag = functions.calc_conic_sag(self.roc, self.kappa, self.alphas, rho, False)
         if derivative:
-            grad_sag = math.calc_conic_sag(self.roc, self.kappa, self.alphas, rho, True)
+            grad_sag = functions.calc_conic_sag(self.roc, self.kappa, self.alphas, rho, True)
             return sag, grad_sag
         else:
             return sag
@@ -267,40 +267,6 @@ class Train:
         n0s = [n(lamb) for n in ns]
         rocs = [i.roc for i in self.interfaces]
         return paraxial.calc_multi_element_lens_petzval_sum(n0s, rocs)
-
-    def make_surfaces(self, names: Sequence[str] = None, shape: str = 'circle'):
-        """Make optical surface for each interface.
-
-        The surfaces are placed along the z axis.
-
-        Args:
-            names (sequence of str): Names to give to surfaces.
-            shape (str): Determines surface boundary. Can be 'circle', 'square', or None. If None, then surfaces are
-                created with default boundary.
-
-        Returns:
-            list of surfaces
-        """
-        if names is None:
-            names = [None]*len(self.interfaces)
-        assert len(names) == len(self.interfaces)
-        assert shape in ('circle', 'square', None)
-        surfaces = []
-        z = self.spaces[0]
-        for num, (interface, space, name) in enumerate(zip(self.interfaces, self.spaces[1:], names)):
-            matrix = otk.h4t.make_translation(0, 0, z)
-            # profile = interface.make_profile()
-            # if shape == 'circle':
-            #     boundary = rt.CircleBoundary(interface.radius/2)
-            # elif shape == 'square':
-            #     boundary = rt.SquareBoundary(interface.radius*2**0.5)
-            # else:
-            #     boundary = None
-            # surface = rt.Surface(profile, matrix, name, boundary, None, rt.FresnelInterface(interface.n1, interface.n2))
-            surface = interface.make_surface(shape, matrix, name)
-            surfaces.append(surface)
-            z += space
-        return surfaces
 
     @classmethod
     def make_singlet_transform1(cls, n: ri.Index, ws: Tuple[float, float], f: float, radius: float, lamb: float = None,
@@ -460,48 +426,6 @@ class Train:
             spaces_stop = stop + 1
         return Train(self.interfaces[start:stop], self.spaces[start:spaces_stop])
 
-    # TODO move to rt1
-    # def make_analysis_surfaces(self):
-    #     lens_surfaces = self.make_surfaces()
-    #     image_surface = rt1.Surface(rt1.PlanarProfile(), otk.h4t.make_translation(0, 0, self.length))
-    #     keys = ['transmitted']*len(lens_surfaces) + ['incident']
-    #     surfaces = lens_surfaces + [image_surface]
-    #     return surfaces, keys
-
-    # def make_analysis_surfaces(self, stop_z: float = 0):
-    #     # Create stop and image surfaces.
-    #     stop_surface = rt.Surface(rt.PlanarProfile(), rt.make_translation(0, 0, stop_z))
-    #     image_surface = rt.Surface(rt.PlanarProfile(), rt.make_translation(0, 0, self.length))
-    #
-    #     # Create lens surfaces.
-    #     lens_surfaces = self.make_surfaces()
-    #
-    #     keys = ['transmitted']*len(lens_surfaces) + ['incident']
-    #     surfaces = lens_surfaces + [image_surface]
-    #     trace_fun = lambda ray: ray.trace_surfaces(surfaces, keys)
-    #
-    #     return stop_surface, image_surface, trace_fun, lens_surfaces
-
-    # TODO move to rt1
-    # def trace_spot_array(self, lamb: float, stop_size: float, num_rays: int, field_size: float, num_spots: int,
-    #         stop_shape: str = 'circle', field_shape: str = 'circle') -> rt1.SpotArray:
-    #     """Trace square angular lattice of 'plane waves'."""
-    #     surfaces, keys = self.make_analysis_surfaces()
-    #     stop_surface = rt1.Surface(rt1.PlanarProfile())
-    #     trace_fun = lambda ray: ray.trace_surfaces(surfaces, keys)[0]
-    #     spot_array = rt1.SpotArray.trace(stop_surface, surfaces[-1], trace_fun, lamb, stop_size, num_rays, field_size,
-    #                                     num_spots, stop_shape, field_shape)
-    #     return spot_array
-
-    # TODO move to rt1
-    # def trace_distortion(self, lamb: float, stop_size: float, num_rays: int, thetas: Sequence[float],
-    #         stop_shape: str = 'circle') -> np.ndarray:
-    #     surfaces, keys = self.make_analysis_surfaces()
-    #     stop_surface = rt1.Surface(rt1.PlanarProfile())
-    #     trace_fun = lambda ray: ray.trace_surfaces(surfaces, keys)[0]
-    #     xs = rt1.trace_distortion(stop_surface, surfaces[-1], trace_fun, lamb, stop_size, num_rays, thetas, stop_shape)
-    #     return xs
-
 class Surface(ABC):
     """An axisymmetric surface between two media.
 
@@ -579,9 +503,9 @@ class SphericalSurface(Surface):
             derivative: If True, derivative is returned as well.
 
         """
-        sag = math.calc_sphere_sag(self.roc, rho)
+        sag = functions.calc_sphere_sag(self.roc, rho)
         if derivative:
-            grad_sag = math.calc_sphere_sag(self.roc, rho, True)
+            grad_sag = functions.calc_sphere_sag(self.roc, rho, True)
             return sag, grad_sag
         else:
             return sag
@@ -640,9 +564,9 @@ class ConicSurface(Surface):
             rho: Distance from center.
             derivative: If True, tuple of sag and its derivative is returned.
         """
-        sag = math.calc_conic_sag(self.roc, self.kappa, self.alphas, rho, False)
+        sag = functions.calc_conic_sag(self.roc, self.kappa, self.alphas, rho, False)
         if derivative:
-            grad_sag = math.calc_conic_sag(self.roc, self.kappa, self.alphas, rho, True)
+            grad_sag = functions.calc_conic_sag(self.roc, self.kappa, self.alphas, rho, True)
             return sag, grad_sag
         else:
             return sag
@@ -870,7 +794,7 @@ class SingletSequence:
 
         def make_half_transform_train(curvature):
             rocs = paraxial.calc_rocs(curvature, shape_factor)
-            edge_propagation_distance = working_distance + math.calc_sphere_sag(max(rocs[0], 0), field_radius)
+            edge_propagation_distance = working_distance + functions.calc_sphere_sag(max(rocs[0], 0), field_radius)
             radius = field_radius + edge_propagation_distance*tan_theta
             thickness = paraxial.calc_center_thickness(rocs, radius, min_thickness)
             singlet = Singlet(tuple(SphericalSurface(roc, radius) for roc in rocs), thickness, n)
@@ -881,7 +805,7 @@ class SingletSequence:
 
         def calc_error(curvature):
             train = make_half_transform_train(curvature)
-            space0 = working_distance - math.calc_sphere_sag(min(train.interfaces[0].roc, 0), field_radius)
+            space0 = working_distance - functions.calc_sphere_sag(min(train.interfaces[0].roc, 0), field_radius)
             error = train.spaces[0] - space0
             return error
 

@@ -10,12 +10,12 @@ import numpy as np
 from functools import singledispatch
 from dataclasses import dataclass
 from typing import Sequence, Union, List
-from .. import math as omath
+from .. import functions
 from .. import sdb
 from .. import geo3
 #from ..sdb.npscalar import *
 #from ..v4 import *
-from .. import v4
+from .. import v4h
 from .. sdb import npscalar
 from .. sdb import numba as sdb_numba
 from . import *
@@ -34,8 +34,8 @@ class Line:
     vector: np.ndarray
 
     def __post_init__(self):
-        assert v4.is_point(self.origin)
-        assert v4.is_vector(self.vector)
+        assert v4h.is_point(self.origin)
+        assert v4h.is_vector(self.vector)
 
     def eval(self, t: float) -> np.ndarray:
         return self.origin + t*self.vector
@@ -44,7 +44,7 @@ class Line:
         return Line(self.eval(t), self.vector)
 
     def pass_point(self, x:np.ndarray):
-        t = v4.dot(self.vector, x - self.origin)/v4.norm_squared(self.vector)
+        t = v4h.dot(self.vector, x - self.origin)/v4h.norm_squared(self.vector)
         return t, self.advance(t)
 
     def transform(self, m: np.ndarray) -> 'Line':
@@ -61,9 +61,9 @@ def intersect(surface: sdb.Surface, line: Line) -> float:
 
 @intersect.register
 def _(s: sdb.Plane, l: Line) -> float:
-    d = v4.dot(l.vector[:3], s.n)
+    d = v4h.dot(l.vector[:3], s.n)
     try:
-        t = -(s.c + v4.dot(l.origin[:3], s.n))/d
+        t = -(s.c + v4h.dot(l.origin[:3], s.n))/d
     except ZeroDivisionError:
         t = float('inf')
     return t
@@ -102,8 +102,8 @@ class Ray:
     element: TransformedElement
 
     def __post_init__(self):
-        assert v4.is_vector(self.k)
-        assert v4.is_vector(self.polarization)
+        assert v4h.is_vector(self.k)
+        assert v4h.is_vector(self.polarization)
         assert np.isscalar(self.flux)
 
     def advance(self, t: float):
@@ -127,11 +127,11 @@ def _(ox: float, oy, oz, vx, vy, vz, px, py, pz, n, flux, phase_origin, lamb, el
         phase_origin: Phase at ray  origin.
         lamb: Wavelength.
     """
-    vector = v4.normalize(v4.to_vector((vx, vy, vz)))
+    vector = v4h.normalize(v4h.to_vector((vx, vy, vz)))
     line = Line(np.asarray((ox, oy, oz, 1.)), vector)
     # Make polarization perpendicular to vector.
-    y = v4.cross(vector, v4.to_vector((px, py, pz)))
-    pol = v4.normalize(v4.cross(y, vector))
+    y = v4h.cross(vector, v4h.to_vector((px, py, pz)))
+    pol = v4h.normalize(v4h.cross(y, vector))
 
     k = line.vector*n*2*np.pi/lamb
     return Ray(line, k, pol, flux, phase_origin, lamb, element)
@@ -159,7 +159,7 @@ def _(self:ConstantInterface, n0: float, n1:float, cos_theta0: float, lamb: floa
 
 @calc_amplitudes.register
 def _(self:FresnelInterface, n0: float, n1:float, cos_theta0: float, lamb: float) -> tuple:
-    return omath.calc_fresnel_coefficients(n0, n1, cos_theta0)
+    return functions.calc_fresnel_coefficients(n0, n1, cos_theta0)
 
 @singledispatch
 def deflect_ray(self:Deflector, ray: Ray, x0:np.ndarray, x1:np.ndarray, dielectric0: np.ndarray, normal: np.ndarray,
@@ -182,17 +182,17 @@ def deflect_ray(self: SimpleDeflector, ray: Ray, x0:np.ndarray, x1:np.ndarray, d
     # Generate unit vector perpendicular to normal and incident.
     s_pol_vector = geo3.make_perpendicular(normal, ray.line.vector)
 
-    incident_p_pol_vector = v4.cross(ray.line.vector, s_pol_vector)
-    refracted_p_pol_vector = v4.cross(refracted_vector, s_pol_vector)
-    reflected_p_pol_vector = v4.cross(reflected_vector, s_pol_vector)
+    incident_p_pol_vector = v4h.cross(ray.line.vector, s_pol_vector)
+    refracted_p_pol_vector = v4h.cross(refracted_vector, s_pol_vector)
+    reflected_p_pol_vector = v4h.cross(reflected_vector, s_pol_vector)
 
-    cos_theta0 = abs(v4.dot(normal, ray.line.vector))
+    cos_theta0 = abs(v4h.dot(normal, ray.line.vector))
     amplitudes = calc_amplitudes(self.interface, n0, n1, cos_theta0, ray.lamb)
-    incident_components = [v4.dot(ray.polarization, i) for i in (incident_p_pol_vector, s_pol_vector)]
+    incident_components = [v4h.dot(ray.polarization, i) for i in (incident_p_pol_vector, s_pol_vector)]
 
     def calc_ray(origin, amplitudes, axis_vectors, ray_vector, n, element):
         pol_unnorm = sum(c*a*v for c, a, v in zip(incident_components, amplitudes, axis_vectors))
-        pol_factor = v4.norm_squared(pol_unnorm)
+        pol_factor = v4h.norm_squared(pol_unnorm)
         pol = pol_unnorm/pol_factor**0.5
         line = Line(origin, ray_vector)
         deflected_ray = Ray(line, n*2*np.pi/ray.lamb*ray_vector, pol, ray.flux*pol_factor*n/n0, ray.phase_origin,
@@ -230,7 +230,7 @@ def get_points(segments: Sequence[Segment], default_length: float = None, max_se
     points = [segments[0].ray.line.origin]
     for seg in segments:
         if last_end is not None and max_sep is not None:
-            sep = v4.norm(seg.ray.line.origin - last_end)
+            sep = v4h.norm(seg.ray.line.origin - last_end)
             if sep > max_sep:
                 raise ValueError(f'Separation between start and last end point is {sep}, greater than {max_sep}.')
         if seg.length is None:
@@ -387,7 +387,7 @@ def nonseq_trace(self: Assembly, start_ray:Ray, sphere_trace_kwargs_:dict=None, 
 
 @make_ray.register
 def _(self: Assembly, ox, oy, oz, vx, vy, vz, px, py, pz, lamb, flux=1, phase_origin=0):
-    x = v4.to_vector((ox, oy, oz))
+    x = v4h.to_vector((ox, oy, oz))
     # TODO tidy
     dielectric = get_dielectric_tensor(self, lamb, x)
     assert is_isotropic(dielectric)

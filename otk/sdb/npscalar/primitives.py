@@ -2,7 +2,7 @@ import numpy as np
 from warnings import warn
 from .. import *
 from .base import *
-from ...v4 import *
+from ...vectors import *
 
 __all__ = []
 

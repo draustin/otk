@@ -1,5 +1,5 @@
 import numpy as np
-from otk import math
+from otk import functions as math
 
 def test_calc_sphere_sag_normal_xy():
     assert math.calc_sphere_sag_normal_xy(10, 0, 0)==(0, (0, 0, 1))

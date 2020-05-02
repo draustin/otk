@@ -4,7 +4,7 @@ import subprocess
 from typing import Sequence, TextIO, Tuple, Callable
 import numpy as np
 from contextlib import contextmanager
-from . import math, trains, ri
+from . import functions, trains, ri
 
 POVRAY_BINARY = ("povray.exe" if os.name == 'nt' else "povray")
 
@@ -145,8 +145,8 @@ def format_vector(*args):
 
 @contextmanager
 def spherical_lens(scene, roc1: float, roc2: float, thickness: float, radius: float, shape: str = 'circle'):
-    sag1 = math.calc_sphere_sag(roc1, radius)
-    sag2 = math.calc_sphere_sag(roc2, radius)
+    sag1 = functions.calc_sphere_sag(roc1, radius)
+    sag2 = functions.calc_sphere_sag(roc2, radius)
 
     scene.write_comment('square_spherical_lens')
 

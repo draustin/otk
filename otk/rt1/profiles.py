@@ -3,8 +3,8 @@ from functools import singledispatch
 from typing import Sequence, Tuple
 import numpy as np
 import mathx
-from .. import math as omath
-from .. import v4b
+from .. import functions
+from .. import v4hb
 from .. import geo3, trains
 from . import boundaries
 
@@ -31,7 +31,7 @@ class Profile:
         Returns:
             array of shape of np.broadcast(x, y).
         """
-        z = self.intersect(v4b.stack_xyzw(x, y, 0, 1), np.asarray([0, 0, 1, 0]))[..., 0]
+        z = self.intersect(v4hb.stack_xyzw(x, y, 0, 1), np.asarray([0, 0, 1, 0]))[..., 0]
         assert z.shape == np.broadcast(x, y).shape
         return z
 
@@ -112,7 +112,7 @@ class SphericalProfile(Profile):
         return d
 
     def calc_z(self, x, y):
-        return omath.calc_sphere_sag(self.roc, (x ** 2 + y ** 2) ** 0.5)
+        return functions.calc_sphere_sag(self.roc, (x ** 2 + y ** 2) ** 0.5)
 
     def calc_normal(self, point):
         """Calculate surface normal.
@@ -126,7 +126,7 @@ class SphericalProfile(Profile):
         normal = -point/self.roc
         normal[..., 2] += 1
         normal[..., 3] = 0
-        return normal  # nx = -point[..., 0]/self.roc  # ny = -point[..., 1]/self.roc  # nz = (self.roc - point[..., 2])/self.roc  # return v4b.stack_xyzw(nx, ny, nz, 0)
+        return normal  # nx = -point[..., 0]/self.roc  # ny = -point[..., 1]/self.roc  # nz = (self.roc - point[..., 2])/self.roc  # return v4hb.stack_xyzw(nx, ny, nz, 0)
 
     def __str__(self):
         return 'spherical with ROC = %.3f mm'%(self.roc*1e3)
@@ -177,9 +177,9 @@ class ArbitraryRotationallySymmetricProfile(Profile):
             # Calculate current trial intersection point.
             point = origin + d*vector
             # Compute radial distance.
-            rho = v4b.dot(point[..., :2]) ** 0.5
+            rho = v4hb.dot(point[..., :2]) ** 0.5
             # Calculate derivative of radial distance with respect to d.
-            drhodd = 2*(v4b.dot(point[..., :2], vector[..., :2]) + d*v4b.dot(vector[..., :2]))
+            drhodd = 2*(v4hb.dot(point[..., :2], vector[..., :2]) + d*v4hb.dot(vector[..., :2]))
             # drhodd = 2*((point[..., 0]*vector[..., 0] + point[..., 1]*vector[..., 1]) +
             #            d*(vector[..., 0]**2 + vector[..., 1]**2))
             # Error is point z minus surface height.
@@ -202,8 +202,8 @@ class ArbitraryRotationallySymmetricProfile(Profile):
         rho = (point[..., 0] ** 2 + point[..., 1] ** 2) ** 0.5
         dzdrho = self.calc_dzdrho(rho)
         factor = mathx.divide0(dzdrho, rho, 0)
-        return v4b.normalize(v4b.stack_xyzw(-point[..., 0]*factor, -point[..., 1]*factor, 1,
-            0))  # return v4b.normalize(v4b.stack_xyzw(-point[0]*factor, -point[1]*factor, 1, 0))
+        return v4hb.normalize(v4hb.stack_xyzw(-point[..., 0]*factor, -point[..., 1]*factor, 1,
+            0))  # return v4hb.normalize(v4hb.stack_xyzw(-point[0]*factor, -point[1]*factor, 1, 0))
 
     def calc_dzdrho(self, rho:float) -> float:
         raise NotImplementedError()
@@ -369,7 +369,7 @@ class LatticeProfile(Profile):
         nx, ny = self.lattice.calc_indices(x_plane, y_plane)
         cx, cy = self.lattice.calc_point(nx, ny)
 
-        center = v4b.stack_xyzw(cx, cy, 0, 1)
+        center = v4hb.stack_xyzw(cx, cy, 0, 1)
         return self.profile.intersect(origin - center, vector)
 
     def __str__(self):
@@ -378,7 +378,7 @@ class LatticeProfile(Profile):
     def calc_normal(self, point):
         nx, ny = self.lattice.calc_indices(point[..., 0], point[..., 1])
         cx, cy = self.lattice.calc_point(nx, ny)
-        center = v4b.stack_xyzw(cx, cy, 0, 1)
+        center = v4hb.stack_xyzw(cx, cy, 0, 1)
         normal = self.profile.calc_normal(point - center)
         return normal
 
@@ -410,7 +410,7 @@ class LatticeProfile(Profile):
             x, y = origin[:, None] + vector[:, None]*d
             cx, cy = self.lattice.calc_point(ix, iy)
             z = self.profile.calc_z(x - cx, y - cy)
-            section = v4b.stack_xyzw(x, y, z, 1)
+            section = v4hb.stack_xyzw(x, y, z, 1)
             sections.append(section)
         return sections
 
@@ -435,7 +435,7 @@ class SquareArrayProfile(Profile):
         nx, ny = self.calc_index(x_plane, y_plane)
         cx, cy = self.calc_center(nx, ny)
 
-        center = v4b.stack_xyzw(cx, cy, 0, 1)
+        center = v4hb.stack_xyzw(cx, cy, 0, 1)
         return self.profile.intersect(origin - center, vector)
 
     def calc_index(self, x, y):
@@ -449,7 +449,7 @@ class SquareArrayProfile(Profile):
     def calc_normal(self, point):
         nx, ny = self.calc_index(point[..., 0], point[..., 1])
         cx, cy = self.calc_center(nx, ny)
-        center = v4b.stack_xyzw(cx, cy, 0, 1)
+        center = v4hb.stack_xyzw(cx, cy, 0, 1)
         normal = self.profile.calc_normal(point - center)
         return normal
 
@@ -462,8 +462,8 @@ class SphericalSquareArrayProfile(SquareArrayProfile):
     def __init__(self, roc, pitch):
         self.roc = roc
         # self.pitch = pitch
-        self.edge_sag = omath.calc_sphere_sag_xy(roc, pitch/2, 0, clip=True)
-        self.corner_sag = omath.calc_sphere_sag_xy(roc, pitch/2, pitch/2, clip=True)
+        self.edge_sag = functions.calc_sphere_sag_xy(roc, pitch/2, 0, clip=True)
+        self.corner_sag = functions.calc_sphere_sag_xy(roc, pitch/2, pitch/2, clip=True)
         profile = SphericalProfile(roc)
         SquareArrayProfile.__init__(self, pitch, profile)
 
@@ -482,7 +482,7 @@ class SphericalSquareArrayProfile(SquareArrayProfile):
     #     nx = np.floor(x_plane/self.pitch)
     #     ny = np.floor(y_plane/self.pitch)
     #     cx, cy = self.calc_center(nx, ny)
-    #     return v4b.intersect_spherical_surface(ox - cx, oy - cy, oz, vx, vy, vz, self.roc)[..., None]
+    #     return v4hb.intersect_spherical_surface(ox - cx, oy - cy, oz, vx, vy, vz, self.roc)[..., None]
     #
     # def calc_center(self, nx, ny):
     #     return (nx + 0.5)*self.pitch, (ny + 0.5)*self.pitch
@@ -494,7 +494,7 @@ class SphericalSquareArrayProfile(SquareArrayProfile):
     #     normal_x = -(point[..., 0] - cx)/self.roc
     #     normal_y = -(point[..., 1] - cy)/self.roc
     #     normal_z = (self.roc - point[..., 2])/self.roc
-    #     return v4b.stack_xyzw(normal_x, normal_y, normal_z, 0)
+    #     return v4hb.stack_xyzw(normal_x, normal_y, normal_z, 0)
 
     def __str__(self):
         return 'SphericalSquareArrayProfile(roc = %.3f mm,  pitch = %.3f mm)'%(self.roc*1e3, self.pitch*1e3)

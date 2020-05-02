@@ -11,7 +11,7 @@ except ImportError:
     pass
 from . import interfaces
 from .surfaces import Surface
-from otk.v4b import *
+from ..v4hb import *
 from .lines import Line
 
 @dataclass

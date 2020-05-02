@@ -2,7 +2,7 @@ import numpy as np
 import mathx
 import otk.h4t
 from mathx import matseq
-from otk import asbp, rt1, math, bvar
+from otk import asbp, rt1, bvar, functions
 
 
 def test_propagate_curved_paraxial_1d():
@@ -401,7 +401,7 @@ def test_curved_interface_collimate():
     m = (1 + (f/z_R)**2)**0.5
     r1_support = m*r0_support
     x1, y1 = asbp.calc_xy(r1_support, num_points)
-    sag = math.calc_sphere_sag_xy(roc, x1, y1)
+    sag = functions.calc_sphere_sag_xy(roc, x1, y1)
     Er1, _ = asbp.propagate_plane_to_curved_spherical(k, r0_support, Er0, f + sag, m)
     Er2, propagator = asbp.invert_plane_to_curved_spherical(k*n, r1_support, Er1, -f*n + sag, 1)
     ##
@@ -435,7 +435,7 @@ def test_curved_interface_collimate_offset():
     r1_support = m*r0_support
     x1, y1 = asbp.calc_xy(r1_support, num_points, rs_center)
     # Calculate and plot interface sag.
-    sag = math.calc_sphere_sag_xy(roc, x1, y1)
+    sag = functions.calc_sphere_sag_xy(roc, x1, y1)
     xu, yu, sagu = asbp.unroll_r(r1_support, sag)
     # Propagate to curved surface.
     Er1, _ = asbp.propagate_plane_to_curved_spherical(k, r0_support, Er0, f + sag, m, rs_center)

@@ -8,7 +8,7 @@ from .scalar import Assembly
 from ..sdb.qt import SphereTraceRender, SphereTraceViewer
 from .._utility import Delegate
 from . import Element
-from .. import v4
+from .. import v4h
 from ..qt import application
 from ..sdb.qt import SphereTraceViewer
 
@@ -23,7 +23,7 @@ def view_elements(elements: Sequence[Element], all_properties: Dict[sdb.Surface,
     if surface is None:
         surface = sdb.UnionOp([e.surface for e in elements])
 
-    epsilon = v4.norm(surface.get_aabb(np.eye(4)).size)*1e-3
+    epsilon = v4h.norm(surface.get_aabb(np.eye(4)).size)*1e-3
 
     if default_edge_width is None:
         default_edge_width = epsilon*2
@@ -32,7 +32,7 @@ def view_elements(elements: Sequence[Element], all_properties: Dict[sdb.Surface,
         all_properties[surface].setdefault('edge_width', default_edge_width)
 
     if zhat is None:
-        zhat = -v4.xhat
+        zhat = -v4h.xhat
 
     sdb_glsl = gen_get_all_recursive(surface, all_properties)
     viewer = SphereTraceViewer(sdb_glsl)

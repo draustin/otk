@@ -4,7 +4,7 @@ from  itertools import  product
 from abc import ABC, abstractmethod
 from typing import Sequence, Tuple
 import numpy as np
-from .. import v4
+from .. import v4h, vectors
 from ..h4t import make_translation
 from . import bounding
 
@@ -195,13 +195,13 @@ class Plane(Primitive):
         d = n.x + c
     """
     # TODO get rid of normalize - make factory method instead
-    def __init__(self, n:Sequence[float], c:float, parent: Surface = None):
+    def __init__(self, n: Sequence[float], c: float, parent: Surface = None):
         Primitive.__init__(self, parent)
-        self.n = v4.normalize(v4.to_vector(n))[:3]
+        self.n = v4h.normalize(v4h.to_vector(n))[:3]
         self.c = float(c)
 
 class Hemisphere(Primitive):
-    def __init__(self, r:float, o:Sequence[float]=None, sign:float=1, parent: Surface = None):
+    def __init__(self, r: float, o: Sequence[float] = None, sign: float = 1, parent: Surface = None):
         Primitive.__init__(self, parent)
         if o is None:
             o = (0.0, 0.0, 0.0)
@@ -211,7 +211,7 @@ class Hemisphere(Primitive):
         self.sign = sign
 
 class SphericalSag(Primitive):
-    def __init__(self, roc:float, side:float=1, vertex:Sequence[float]=None, parent: Surface = None):
+    def __init__(self, roc: float, side: float = 1., vertex: Sequence[float] = None, parent: Surface = None):
         """Spherical sag profile.
 
         Spherical profile applies out to circle of radius |roc| in z=vertex[2] plane beyond which it continues in this

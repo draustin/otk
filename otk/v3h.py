@@ -1,3 +1,4 @@
+"""Definitions and operations for homogeneous vectors in 2D space."""
 import numpy as np
 
 def is_point(x: np.ndarray) -> bool:
