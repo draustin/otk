@@ -3,7 +3,6 @@ import numpy as np
 from typing import Tuple, Sequence
 
 from otk.rt1 import Ray
-from .. import geo3
 import mathx
 from .. import ri
 from .. import v4hb
@@ -126,11 +125,11 @@ class SpotArray:
         vector_local = v4hb.stack_xyzw(vxv, vyv, vzv, 0)
         origin = stop_surface.to_global(origin_local)
         vector = stop_surface.to_global(vector_local)
-        pol = geo3.normalize(v4hb.cross(vector, [0, 1, 0, 0]))
+        pol = v4hb.normalize(v4hb.cross(vector, [0, 1, 0, 0]))
         segments = trace_fun(raytrace.Ray(raytrace.Line(origin, vector), pol, 0, lamb, n0(lamb)))
         shape = num_spots, num_spots, num_rays, num_rays, 4
         line = segments[-1].ray.line
-        ix, iy = geo3.to_xy(image_surface.to_local(line.origin).reshape(shape))
+        ix, iy = v4hb.to_xy(image_surface.to_local(line.origin).reshape(shape))
         ivx, ivy, ivz = v4hb.to_xyz(image_surface.to_local(line.vector).reshape(shape))
         iu = ivx/ivz
         iv = ivy/ivz
@@ -171,7 +170,7 @@ def trace_distortion(stop_surface, image_surface, trace_fun, lamb: float, stop_s
         vector = stop_surface.to_global(vector_local)
         pol = stop_surface.matrix[1, :]
         segments = trace_fun(raytrace.Ray(otk.rt1.lines.Line(origin, vector), pol, 1, 0, lamb))
-        ix, iy = geo3.to_xy(image_surface.to_local(segments[-1].ray.line.origin))
+        ix, iy = v4hb.to_xy(image_surface.to_local(segments[-1].ray.line.origin))
         ixs.append(ix.mean())
 
     return np.asarray(ixs)
@@ -183,14 +182,14 @@ def connect_mapped_points(ray0, point1, map_to, map_from, max_error_distance=1e-
     while num_iterations <= max_num_iterations:
         # Trace from 0 to 1.
         ray1i = map_to(ray0)
-        error1 = geo3.dot(ray1i.line.origin - point1)
+        error1 = v4hb.dot(ray1i.line.origin - point1)
 
         # Make ray from point1 in opposite direction to ray1i.
         ray1 = Ray(otk.rt1.lines.Line(point1, -ray1i.line.vector), ray1i.pol, ray1i.flux, 0, ray1i.lamb, ray1i.n)
 
         # Trace from 1 to 0.
         ray0i = map_from(ray1)
-        error0 = geo3.dot(ray0i.line.origin - point0)
+        error0 = v4hb.dot(ray0i.line.origin - point0)
 
         # Make ray from point0 in opposite direction to ray0i.
         ray0 = Ray(otk.rt1.lines.Line(point0, -ray0i.line.vector), ray0i.pol, ray0i.flux, 0, ray0i.lamb, ray0i.n)
@@ -212,7 +211,7 @@ def make_phase_space_cross(x_w, y_w, vx_w, vy_w, num=10, colors=('b', 'r'), symb
     zeros = np.zeros(num)
     origin = np.c_[np.r_[np.linspace(-x_w/2, x_w/2, num), zeros, zeros, zeros], np.r_[
         zeros, np.linspace(-y_w/2, y_w/2, num), zeros, zeros], np.zeros(4*num), np.zeros(4*num)]
-    vector = geo3.normalize(np.c_[np.r_[zeros, zeros, np.linspace(-vx_w/2, vx_w/2, num), zeros], np.r_[
+    vector = v4hb.normalize(np.c_[np.r_[zeros, zeros, np.linspace(-vx_w/2, vx_w/2, num), zeros], np.r_[
         zeros, zeros, zeros, np.linspace(-vy_w/2, vy_w/2, num)], np.ones(4*num), np.zeros(4*num)])
     return origin, vector
 

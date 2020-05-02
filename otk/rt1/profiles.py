@@ -3,9 +3,11 @@ from functools import singledispatch
 from typing import Sequence, Tuple
 import numpy as np
 import mathx
+import otk.functions
+
 from .. import functions
 from .. import v4hb
-from .. import geo3, trains
+from .. import trains
 from . import boundaries
 
 class Profile:
@@ -107,7 +109,7 @@ class SphericalProfile(Profile):
             d (...x1 array): Number of directions to intersection.
         """
         d = \
-        geo3.intersect_spherical_surface(origin[..., 0], origin[..., 1], origin[..., 2], vector[..., 0], vector[..., 1],
+        otk.functions.intersect_spherical_surface(origin[..., 0], origin[..., 1], origin[..., 2], vector[..., 0], vector[..., 1],
             vector[..., 2], self.roc)[..., None]
         return d
 
@@ -264,7 +266,7 @@ class ConicProfile(ArbitraryRotationallySymmetricProfile):
         """
         if np.isfinite(self.roc):
             # Starting guess is sphere.
-            d = geo3.intersect_spherical_surface(origin[..., 0], origin[..., 1], origin[..., 2], vector[..., 0],
+            d = otk.functions.intersect_spherical_surface(origin[..., 0], origin[..., 1], origin[..., 2], vector[..., 0],
                 vector[..., 1], vector[..., 2], self.roc)[..., None]
         else:
             # Starting guess is plane.

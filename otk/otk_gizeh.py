@@ -1,7 +1,7 @@
 """Drawing functions using the gizeh library as a backend."""
 import numpy as np
 import gizeh
-from . import trains, math
+from . import trains, functions
 
 def make_interface(face:trains.Interface, num_points=32, **kwargs):
     xys = face.get_points(num_points)
@@ -25,7 +25,7 @@ def label_interface(face:trains.Interface, radius_factor=1, font_family='sans', 
     if font_size is None:
         font_size = face.radius/3
     x = radius_factor*face.radius
-    y = math.calc_sphere_sag(face.roc, face.radius)
+    y = functions.calc_sphere_sag(face.roc, face.radius)
     string = 'ROC %.3f mm'%(face.roc*1e3)
     text_element = gizeh.text(string, font_family, font_size, **kwargs).translate((x, y))
     line_element = gizeh.polyline(((face.radius, y), (x, y)), stroke=(0.8, 0.8, 0.8), stroke_width=font_size/16)

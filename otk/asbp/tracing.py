@@ -3,6 +3,7 @@ import logging
 
 import numpy as np
 import mathx
+import otk.functions
 import otk.h4t
 
 from . import profiles
@@ -246,7 +247,8 @@ class Beam(ImmutableTransform):
         polarization_local = polarization.dot(self.inverse_matrix)
         profile = self.profile.reflect(rt1.to_xyz(normal_local), n, scale_Er, polarization_local[:2])
         # Reflect about plane z_local = profile.z at rs_center. WTF?
-        matrix = rt1.transform(rt1.calc_mirror_matrix(otk.h4t.make_translation(0, 0, profile.z_center)), self.matrix)
+        matrix = rt1.transform(
+            otk.functions.calc_mirror_matrix(otk.h4t.make_translation(0, 0, profile.z_center)), self.matrix)
         return Beam(profile, matrix)
 
     def make_interface_modes(self, surface_profile: rt1.Profile, interface: rt1.Interface):

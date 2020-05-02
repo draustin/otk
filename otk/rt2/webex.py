@@ -1,17 +1,15 @@
-import numpy as np
 from collections import defaultdict
-from typing import Dict, Sequence, Iterable, Union
-from PyQt5 import QtWidgets, QtCore
-from .. import sdb
-from ..sdb.glsl import gen_get_all_recursive
-from .scalar import Assembly
-from ..sdb.qt import SphereTraceRender, SphereTraceViewer
-from .._utility import Delegate
+from typing import Dict, Sequence, Iterable
+
+import numpy as np
+
 from . import Element
+from .. import sdb
 from .. import v4h
-from ..qt import application
-from ..sdb.qt import SphereTraceViewer
+from ..functions import norm
 from ..sdb import webex
+from ..sdb.glsl import gen_get_all_recursive
+
 
 def gen_scene_html(filename: str, elements: Sequence[Element], all_properties: Dict[sdb.Surface, Dict] = None,
     surface: sdb.Surface = None, default_edge_width: float = None, projection_type: str = 'orthographic',
@@ -24,7 +22,7 @@ def gen_scene_html(filename: str, elements: Sequence[Element], all_properties: D
         surface = sdb.UnionOp([e.surface for e in elements])
 
     if epsilon is None:
-        epsilon = v4h.norm(surface.get_aabb(np.eye(4)).size)*1e-3
+        epsilon = norm(surface.get_aabb(np.eye(4)).size)*1e-3
 
     if default_edge_width is None:
         default_edge_width = epsilon*2

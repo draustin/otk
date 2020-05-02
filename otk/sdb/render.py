@@ -5,7 +5,8 @@ import itertools
 from typing import Sequence, List, Tuple
 import numpy as np
 from .. import v4h
-#from ..v4b import *
+from ..types import Sequence3, Matrix4, Vector4, Sequence4
+from ..functions import normalize, norm
 from .npscalar import spheretrace
 from . import bounding, Surface
 
@@ -37,14 +38,14 @@ def projection(l:float, r:float, b:float, t:float, n:float, f:float):
         (0,           0,           -1,              0))).T
 
 """Produce camera to world transform."""
-def lookat(eye: Sequence[float], center: Sequence[float], y: Sequence[float] = (0.0, 1.0, 0.0)):
-    eye = v4h.to_point(eye)
-    center = v4h.to_point(center)
+def lookat(eye: Sequence3, center: Sequence3, y: Sequence3 = (0.0, 1.0, 0.0)) -> Matrix4:
+    eye = np.asarray(eye, float)
+    assert eye.shape == (3,)
 
     # eye to center is -z axis.
-    z = v4h.normalize(eye - center)
-    x = v4h.normalize(v4h.cross(y, z))
-    y = v4h.cross(z, x)
+    z = normalize(eye - center)
+    x = normalize(np.cross(y, z))
+    y = np.cross(z, x)
 
     return np.asarray((
         (x[0], y[0], z[0], eye[0]),
@@ -73,7 +74,7 @@ def raster(target, shader):
             ny = pix2norm(iy, target.shape[0])
             target[iy, ix] = shader(nx, ny)
 
-def ndc2ray(nx:float, ny:float, invP:Sequence[Sequence[float]]):
+def ndc2ray(nx:float, ny:float, invP: Matrix4) -> Tuple[Vector4, Vector4, float]:
     invP = np.asarray(invP)
 
     # Define ray intersection point with near and far planes in normalized device coordinates.
@@ -88,7 +89,7 @@ def ndc2ray(nx:float, ny:float, invP:Sequence[Sequence[float]]):
     wf = wfp / wfp[3]
 
     vp = wf - w0
-    d_max = v4h.norm(vp)
+    d_max = norm(vp)
     v = vp/d_max
 
     return w0, v, d_max
@@ -202,24 +203,24 @@ class Scene:
         wireframe_models = list(wireframe_models)
         return cls(name, sdb_glsl, z_near, z_far, eye, center, wireframe_models)
 
-def lookat_surface(surface: Surface, projection_type: str, zhat: Sequence[float], aspect: float) -> Tuple[Projection, np.ndarray]:
+def lookat_surface(surface: Surface, projection_type: str, zhat: Sequence4, aspect: float) -> Tuple[Projection, np.ndarray]:
     """Generate projection and eye to world transformation for viewing a surface in its entirety.
 
     The projection type is either 'orthographic' or 'perspective'. The eye is displaced from the center of the surface
     along the positive zhat direction. The aspect ratio of the display (height/width in pixels) ensures the surface
     fits verticallly as well as horizontally.
     """
-    zhat = v4h.normalize(v4h.to_vector(zhat))
+    zhat = normalize(v4h.to_vector(zhat))
     xhat = v4h.cross(v4h.yhat, zhat)
-    if np.isclose(v4h.norm(xhat), 0):
+    if np.isclose(norm(xhat), 0):
         xhat = np.cross(zhat, v4h.zhat)
-    xhat = v4h.normalize(xhat)
+    xhat = normalize(xhat)
     yhat = v4h.cross(zhat, xhat)
     e2w0 = np.stack((xhat, yhat, zhat, v4h.origin))
     w2e0 = np.linalg.inv(e2w0)
     box = surface.get_aabb(w2e0)
     center = box.center.dot(e2w0)
-    diag = v4h.norm(box.size)
+    diag = norm(box.size)
     extra = diag*3
     half_width = max(box.size[0]/2, box.size[1]/2/aspect)
     if projection_type == 'orthographic':

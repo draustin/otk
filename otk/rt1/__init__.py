@@ -2,7 +2,7 @@ from ..v4hb import dot, cross, triple, normalize, \
     stack_xyzw, concatenate_xyzw, transform, to_xyzw, to_xy, to_xyz
 from otk.h4t import make_x_rotation, make_y_rotation, make_z_rotation, make_translation, make_rotation, make_scaling, \
     make_frame
-from ..geo3 import refract_vector, reflect_vector, NoIntersectionError, calc_mirror_matrix
+from otk.functions import refract_vector, reflect_vector, calc_mirror_matrix
 from .raytrace import Ray, Line
 from .boundaries import Boundary, InfiniteBoundary, SquareBoundary, RectangleBoundary, CircleBoundary
 from .masks import Mask, LatticeMask
@@ -17,8 +17,7 @@ from .analysis import SpotArray, trace_distortion, trace_train_spot_array
 
 # from rt import * isn't recommended, but need to list names here to prevent linter/PyCharm from thinking the imports are unused.
 __all__ = ['dot', 'cross', 'triple', 'normalize',
-    'stack_xyzw', 'concatenate_xyzw', 'transform', 'to_xyzw', 'to_xy', 'to_xyz', 'refract_vector', 'reflect_vector',
-    'NoIntersectionError', 'calc_mirror_matrix', 'Boundary', 'InfiniteBoundary', 'SquareBoundary',
+    'stack_xyzw', 'concatenate_xyzw', 'transform', 'to_xyzw', 'to_xy', 'to_xyz', 'NoIntersectionError', 'Boundary', 'InfiniteBoundary', 'SquareBoundary',
     'RectangleBoundary', 'CircleBoundary', 'Mask', 'LatticeMask', 'Profile', 'PlanarProfile', 'SphericalProfile', 'SphericalSquareArrayProfile', 'make_spherical_profile',
     'ConicProfile', 'SquareArrayProfile', 'LatticeProfile',
      'BinaryProfile', 'Interface', 'FresnelInterface', 'SampledCoating', 'Mirror', 'PerfectRefractor', 'Directions', 'FresnelInterface',

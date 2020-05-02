@@ -1,11 +1,11 @@
 from typing import Dict, Sequence, Tuple
 from enum import Enum
 import numpy as np
+import otk.functions
 import scipy.interpolate
-from otk.geo3 import make_perpendicular
+from otk.functions import make_perpendicular
 
 from .. import v4hb
-from .. import geo3
 from .. import functions
 from .. import ri
 
@@ -70,7 +70,7 @@ def calc_matrix(incident_vectors, deflected_vectors, amplitudes):
 class Mirror(Interface):
     def calc_modes(self, point: np.ndarray, normal: np.ndarray, lamb: float, incident_vector: np.ndarray,
             n: np.ndarray) -> Dict:
-        reflected_vector = geo3.reflect_vector(incident_vector, normal)
+        reflected_vector = otk.functions.reflect_vector(incident_vector, normal)
         s_pol_vector = v4hb.cross(normal, incident_vector)
         incident_p_pol_vector = v4hb.cross(incident_vector, s_pol_vector)
         reflected_p_pol_vector = v4hb.cross(reflected_vector, s_pol_vector)
@@ -123,8 +123,8 @@ class IsotropicMediaInterface(Interface):
 
         cos_theta1 = abs(cos_theta1)
 
-        refracted_vector = geo3.refract_vector(incident_vector, normal, nb/na)*na/nb
-        reflected_vector = geo3.reflect_vector(incident_vector, normal)
+        refracted_vector = otk.functions.refract_vector(incident_vector, normal, nb/na)*na/nb
+        reflected_vector = otk.functions.reflect_vector(incident_vector, normal)
 
         # Generate unit vector perpendicular to normal and incident.
         s_pol_vector = make_perpendicular(normal, incident_vector)

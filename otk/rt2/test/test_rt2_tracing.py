@@ -6,6 +6,7 @@ from otk import sdb
 from otk.sdb import npscalar
 #from otk.sdb import *
 #from otk.sdb.npscalar import *
+from otk.functions import dot, normalize, norm
 from otk.rt2.scalar import _get_transformed_element, _process_ray
 from otk.rt2 import rt2_scalar as rt2
 from otk.sdb import lens
@@ -34,9 +35,9 @@ def test_tracing():
     length, deflected_rays = _process_ray(assembly, incident_ray, dict(epsilon=epsilon, t_max=1e9, max_steps=100))
     assert (2**0.5 - epsilon) <= length  <= (2**0.5 + epsilon)
 
-    (rp, rs), (tp, ts) = functions.calc_fresnel_coefficients(n0, n1, abs(v4h.dot(incident_ray.line.vector, normal)))
+    (rp, rs), (tp, ts) = functions.calc_fresnel_coefficients(n0, n1, abs(dot(incident_ray.line.vector, normal)))
     assert 0 <= npscalar.getsdb(surface, deflected_rays[0].line.origin) <= epsilon
-    assert np.array_equal(deflected_rays[0].line.vector, v4h.normalize(v4h.to_vector((0, 1, -1, 0))))
+    assert np.array_equal(deflected_rays[0].line.vector, normalize(v4h.to_vector((0, 1, -1, 0))))
     assert np.isclose(deflected_rays[0].flux, rs**2)
 
     vy = 2**-0.5*n0/n1
@@ -115,7 +116,7 @@ def test_biconvex_lens():
     segments = rt2.nonseq_trace(assembly, incident_ray1, sphere_trace_kwargs).flatten()
     assert len(segments) == 3
     # Check ray passes close to image.
-    assert v4h.norm(segments[2].ray.line.pass_point(image)[1].origin - image) < 1e-6
+    assert norm(segments[2].ray.line.pass_point(image)[1].origin - image) < 1e-6
 
     # TODO check phase
 
@@ -140,7 +141,7 @@ def test_hyperbolic_lens():
         ray = rt2.make_ray(assembly, x0, 0, -1, 0, 0, 1, 1, 0, 0, 800e-9)
         segments = rt2.nonseq_trace(assembly, ray, sphere_trace_kwargs).flatten()
         assert len(segments) == 2
-        assert v4h.norm(segments[1].ray.line.pass_point(focus)[1].origin - focus) < 1e-6
+        assert norm(segments[1].ray.line.pass_point(focus)[1].origin - focus) < 1e-6
 
 
 

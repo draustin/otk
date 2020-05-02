@@ -2,6 +2,7 @@ import numpy as np
 from warnings import warn
 from numba import njit
 from ... import v4h
+from ...functions import norm, norm_squared
 from ..geometry import *
 from .base import  *
 from .base import get_cached_getsdb, surface_labels
@@ -14,7 +15,7 @@ def _(s: Box):
     @njit("f8(f8[:])")
     def g(x:np.ndarray):
         q = np.abs(x[:3] - center) - (half_size - radius)
-        return v4h.norm(np.maximum(q, 0.)) + min(max(q[0], max(q[1], q[2])), 0.0) - radius
+        return norm(np.maximum(q, 0.)) + min(max(q[0], max(q[1], q[2])), 0.0) - radius
     return g
 
 @gen_identify.register(Box)
@@ -33,7 +34,7 @@ def _(s: InfiniteCylinder):
     r = s.r
     @njit("f8(f8[:])")
     def g(x):
-        return v4h.norm(x[:2] - o) - r
+        return norm(x[:2] - o) - r
     return g
 
 @gen_getsdb.register
@@ -43,7 +44,7 @@ def _(s: InfiniteRectangularPrism):
     @njit("f8(f8[:])")
     def g(x):
         q = np.abs(x[:2] - center) - half_size
-        return v4h.norm(np.maximum(q, 0.0)) + min(max(q[0], q[1]), 0.0)
+        return norm(np.maximum(q, 0.0)) + min(max(q[0], q[1]), 0.0)
     return g
 
 @gen_identify.register(InfiniteRectangularPrism)
@@ -91,7 +92,7 @@ def _(s: ZemaxConic):
     @njit("f8(f8[:])")
     def getsdb(x):
         xp = x[:3] - vertex
-        rho2 = min(v4h.norm_squared(xp[:2]), radius_sqd)
+        rho2 = min(norm_squared(xp[:2]), radius_sqd)
         rho = rho2**0.5
         if np.isfinite(roc):
             z = rho2/(roc*(1 + (1 - kappa*rho2/roc**2)**0.5))
@@ -115,7 +116,7 @@ def _(s: SphericalSag):
     @njit("f8(f8[:])")
     def getsdb(x):
         if np.isfinite(roc):
-            a = inside*(v4h.norm(x[:3] - center) - abs(roc))
+            a = inside*(norm(x[:3] - center) - abs(roc))
             b = -side*(x[2] - center[2])
             if inside > 0:
                 return min(a, b)

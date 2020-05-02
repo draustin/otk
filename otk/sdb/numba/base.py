@@ -3,7 +3,7 @@ import numpy as np
 from typing import Sequence
 from numba import njit, typeof
 from functools import singledispatch
-from ... import v4h
+from ...functions import norm, normalize
 from ..geometry import *
 from ..npscalar.base import SphereTrace
 
@@ -37,7 +37,7 @@ ks_getnormal = (
 @singledispatch
 def getnormal(surface:Surface, x, h=1e-9) -> np.ndarray:
     getsdb = get_cached_getsdb(surface)
-    return v4h.normalize(sum(k*getsdb(x + k*h) for k in ks_getnormal))
+    return normalize(sum(k*getsdb(x + k*h) for k in ks_getnormal))
 
 def gen_reduce(op, funs):
     fun0 = funs[0]
@@ -124,7 +124,7 @@ def _(s:SegmentedRadial):
     getsdbs = tuple(get_cached_getsdb(child) for child in s.surfaces)
     @njit("f8(f8[:])")
     def g(x):
-        rho = v4h.norm(x[:2] - vertex)
+        rho = norm(x[:2] - vertex)
         for getsdb, r in zip(getsdbs[:-1], radii):
             if rho <= r:
                 return getsdb(x)
@@ -138,7 +138,7 @@ def _(s:SegmentedRadial):
     identifies = tuple(get_cached_identify(child) for child in s.surfaces)
     @njit
     def g(x):
-        rho = v4h.norm(x[:2] - vertex)
+        rho = norm(x[:2] - vertex)
         for identify, r in zip(identifies[:-1], radii):
             if rho <= r:
                 return identify(x)

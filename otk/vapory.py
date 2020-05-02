@@ -7,11 +7,11 @@ the pov module.
 import numpy as np
 import vapory as vp
 
-from . import math, trains
+from . import functions, trains
 
 def make_circular_spherical_lens(roc1, roc2, thickness, radius, n, *args):
-    sag1 = math.calc_sphere_sag(roc1, radius)
-    sag2 = math.calc_sphere_sag(roc2, radius)
+    sag1 = functions.calc_sphere_sag(roc1, radius)
+    sag2 = functions.calc_sphere_sag(roc2, radius)
 
     sections = []
     surface1 = vp.Sphere([0, 0, roc1], abs(roc1))
@@ -33,8 +33,8 @@ def make_circular_spherical_lens(roc1, roc2, thickness, radius, n, *args):
 
 def make_square_spherical_lens(roc1: float, roc2: float, thickness: float, side_length: float, n: float, *args):
     radius = side_length/2**0.5
-    sag1 = math.calc_sphere_sag(roc1, radius)
-    sag2 = math.calc_sphere_sag(roc2, radius)
+    sag1 = functions.calc_sphere_sag(roc1, radius)
+    sag2 = functions.calc_sphere_sag(roc2, radius)
     hsl = side_length/2
 
     sections = []

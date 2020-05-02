@@ -6,9 +6,6 @@ try:
 except ImportError:
     numba = None
 
-# Include these in namespace for convenience.
-from .functions import dot, norm_squared, norm, normalize
-
 if numba is None:
     def cross(a, b):
         return np.r_[np.cross(a[:3], b[:3]), 0]

@@ -7,9 +7,14 @@ Sequence2 = Sequence
 Sequence3 = Sequence
 Sequence4 = Sequence
 
-# Numpy arrays of a certain shape
-Vector2 = np.ndarray
-Vector3 = np.ndarray
-Vector4 = np.ndarray
-Matrix3 = np.ndarray
-Matrix4 = np.ndarray
+# Numpy arrays of a certain shape.
+Vector2 = np.ndarray # (2,)
+Vector3 = np.ndarray # (3,)
+Vector4 = np.ndarray # (4,)
+Matrix3 = np.ndarray # (3, 3)
+Matrix4 = np.ndarray # (4, 4)
+
+# Numpy arrays with final dimension of certain length (for broadcasted operations).
+Vectors2 = np.ndarray # (..., 2)
+Vectors3 = np.ndarray # (..., 3)
+Vectors4 = np.ndarray # (..., 4)

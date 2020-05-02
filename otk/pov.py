@@ -1,4 +1,8 @@
-""""""
+"""Tools for generating scenes in POV-Ray.
+
+I wrote this module before the 3D geometry system based on signed distance bounds (sdb). If POV-Ray output is desired
+in future it would be much better to make it a backend of sdb.
+"""
 import os, shutil
 import subprocess
 from typing import Sequence, TextIO, Tuple, Callable

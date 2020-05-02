@@ -2,7 +2,7 @@
 import numpy as np
 from typing import Sequence
 import cairo
-from . import trains, math
+from . import trains, functions
 
 index_colors = {'air': (0.9, 0.9, 0.9, 1), 'fused_silica': (0, 0.5, 1, 1)}
 
@@ -22,7 +22,7 @@ def label_interface(ctx: cairo.Context, face:trains.Interface, radius_factor=1):
         radius_factor (scalar): Factor by which interface radius is multiplied to get text x position.
     """
     x = radius_factor*face.radius
-    y = math.calc_sphere_sag(face.roc, face.radius)
+    y = functions.calc_sphere_sag(face.roc, face.radius)
     string = 'ROC %.3f mm'%(face.roc*1e3)
     ctx.set_source_rgb(0, 0, 0)
     ctx.save()
@@ -131,7 +131,7 @@ def label_train_spaces(ctx: cairo.Context, train: trains.Train, radius_factors=1
             h_next = 0
         else:
             radius_next = next_interface.radius
-            h_next = math.calc_sphere_sag(next_interface.roc, radius_next)
+            h_next = functions.calc_sphere_sag(next_interface.roc, radius_next)
         y_next = y_last + space
         if space != 0:
             string = '%.3f mm %s'%(space*1e3, n.name)

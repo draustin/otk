@@ -1,12 +1,13 @@
 from typing import Iterable, Sequence, List
 
+import otk.functions
 import otk.h4t
 import otk.rt1.lines
 import scipy.optimize
 import numpy as np
 from .. import ri
 from . import profiles, boundaries, interfaces
-from .. import v4hb, geo3, trains
+from .. import v4hb, trains
 import mathx
 from .lines import Line
 
@@ -46,7 +47,7 @@ class MutableTransform(MutableTransformable):
         # TODO maybe copy the matrix to prevent accidental (or deliberate?) overwrite?
         self.matrix = matrix
         self.inverse_matrix = np.linalg.inv(self.matrix)
-        self.reflection_matrix = geo3.calc_mirror_matrix(
+        self.reflection_matrix = otk.functions.calc_mirror_matrix(
             self.matrix)  # np.matmul(self.inverse_matrix, np.matmul(np.diag((1, 1, -1, 1)), self.matrix))
 
     def transform(self, transformation, frame='global'):

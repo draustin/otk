@@ -59,9 +59,6 @@ def norm(vector):
     return dot(vector)**0.5
 
 
-# TODO up comes first for historical reasons. Change it.
-
-
 def to_xyzw(matrix):
     """Convenience/readibility function to bring spatial (trailing) axis to start.
 

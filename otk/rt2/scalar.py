@@ -10,9 +10,11 @@ import numpy as np
 from functools import singledispatch
 from dataclasses import dataclass
 from typing import Sequence, Union, List
+
+import otk.functions
+from ..functions import normalize, dot, norm_squared
 from .. import functions
 from .. import sdb
-from .. import geo3
 #from ..sdb.npscalar import *
 #from ..v4 import *
 from .. import v4h
@@ -44,7 +46,7 @@ class Line:
         return Line(self.eval(t), self.vector)
 
     def pass_point(self, x:np.ndarray):
-        t = v4h.dot(self.vector, x - self.origin)/v4h.norm_squared(self.vector)
+        t = dot(self.vector, x - self.origin)/norm_squared(self.vector)
         return t, self.advance(t)
 
     def transform(self, m: np.ndarray) -> 'Line':
@@ -127,11 +129,11 @@ def _(ox: float, oy, oz, vx, vy, vz, px, py, pz, n, flux, phase_origin, lamb, el
         phase_origin: Phase at ray  origin.
         lamb: Wavelength.
     """
-    vector = v4h.normalize(v4h.to_vector((vx, vy, vz)))
+    vector = normalize(v4h.to_vector((vx, vy, vz)))
     line = Line(np.asarray((ox, oy, oz, 1.)), vector)
     # Make polarization perpendicular to vector.
     y = v4h.cross(vector, v4h.to_vector((px, py, pz)))
-    pol = v4h.normalize(v4h.cross(y, vector))
+    pol = normalize(v4h.cross(y, vector))
 
     k = line.vector*n*2*np.pi/lamb
     return Ray(line, k, pol, flux, phase_origin, lamb, element)
@@ -176,23 +178,23 @@ def deflect_ray(self: SimpleDeflector, ray: Ray, x0:np.ndarray, x1:np.ndarray, d
     n_ratio = n1/n0
 
     # Calculate normalized refracted and reflected vectors.
-    refracted_vector = geo3.refract_vector(ray.line.vector, normal, n_ratio)/n_ratio
-    reflected_vector = geo3.reflect_vector(ray.line.vector, normal)
+    refracted_vector = otk.functions.refract_vector(ray.line.vector, normal, n_ratio)/n_ratio
+    reflected_vector = otk.functions.reflect_vector(ray.line.vector, normal)
 
     # Generate unit vector perpendicular to normal and incident.
-    s_pol_vector = geo3.make_perpendicular(normal, ray.line.vector)
+    s_pol_vector = otk.functions.make_perpendicular(normal, ray.line.vector)
 
     incident_p_pol_vector = v4h.cross(ray.line.vector, s_pol_vector)
     refracted_p_pol_vector = v4h.cross(refracted_vector, s_pol_vector)
     reflected_p_pol_vector = v4h.cross(reflected_vector, s_pol_vector)
 
-    cos_theta0 = abs(v4h.dot(normal, ray.line.vector))
+    cos_theta0 = abs(dot(normal, ray.line.vector))
     amplitudes = calc_amplitudes(self.interface, n0, n1, cos_theta0, ray.lamb)
-    incident_components = [v4h.dot(ray.polarization, i) for i in (incident_p_pol_vector, s_pol_vector)]
+    incident_components = [dot(ray.polarization, i) for i in (incident_p_pol_vector, s_pol_vector)]
 
     def calc_ray(origin, amplitudes, axis_vectors, ray_vector, n, element):
         pol_unnorm = sum(c*a*v for c, a, v in zip(incident_components, amplitudes, axis_vectors))
-        pol_factor = v4h.norm_squared(pol_unnorm)
+        pol_factor = norm_squared(pol_unnorm)
         pol = pol_unnorm/pol_factor**0.5
         line = Line(origin, ray_vector)
         deflected_ray = Ray(line, n*2*np.pi/ray.lamb*ray_vector, pol, ray.flux*pol_factor*n/n0, ray.phase_origin,

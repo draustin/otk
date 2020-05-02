@@ -4,7 +4,7 @@ from  itertools import  product
 from abc import ABC, abstractmethod
 from typing import Sequence, Tuple
 import numpy as np
-from .. import v4h
+from ..functions import normalize
 from ..h4t import make_translation
 from . import bounding
 
@@ -197,7 +197,7 @@ class Plane(Primitive):
     # TODO get rid of normalize - make factory method instead
     def __init__(self, n: Sequence[float], c: float, parent: Surface = None):
         Primitive.__init__(self, parent)
-        self.n = v4h.normalize(v4h.to_vector(n))[:3]
+        self.n = normalize(n[:3])
         self.c = float(c)
 
 class Hemisphere(Primitive):
