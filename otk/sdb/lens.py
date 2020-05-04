@@ -67,8 +67,8 @@ def make_spherical_singlet_square_array(roc0, roc1, thickness, pitch, size, face
         face_center = 0, 0, 0
     face_center = np.asarray(face_center)
     assert face_center.shape == (3,)
-    s0 = FiniteRectangularArray(pitch, size, SphericalSag(roc0, 1, (0, 0, face_center[2])), origin=face_center[:2])
-    s1 = FiniteRectangularArray(pitch, size, SphericalSag(roc1, -1, (0, 0, face_center[2] + thickness)), origin=face_center[:2])
+    s0 = FiniteRectangularArray(pitch, size, SphericalSag(roc0, 1, (0, 0, face_center[2])), center=face_center[:2])
+    s1 = FiniteRectangularArray(pitch, size, SphericalSag(roc1, -1, (0, 0, face_center[2] + thickness)), center=face_center[:2])
     s2 = InfiniteRectangularPrism(*(pitch*size), face_center[:2])
     radius = sum(pitch**2)**0.5/2
     z0 = min(functions.calc_sphere_sag(roc0, radius), 0)

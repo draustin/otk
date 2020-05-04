@@ -1,6 +1,7 @@
 from typing import Sequence, Union
 from dataclasses import dataclass
 import numpy as np
+from ..types import Vector2
 from . import *
 from ..functions import norm
 
@@ -39,9 +40,14 @@ class ZemaxConicSagFunction(SagFunction):
 
 @dataclass
 class RectangularArrayLevel:
-    pitch: np.ndarray
-    size: Union[np.ndarray, None]
-    clamp: bool
+    """Defines one level of a multi-level rectangular array.
+
+    If size is None then the array is infinite with one unit cell centered on the origin; otherwise it has size units
+    along each axis and the entire array is centered on the origin.
+    """
+    pitch: Vector2
+    size: Union[Vector2, None] = None
+    clamp: bool = False
 
     @classmethod
     def make(cls, pitch, size = None, clamp: bool = False):

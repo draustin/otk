@@ -63,9 +63,9 @@ def intersect(surface: sdb.Surface, line: Line) -> float:
 
 @intersect.register
 def _(s: sdb.Plane, l: Line) -> float:
-    d = v4h.dot(l.vector[:3], s.n)
+    d = dot(l.vector[:3], s.n)
     try:
-        t = -(s.c + v4h.dot(l.origin[:3], s.n))/d
+        t = -(s.c + dot(l.origin[:3], s.n))/d
     except ZeroDivisionError:
         t = float('inf')
     return t

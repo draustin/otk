@@ -4,6 +4,7 @@ from  itertools import  product
 from abc import ABC, abstractmethod
 from typing import Sequence, Tuple
 import numpy as np
+from ..types import Sequence2, Vector2, Sequence3
 from ..functions import normalize
 from ..h4t import make_translation
 from . import bounding
@@ -242,7 +243,8 @@ class SagFunction(ABC):
         pass
 
 class Sag(Primitive):
-    def __init__(self, sagfun: SagFunction, side: float = 1., origin: Sequence[float] = None, parent: Surface = None):
+    """Surface defined by f(r_x - o_x, r_y - o_y) = r_z - o_z."""
+    def __init__(self, sagfun: SagFunction, side: float = 1., origin: Sequence3 = None, parent: Surface = None):
         Primitive.__init__(self, parent)
         self.sagfun = sagfun
         self.side = float(side)
@@ -321,35 +323,36 @@ class Compound(Surface):
             yield from s.descendants()
         yield self
 
+
 class FiniteRectangularArray(Compound):
-    # surface must be
-    def __init__(self, pitch, size, surface:Surface, origin=None, corner=None, parent: Surface = None):
-        Compound.__init__(self, [surface])
-        pitch = np.asarray(pitch)
+    """A finite rectangular array of unit surfaces in the xy plane.
+
+    Position in the xy plane is specified by the center of the array or the lower-left corner
+    (assuming pitch is positive). If neither are specified the array is centered at (0, 0).
+    """
+    def __init__(self, pitch: Sequence2, size: Sequence2[int], unit:Surface, center: Sequence2 = None, corner: Sequence2 = None, parent: Surface = None):
+        Compound.__init__(self, [unit], parent)
+        pitch = np.array(pitch, float)
         assert pitch.shape == (2,)
-        size = np.asarray(size)
+        size = np.array(size, int)
         assert size.shape == (2,)
 
-        if origin is None:
+        if center is None:
             if corner is None:
                 corner = -pitch*size/2
         else:
             assert corner is None
-            corner = origin - pitch*size/2
+            center = np.array(center, float)
+            corner = center - pitch*size/2
+        corner = np.array(corner, float)
+        assert corner.shape == (2,)
 
         self.pitch = pitch
         self.size = size
         self.corner = corner
 
-    def get_center(self, x:Sequence[float]) -> np.ndarray:
-        """
-
-        Args:
-            x: Position 2-vector.
-
-        Returns:
-            Nearest center as position 2-vector.
-        """
+    def get_center(self, x: Sequence2) -> Vector2:
+        """Return nearest unit center."""
         index = np.clip(np.floor((x - self.corner)/self.pitch), 0, self.size - 1)
         center = (index + 0.5)*self.pitch + self.corner
         return center

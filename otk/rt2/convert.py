@@ -4,12 +4,13 @@ from typing import Sequence, List
 from warnings import warn
 import numpy as np
 from .. import trains
+from ..types import Sequence3
 from ..sdb import *
 from . import *
 from . import scalar
 
-__all__ = ['make_element', 'make_surface', 'make_elements', 'make_square_array_surface', 'make_square_array_element',
-    'make_square_array_elements', 'make_sag_function']
+__all__ = ['make_element', 'make_surface', 'make_elements', 'to_rectanglar_array_sag', 'to_rectangular_array_surface', 'to_rectangular_array_element',
+    'to_rectangular_array_elements', 'make_sag_function']
 
 # begin make_surface
 
@@ -122,74 +123,44 @@ def _(obj: trains.SingletSequence, shape:str='circle', start:Sequence[float]=Non
 
 # end make_elements
 
-# begin make_square_array_surface
+def to_rectanglar_array_sag(surface: trains.Surface, levels: Sequence[RectangularArrayLevel] = None, side: float=1., center: Sequence[float] = None) -> Surface:
+    """Make nested rectangular array sag surface from train surface.
 
-@singledispatch
-def make_square_array_surface(obj, *args, **kwargs) -> Surface:
-    raise NotImplementedError(obj)
+    The geometry of each level of the array is defined in levels, from smallest to largest scale.
+    """
+    fn = RectangularArraySagFunction.make_multi(make_sag_function(surface), levels)
+    return Sag(fn, side, center)
 
-@make_square_array_surface.register
-def _(obj: trains.Surface, side: float=1., vertex: Sequence[float] = None, pitch: float = None) -> Surface:
-    if pitch is None:
-        pitch = obj.radius*2**0.5
-    fn = RectangularArraySagFunction(make_sag_function(obj), (pitch,)*2)
-    return Sag(fn, side, vertex)
+def to_rectangular_array_surface(singlet: trains.Singlet, levels: Sequence[RectangularArrayLevel], center: Sequence3 = (0., 0., 0.)) -> Surface:
+    """Make nested rectangular lens array of given singlet.
 
-@make_square_array_surface.register
-def _(obj: trains.Singlet, size: Sequence[int], origin: Sequence[float] = None, pitch: float = None) -> Surface:
-    size = np.array(size, int)
-    assert size.shape == (2,)
-    if origin is None:
-        origin = np.zeros(3)
-    origin = np.array(origin, float)
-    assert origin.shape == (3,)
+    The geometry of each level of the array is defined in levels, from smallest to largest scale.
+    """
+    center = np.array(center, float)
+    assert center.shape == (3,)
     # TODO special cases for planar surface
-    if pitch is None:
-        pitch = obj.radius*2**0.5
-    front = make_square_array_surface(obj.surfaces[0], 1, origin + (pitch/2, pitch/2, 0), pitch)
-    back = make_square_array_surface(obj.surfaces[1], -1, origin + (pitch/2, pitch/2, obj.thickness), pitch)
-    z0 = min(obj.surfaces[0].sag_range[0], 0)
-    z1 = obj.thickness + max(obj.surfaces[1].sag_range[1], 0)
-    width, height = pitch*size
-    side = InfiniteRectangularPrism(width, height, origin[:2])
-    bound = Box((width/2, height/2, (z1 - z0)/2), (origin[0], origin[1], origin[2] + (z1 + z0)/2))
+    front = to_rectanglar_array_sag(singlet.surfaces[0], levels, 1., center)
+    back = to_rectanglar_array_sag(singlet.surfaces[1], levels, -1., center + (0, 0, singlet.thickness))
+    z0 = min(singlet.surfaces[0].sag_range[0], 0)
+    z1 = singlet.thickness + max(singlet.surfaces[1].sag_range[1], 0)
+    width, height = levels[-1].pitch*levels[-1].size
+    side = InfiniteRectangularPrism(width, height, center[:2])
+    bound = Box((width/2, height/2, (z1 - z0)/2), (center[0], center[1], center[2] + (z1 + z0)/2))
     surface = IntersectionOp((front, back, side), bound)
     return surface
 
-# end make_square_array_surface
+def to_rectangular_array_element(singlet: trains.Singlet, levels: Sequence[RectangularArrayLevel], center: Sequence3 = (0., 0., 0.)) -> Element:
+    surface = to_rectangular_array_surface(singlet, levels, center)
+    return SimpleElement(surface, UniformIsotropic(singlet.n), perfect_refractor)
 
-# begin make_square_array_element
-@singledispatch
-def make_square_array_element(obj, size: Sequence[int], origin: Sequence[float] = None) -> Element:
-    raise NotImplementedError(obj)
-
-@make_square_array_element.register
-def _(obj: trains.Singlet, size: Sequence[int], origin: Sequence[float] = None, pitch: float = None) -> Element:
-    surface = make_square_array_surface(obj, size=size, origin=origin, pitch=pitch)
-    return SimpleElement(surface, UniformIsotropic(obj.n), perfect_refractor)
-# end make_square_array_element
-
-# begin make_square_array_elements
-@singledispatch
-def make_square_array_elements(obj, size: Sequence[int], start: Sequence[float] = None, pitch: float = None) -> List[Element]:
-    raise NotImplementedError(obj)
-
-@make_square_array_elements.register
-def _(obj: trains.SingletSequence, size: Sequence[int], start: Sequence[float] = None, pitch: float = None) -> List[Element]:
-    if start is None:
-        start = 0, 0, 0
-    start = np.array(start, float)
-    assert start.shape == (3,)
-
-    if pitch is None:
-        pitch = obj.singlets[0].radius*2**0.5
+def to_rectangular_array_elements(train: trains.SingletSequence, levels: Sequence[RectangularArrayLevel], center: Sequence3 = (0., 0., 0.)) -> List[Element]:
+    center = np.array(center, float)
+    assert center.shape == (3, )
 
     elements = []
     z = 0
-    for space, singlet in zip(obj.spaces[:-1], obj.singlets):
+    for space, singlet in zip(train.spaces[:-1], train.singlets):
         z += space
-        elements.append(make_square_array_element(singlet, size, start + (0, 0, z), pitch))
+        elements.append(to_rectangular_array_element(singlet, levels, center + (0, 0, z)))
         z += singlet.thickness
     return elements
-# end make_square_array_elements
-
