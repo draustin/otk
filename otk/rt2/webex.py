@@ -13,7 +13,8 @@ from ..sdb.glsl import gen_get_all_recursive
 
 def gen_scene_html(filename: str, elements: Sequence[Element], all_properties: Dict[sdb.Surface, Dict] = None,
     surface: sdb.Surface = None, default_edge_width: float = None, projection_type: str = 'orthographic',
-    zhat: Sequence[float]=None, rays: Sequence[np.ndarray] = None, colors: Iterable = None, epsilon: float=None):
+    zhat: Sequence[float]=None, rays: Sequence[np.ndarray] = None, colors: Iterable = None, epsilon: float=None,
+    max_steps: int = 1000):
     if all_properties is None:
         all_properties = {}
     all_properties = defaultdict(dict, all_properties)
@@ -38,5 +39,5 @@ def gen_scene_html(filename: str, elements: Sequence[Element], all_properties: D
     # Don't know if aspect ratio of canvas is specified in advance, or whether it can be. Guess 1.0 for now.
     projection, eye_to_world = sdb.lookat_surface(surface, projection_type, zhat, 1.0)
 
-    webex.gen_html(filename, sdb_glsl, eye_to_world, projection, 1000, epsilon, (1, 1, 1, 1), rays, colors)
+    webex.gen_html(filename, sdb_glsl, eye_to_world, projection, max_steps, epsilon, (1, 1, 1, 1), rays, colors)
 

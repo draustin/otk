@@ -4,7 +4,7 @@ from  itertools import  product
 from abc import ABC, abstractmethod
 from typing import Sequence, Tuple, Union
 import numpy as np
-from ..types import Sequence2, Vector2, Sequence3, Vector2Int
+from ..types import Sequence2, Vector2, Sequence3, Vector2Int, Vector3
 from ..functions import normalize
 from ..h4t import make_translation
 from . import bounding
@@ -212,7 +212,11 @@ class Hemisphere(Primitive):
         self.sign = sign
 
 class SphericalSag(Primitive):
-    def __init__(self, roc: float, side: float = 1., vertex: Sequence[float] = None, parent: Surface = None):
+    roc: float
+    side: float # +/- 1.
+    vertex: Vector3
+
+    def __init__(self, roc: float, side: float = 1., vertex: Sequence3 = (0., 0., 0.), parent: Surface = None):
         """Spherical sag profile.
 
         Spherical profile applies out to circle of radius |roc| in z=vertex[2] plane beyond which it continues in this
@@ -225,12 +229,12 @@ class SphericalSag(Primitive):
             vertex: position of vertex - defaults to origin.
         """
         Primitive.__init__(self, parent)
-        self.roc = roc
+        self.roc = float(roc)
         assert np.isclose(abs(side), 1)
-        self.side = side
-        if vertex is None:
-            vertex = 0, 0, 0
-        self.vertex = np.asarray(vertex[:3])
+        self.side = float(side)
+        vertex = np.array(vertex, float)
+        assert vertex.shape == (3,)
+        self.vertex = vertex
 
     @property
     def center(self):
