@@ -12,7 +12,9 @@ def application():
 
     Spyder setup: Preferences / IPython console / Graphics / Graphics backend: select Qt5.
     """
-    QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
+    if not QtWidgets.QApplication.instance():
+        print('QCoreApplication not created, so setting AA_EnableHighDpiScaling. Expect a warning - possible in Qt / PyQt.')
+        QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
     if QtWidgets.QApplication.instance():
         app = QtWidgets.QApplication.instance()
         exec_app = False

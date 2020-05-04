@@ -2,9 +2,9 @@ from typing import List
 from dataclasses import dataclass
 from  itertools import  product
 from abc import ABC, abstractmethod
-from typing import Sequence, Tuple
+from typing import Sequence, Tuple, Union
 import numpy as np
-from ..types import Sequence2, Vector2, Sequence3
+from ..types import Sequence2, Vector2, Sequence3, Vector2Int
 from ..functions import normalize
 from ..h4t import make_translation
 from . import bounding
@@ -330,12 +330,15 @@ class FiniteRectangularArray(Compound):
     Position in the xy plane is specified by the center of the array or the lower-left corner
     (assuming pitch is positive). If neither are specified the array is centered at (0, 0).
     """
-    def __init__(self, pitch: Sequence2, size: Sequence2[int], unit:Surface, center: Sequence2 = None, corner: Sequence2 = None, parent: Surface = None):
+    pitch: Vector2
+    size: Vector2Int
+    corner: Vector2
+
+    def __init__(self, pitch: Union[Sequence2, float], size: Union[Sequence2[int], int], unit:Surface, center: Sequence2 = None, corner: Sequence2 = None, parent: Surface = None):
         Compound.__init__(self, [unit], parent)
-        pitch = np.array(pitch, float)
-        assert pitch.shape == (2,)
-        size = np.array(size, int)
-        assert size.shape == (2,)
+
+        pitch = np.broadcast_to(pitch, (2, )).astype(float)
+        size = np.broadcast_to(size, (2, )).astype(int)
 
         if center is None:
             if corner is None:

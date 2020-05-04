@@ -430,10 +430,15 @@ class Surface(ABC):
     """An axisymmetric surface between two media.
 
     TODO define radius. Is sag constant outside this i.e. is sag(rho) = sag(radius) for rho > radius?"""
+    roc: float
+    radius: float
 
     def __init__(self, roc: float, radius: float):
         self.roc = float(roc)
         self.radius = float(radius)
+
+    def __eq__(self, other):
+        return type(self) is type(other) and self.roc == other.roc and self.radius == other.radius
 
     @property
     @abstractmethod
@@ -477,14 +482,8 @@ class SphericalSurface(Surface):
     def reverse(self) -> 'SphericalSurface':
         return SphericalSurface(-self.roc, self.radius)
 
-    def __str__(self):
-        return 'ROC %.3g mm, radius %.3g mm'%(self.roc*1e3, self.radius*1e3)
-
     def __repr__(self):
-        return 'Surface(roc=%r, radius=%r)'%(self.roc, self.radius)
-
-    def __eq__(self, other):
-        return type(self) is type(other) and self.roc == other.roc and self.radius == other.radius
+        return f'SphericalSurface(roc={self.roc}, radius={self.radius})'
 
     # TODO move to rt1
     # def make_profile(self):
@@ -543,17 +542,11 @@ class ConicSurface(Surface):
         s = self.calc_sag(self.radius)
         return np.array((min(s, 0), max(s, 0)))
 
-    def __str__(self):
-        return 'ROC %.3f mm, radius %.3f mm, kappa %.3f, alphas %s'%(
-            self.roc*1e3, self.radius*1e3, self.kappa, ', '.join('%g'%v for v in self.alphas))
-
     def __repr__(self):
-        return 'ConicSurface(%r, %r, %r, %r)'%(self.roc, self.radius, self.kappa, self.alphas)
+        return f'ConicSurface(roc={self.roc}, radius={self.radius}, kappa={self.kappa}, alphas={self.alphas})'
 
     def __eq__(self, other):
-        return type(self) is type(
-            other) and self.roc == other.roc and self.radius == other.radius and self.kappa == other.kappa and np.array_equal(
-            self.kappa, other.kappa)
+        return Surface.__eq__(self, other) and self.kappa == other.kappa and np.array_equal(self.kappa, other.kappa)
 
     def calc_sag(self, rho, derivative: bool = False):
         """Calculate sag of surface.
@@ -663,6 +656,10 @@ class Singlet:
         thickness: Center thickness.
         n: Defines internal refractive index.
     """
+    surfaces: Tuple[Surface, Surface]
+    thickness: float
+    n: ri.Index
+    radius: float
 
     def __init__(self, surfaces: Tuple[Surface, Surface], thickness: float, n: ri.Index):
         self.surfaces = surfaces
@@ -676,14 +673,11 @@ class Singlet:
             n2 = n1
         return self.surfaces[0].to_interface(n1, self.n), self.surfaces[1].to_interface(self.n, n2)
 
-    def __str__(self):
-        return '%s - %.3f mm %s - %s'%(self.surfaces[0], self.thickness*1e3, self.n, self.surfaces[1])
-
     def __repr__(self):
-        return 'Singlet((%r, %r), %.f mm, n=%r)'%(self.surfaces[0], self.surfaces[1], self.thickness*1e3, self.n)
+        return f'Singlet(surfaces=({self.surfaces[0]}, {self.surfaces[1]}), thickness={self.thickness}, n={self.n})'
 
     def reverse(self) -> 'Singlet':
-        return Singlet(tuple(s.reverse() for s in self.surfaces[::-1]), self.thickness, self.n)
+        return Singlet((self.surfaces[1].reverse(), self.surfaces[0].reverse()), self.thickness, self.n)
 
     @classmethod
     def from_focal_length(cls, f: float, n: ri.Index, center_thickness: float, radius: float, shape_factor: float = 0,
