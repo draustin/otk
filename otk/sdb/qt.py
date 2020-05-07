@@ -1,9 +1,10 @@
 import time
-from typing import Sequence, Iterable
+from typing import Sequence, Iterable, Tuple
 import numpy as np
 from OpenGL import GL
 from PyQt5.QtCore import QPoint
 from PyQt5 import QtWidgets, QtCore, QtGui
+from otk.types import Matrix4
 from otk.h4t import make_x_rotation, make_y_rotation, make_translation
 from .._utility import Delegate
 from . import *
@@ -213,21 +214,29 @@ class SphereTraceViewer(QtWidgets.QWidget):
         sb.setValue(np.log10(display_widget.epsilon))
         sb.valueChanged.connect(self.log10EpsilonChanged)
 
+        b = QtWidgets.QPushButton('Home')
+        self._home_button = b
+        b.pressed.connect(self.go_home)
+
+        # Place widgets in layout.
         hbox = QtWidgets.QHBoxLayout()
         self.setLayout(hbox)
         vbox = QtWidgets.QVBoxLayout()
         hbox.addLayout(vbox)
         vbox.addWidget(max_steps)
         vbox.addWidget(self._log10epsilon)
+        vbox.addWidget(self._home_button)
         vbox.addStretch(1)
         hbox.addWidget(display_widget)
 
-        timer = QtCore.QTimer()
-        timer.timeout.connect(display_widget.update)
-        #timer.start(0)
-        self.timer = timer
+        # Timer not used at the moment. But we might want an animate feature so leaving this here.
+        # timer = QtCore.QTimer()
+        # timer.timeout.connect(display_widget.update)
+        # #timer.start(0)
+        # self.timer = timer
 
         self.display_widget = display_widget
+        self.set_home(None)
 
     def maxStepsChanged(self, value):
         self.display_widget.max_steps = value
@@ -237,6 +246,13 @@ class SphereTraceViewer(QtWidgets.QWidget):
 
     def sizeHint(self) -> QtCore.QSize:
         return QtCore.QSize(800, 600)
+
+    def set_home(self, home: Tuple[Matrix4, Projection]):
+        self.home = home
+        self._home_button.setEnabled(home is not None)
+
+    def go_home(self):
+        self.eye_to_world, self.projection = self.home
 
     def set_rays(self, rays: Sequence[np.ndarray], colors: Iterable = None):
         self.display_widget.set_rays(rays, colors)

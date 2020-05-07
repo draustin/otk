@@ -40,8 +40,8 @@ def view_elements(elements: Sequence[Element], all_properties: Dict[sdb.Surface,
     size = viewer.size()
     aspect = size.height()/size.width()
     projection, eye_to_world = sdb.lookat_surface(surface, projection_type, zhat, aspect)
-    viewer.projection = projection
-    viewer.eye_to_world = eye_to_world
+    viewer.set_home((eye_to_world, projection))
+    viewer.go_home()
     viewer.show()
     return viewer
 
