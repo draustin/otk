@@ -12,7 +12,7 @@ def _(s: Box):
     half_size = s.half_size
     center = s.center
     radius = s.radius
-    @njit("f8(f8[:])")
+    @njit#("f8(f8[:])")
     def g(x:np.ndarray):
         q = np.abs(x[:3] - center) - (half_size - radius)
         return norm(np.maximum(q, 0.)) + min(max(q[0], max(q[1], q[2])), 0.0) - radius
@@ -32,7 +32,7 @@ def _(surface):
 def _(s: InfiniteCylinder):
     o = s.o
     r = s.r
-    @njit("f8(f8[:])")
+    @njit#("f8(f8[:])")
     def g(x):
         return norm(x[:2] - o) - r
     return g
@@ -41,7 +41,7 @@ def _(s: InfiniteCylinder):
 def _(s: InfiniteRectangularPrism):
     center = s.center
     half_size = np.asarray((s.width/2, s.height/2))
-    @njit("f8(f8[:])")
+    @njit#("f8(f8[:])")
     def g(x):
         q = np.abs(x[:2] - center) - half_size
         return norm(np.maximum(q, 0.0)) + min(max(q[0], q[1]), 0.0)
@@ -61,7 +61,7 @@ def _(surface):
 def _(s:Plane):
     n = s.n
     c = s.c
-    @njit("f8(f8[:])")
+    @njit#("f8(f8[:])")
     def g(x):
         # It doesn't like dot???
         #return dot(x[:3], n) + c
@@ -74,7 +74,7 @@ def _(s: Sag):
     origin = s.origin
     side = s.side
     lipschitz = s.lipschitz
-    @njit("f8(f8[:])")
+    @njit#("f8(f8[:])")
     def g(x):
         sag = getsag(x[:2] - origin[:2])
         return side*(sag + origin[2] - x[2])/lipschitz
@@ -89,7 +89,7 @@ def _(s: ZemaxConic):
     alphas = np.asarray(s.alphas)
     side = s.side
     lipschitz = s.lipschitz
-    @njit("f8(f8[:])")
+    @njit#("f8(f8[:])")
     def getsdb(x):
         xp = x[:3] - vertex
         rho2 = min(norm_squared(xp[:2]), radius_sqd)
@@ -113,7 +113,7 @@ def _(s: SphericalSag):
     center = s.center
     vertexz = s.vertex[2]
     inside = side*np.sign(roc)
-    @njit("f8(f8[:])")
+    @njit#("f8(f8[:])")
     def getsdb(x):
         if np.isfinite(roc):
             a = inside*(norm(x[:3] - center) - abs(roc))

@@ -5,6 +5,7 @@ TODOs:
 #      * Absorptive media
 #      * diffraction grating
 """
+import logging
 from warnings import warn
 import numpy as np
 from functools import singledispatch
@@ -15,12 +16,11 @@ import otk.functions
 from ..functions import normalize, dot, norm_squared
 from .. import functions
 from .. import sdb
-#from ..sdb.npscalar import *
-#from ..v4 import *
 from .. import v4h
 from .. sdb import npscalar
-from .. sdb import numba as sdb_numba
 from . import *
+
+logger = logging.getLogger(__name__)
 
 __all__ = ['Line', 'Ray', 'make_line', 'make_ray', 'perfect_refractor', 'Branch', 'get_points',
     'get_deflector', 'intersect', 'Segment', 'nonseq_trace', 'set_backend', 'form_ray']
@@ -327,14 +327,16 @@ def _process_ray(self: Assembly, ray:Ray, sphere_trace_kwargs:dict) -> tuple:
             if trace.steps >= sphere_trace_kwargs['max_steps']:
                 warn(f"Spheretrace reached max_steps ({sphere_trace_kwargs['max_steps']}.")
             return None, ()
-        else:
-            x0 = trace.last_x
-            x1 = trace.x
-            tensor0 = get_dielectric_tensor(self.exterior, ray.lamb, trace.last_x)
-            element1 = _get_transformed_element(self, trace.x)
-            tensor1 = element1.get_dielectric_tensor(ray.lamb, trace.x)
-            normal = -element1.getnormal(trace.xm) # Normal points from 0 to 1.
-            deflector = element1.get_deflector(trace.x)
+
+        x0 = trace.last_x
+        x1 = trace.x
+        tensor0 = get_dielectric_tensor(self.exterior, ray.lamb, trace.last_x)
+        element1 = _get_transformed_element(self, trace.x)
+        tensor1 = element1.get_dielectric_tensor(ray.lamb, trace.x)
+        normal = -element1.getnormal(trace.xm) # Normal points from 0 to 1.
+        deflector = element1.get_deflector(trace.x)
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f'{trace} - {element1.element.surface}')
     else:
         line0 = ray.line.transform(element0.root_to_local)
         trace = backend.spheretrace(element0.element.surface, line0.origin, line0.vector, sign=-1., through=True,
@@ -343,27 +345,31 @@ def _process_ray(self: Assembly, ray:Ray, sphere_trace_kwargs:dict) -> tuple:
             if trace.steps >= sphere_trace_kwargs['max_steps']:
                 warn(f"Spheretrace reached max_steps ({sphere_trace_kwargs['max_steps']}.")
             return None, ()
+
+        # TODO some recomputation of transforms here
+        x0 = np.dot(trace.last_x, element0.local_to_root)
+        xm = np.dot(trace.xm, element0.local_to_root)
+        x1 = np.dot(trace.x, element0.local_to_root)
+
+        tensor0 = element0.get_dielectric_tensor(ray.lamb, x0)
+        # normal should point from 0 to 1, so no minus sign.
+        normal = element0.getnormal(xm)
+        deflector = element0.get_deflector(x0)
+
+        element1 = _get_transformed_element(self, x1)
+        if element1 is None:
+            tensor1 = get_dielectric_tensor(self.exterior, ray.lamb, x1)
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f'{element0.element.surface} - {trace}')
         else:
-            # TODO some recomputation of transforms here
-            x0 = np.dot(trace.last_x, element0.local_to_root)
-            xm = np.dot(trace.xm, element0.local_to_root)
-            x1 = np.dot(trace.x, element0.local_to_root)
-
-            tensor0 = element0.get_dielectric_tensor(ray.lamb, x0)
-            # normal should point from 0 to 1, so no minus sign.
-            normal = element0.getnormal(xm)
-            deflector = element0.get_deflector(x0)
-
-            element1 = _get_transformed_element(self, x1)
-            if element1 is None:
-                tensor1 = get_dielectric_tensor(self.exterior, ray.lamb, x1)
-            else:
-                tensor1 = element1.get_dielectric_tensor(ray.lamb, x1)
-                normal1 = -element1.getnormal(xm)
-                assert np.allclose(normal, normal1)
-                deflector1 = element1.get_deflector(x1)
-                deflector = deflector1 # TODO HACK
-                # TODO assert deflectors are equal
+            tensor1 = element1.get_dielectric_tensor(ray.lamb, x1)
+            normal1 = -element1.getnormal(xm)
+            assert np.allclose(normal, normal1)
+            deflector1 = element1.get_deflector(x1)
+            deflector = deflector1 # TODO HACK
+            # TODO assert deflectors are equal
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f'{element0.element.surface} - {trace} - {element1.element.surface}')
 
     ray = ray.advance(trace.tm)
     deflected_rays = deflect_ray(deflector, ray, x0, x1, tensor0, normal, tensor1, element1)

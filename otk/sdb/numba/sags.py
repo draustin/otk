@@ -13,7 +13,7 @@ def _(s:ZemaxConicSagFunction):
     radius_sqd = s.radius**2
     kappa = s.kappa
     alphas = np.asarray(s.alphas)
-    @njit("f8(f8[:])")
+    @njit#("f8(f8[:])")
     def g(x):
         rho2 = min(norm_squared(x[:2]), radius_sqd)
         rho = rho2**0.5
@@ -36,12 +36,12 @@ def _(s:RectangularArraySagFunction):
     clamp = s.clamp
     getsag_unit = gen_getsag(s.unit)
     if size is None:
-        @njit("f8(f8[:])")
+        @njit#("f8(f8[:])")
         def g(x):
             q = np.abs(np.mod(x + pitch/2, pitch) - pitch/2)
             return getsag_unit(q)
     else:
-        @njit("f8(f8[:])")
+        @njit#("f8(f8[:])")
         def g(x):
             n = np.minimum(np.maximum(np.floor(x/pitch + size/2), 0), size - 1)
             q = np.abs(x - (n + 0.5 - size/2)*pitch)

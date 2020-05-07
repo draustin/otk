@@ -1,4 +1,3 @@
-import logging
 import numpy as np
 from typing import Sequence
 from numba import njit, typeof
@@ -9,15 +8,9 @@ from ..npscalar.base import SphereTrace
 
 __all__ = ['gen_getsdb', 'gen_getsag', 'spheretrace', 'identify', 'gen_identify', 'getnormal']
 
-logger = logging.getLogger(__name__)
-
 @singledispatch
 def gen_getsdb(surface):
     raise NotImplementedError(surface)
-
-# @singledispatch
-# def gen_getsdbi(surface):
-#     raise NotImplementedError
 
 @singledispatch
 def gen_getsag(sagfun):
@@ -39,10 +32,10 @@ def getnormal(surface:Surface, x, h=1e-9) -> np.ndarray:
     getsdb = get_cached_getsdb(surface)
     return normalize(sum(k*getsdb(x + k*h) for k in ks_getnormal))
 
-def gen_reduce(op, funs):
+def gen_reduce_onebyone(op, funs):
     fun0 = funs[0]
     if len(funs) > 2:
-        oneless = gen_reduce(op, funs[1:])
+        oneless = gen_reduce_onebyone(op, funs[1:])
         @njit
         def result(x):
             return op(fun0(x), oneless(x))
@@ -51,6 +44,26 @@ def gen_reduce(op, funs):
         @njit
         def result(x):
             return op(fun0(x), fun1(x))
+    return result
+
+def gen_reduce_pairwise(op, funs):
+    if len(funs) == 2:
+        f0, f1 = funs
+        @njit
+        def result(x):
+            return op(f0(x), f1(x))
+    elif len(funs) == 3:
+        f0, f1, f2 = funs
+        @njit
+        def result(x):
+            return op(f0(x), op(f1(x), f2(x)))
+    else:
+        n = int(len(funs)/2)
+        fa = gen_reduce_pairwise(op, funs[:n])
+        fb = gen_reduce_pairwise(op, funs[n:])
+        @njit
+        def result(x):
+            return op(fa(x), fb(x))
     return result
 
 @njit
@@ -78,29 +91,29 @@ def _(u: UnionOp):
     #     for child_g in gs[1:]:
     #         d = min(d, child_g(x))
     #     return d
-    return gen_reduce(min, gs)
+    return gen_reduce_pairwise(min, gs)
 
 @gen_identify.register
 def _(u: UnionOp):
     gs = [get_cached_identify(child) for child in u.surfaces]
-    return gen_reduce(min_first, gs)
+    return gen_reduce_pairwise(min_first, gs)
 
 
 @gen_getsdb.register
 def _(surface: IntersectionOp):
     gs = tuple(get_cached_getsdb(child) for child in surface.surfaces)
-    return gen_reduce(max, gs)
+    return gen_reduce_pairwise(max, gs)
 
 @gen_identify.register
 def _(surface: IntersectionOp):
     gs = tuple(get_cached_identify(child) for child in surface.surfaces)
-    return gen_reduce(max_first, gs)
+    return gen_reduce_pairwise(max_first, gs)
 
 @gen_getsdb.register
 def _(surface: DifferenceOp):
     g0 = get_cached_getsdb(surface.surfaces[0])
     g1 = get_cached_getsdb(surface.surfaces[1])
-    @njit("f8(f8[:])")
+    @njit#("f8(f8[:])")
     def g(x):
         return max(g0(x), -g1(x))
     return g
@@ -122,7 +135,7 @@ def _(s:SegmentedRadial):
     vertex = s.vertex
     radii = s.radii
     getsdbs = tuple(get_cached_getsdb(child) for child in s.surfaces)
-    @njit("f8(f8[:])")
+    @njit#("f8(f8[:])")
     def g(x):
         rho = norm(x[:2] - vertex)
         for getsdb, r in zip(getsdbs[:-1], radii):
@@ -176,11 +189,12 @@ def _(s: FiniteRectangularArray):
 
 def lookup_cache(cache: dict, key, calc_value):
     try:
-        return cache[key]
+        value = cache[key]
     except KeyError:
         value = calc_value()
         cache[key] = value
-        return value
+
+    return value
 
 getsdb_cache = {}
 spheretrace_cache = {}
@@ -215,7 +229,6 @@ def get_cached_identify(surface: Surface):
     return lookup_cache(identify_cache, surface, lambda : gen_identify(surface))
 
 def gen_spheretrace(surface: Surface):
-    logger.info(f'Generating spheretrace for {surface}.')
     getsdb = get_cached_getsdb(surface)
 
     @njit
