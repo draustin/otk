@@ -1,6 +1,6 @@
 """Abstractions for the refractive index of materials.
 
-TODO merge wth refindinf library in Dane's optphys package.
+TODO merge wth refindinf.
 """
 from typing import Callable
 import scipy.interpolate
