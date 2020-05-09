@@ -1,8 +1,7 @@
 """Basic paraxial optics calculations."""
 from typing import Tuple
 import numpy as np
-import mathx
-from . import abcd, functions, ri
+from . import abcd, functions
 
 def calc_image_distance(object_distance, focal_length):
     """Calculate image distance using imaging equation."""
@@ -284,8 +283,9 @@ def calc_rocs(curvature, shape_factor):
     #ratio =  (shape_factor + 1)/(shape_factor - 1) # Ratio of roc2 to roc1.
     #roc1 = (1 - 1/ratio)/curvature
     #roc2 = (ratio - 1)/curvature
-    roc1 = mathx.divide0(2, curvature*(shape_factor + 1), np.inf)
-    roc2 = mathx.divide0(2, curvature*(shape_factor - 1), np.inf)
+    with np.errstate(divide='ignore'):
+        roc1 = np.divide(2., curvature*(shape_factor + 1))
+        roc2 = np.divide(2, curvature*(shape_factor - 1))
     return roc1, roc2
 
 def calc_center_thickness(rocs: tuple, radius: float, min_thickness: float):

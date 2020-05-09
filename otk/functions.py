@@ -17,6 +17,9 @@ except ImportError:
 
 from .types import Sequence3, Vector3, Vectors4, Scalars, Matrix4
 
+def abs_sqd(x):
+    return x.real**2 + x.imag**2
+
 if numba is None:
     def dot(a: Sequence, b: Sequence):
         """Dot product with second argument conjugated."""
@@ -31,6 +34,8 @@ if numba is None:
     def normalize(x: Sequence):
         return np.asarray(x)/norm(x)
 else:
+    abs_sqd = numba.vectorize(cache=True)(abs_sqd)
+
     @numba.njit
     def dot(x: Sequence, y: Sequence):
         """Dot product with second argument conjugated."""

@@ -8,7 +8,6 @@ from typing import Tuple
 import dataclasses
 from dataclasses import dataclass
 import numpy as np
-import mathx
 
 # def propagate_Gaussian(d, q1, E1):
 #     q2 = apply_to_Gaussian(propagation(d), q)
@@ -42,8 +41,7 @@ def interface(n1, n2):
 
 
 def thick_lens(n2, r1, r2, t, n1=1):
-    # return mathx.mult_mat_mat([[1,0],[(n2-n1)/(r2*n1),n2/n1]],propagation(t),[[1,0],[(n1-n2)/(r1*n2),n1/n2]])
-    return mathx.mult_mat_mat(curved_interface(n2, n1, -r2), propagation(t), curved_interface(n1, n2, r1))
+    return curved_interface(n2, n1, -r2) @ propagation(t) @ curved_interface(n1, n2, r1)
 
 
 def transform_Gaussian(m, q):

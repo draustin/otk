@@ -32,7 +32,6 @@ try:
 except ImportError:
     pass
 import otk.rt1.raytrace
-import mathx
 from . import rt1
 from . import asbp
 

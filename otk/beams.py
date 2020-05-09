@@ -1,7 +1,6 @@
 """Standard beams e.g. Gaussian modes. Currently only fundamental Gaussian."""
 import numpy as np
 import scipy
-import mathx
 
 def calc_super_gaussian(radius, order, r):
     """Calculate field of power/energy normalized super-Gaussian.
@@ -67,7 +66,8 @@ class FundamentalGaussian:
             Radius of curvature.
         """
         z = np.asarray(z)
-        return z + mathx.divide0(self.z_R**2, z, np.inf) # z*(1 + mathx.divide0(self.z_R, z)**2)
+        with np.errstate(divide='ignore'):
+            return z + self.z_R**2/z
 
     # Not defined at z=0.
     # def drocdz(self, z):
@@ -99,7 +99,7 @@ class FundamentalGaussian:
         psi = self.Gouy(z)
         R = self.roc(z)
         absE = self.w_0/w*np.exp(-(rho/w)**2)*self.absE_w
-        z_c = mathx.divide0(rho**2, 2*R)
+        z_c = rho**2/(2*R)
         # try:
         #     z_c=rho**2/(2*R)
         # except ZeroDivisionError:
