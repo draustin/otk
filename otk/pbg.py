@@ -26,7 +26,7 @@ import otk.rt1.lines
 import numpy as np
 import pyqtgraph_extended as pg
 from typing import Sequence
-
+from .functions import abs_sqd 
 try:
     import gizeh
 except ImportError:
@@ -143,7 +143,7 @@ class Mode:
         coefficients_, projected_field_ = self.reshape((-1,))._project_field(k, points_, field_)
         coefficients = coefficients_.reshape(self.shape + (1,))
         projected_field = projected_field_.reshape(field.shape)
-        flux = mathx.abs_sqd(coefficients)
+        flux = abs_sqd(coefficients)
         phi_axis_origin = np.angle(coefficients)
         return flux, phi_axis_origin, projected_field
 
@@ -373,8 +373,8 @@ class Beam:
             if rs_support is None:
                 x1, y1 = rt1.to_xy(self.mode.prp.h1)
                 x2, y2 = rt1.to_xy(self.mode.prp.h2)
-                var_x = max(var_x, mathx.abs_sqd(x1).max(), mathx.abs_sqd(x2).max())
-                var_y = max(var_y, mathx.abs_sqd(y1).max(), mathx.abs_sqd(y2).max())
+                var_x = max(var_x, abs_sqd(x1).max(), abs_sqd(x2).max())
+                var_y = max(var_y, abs_sqd(y1).max(), abs_sqd(y2).max())
                 rs_support = num_sigmas*np.asarray((var_x, var_y))**0.5
 
         if qs_center is None:

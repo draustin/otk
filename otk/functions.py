@@ -4,6 +4,7 @@ TODO better distinguishing and handling of (i) numba not installed and (ii) numb
 compilation time. I don't remember why I used numba.vectorize for some routines below... maybe can replace with numba.njit
 everywhere? Could also make a decorator that applies njit if numba is installed.
 
+TODO move stuff in mathx.
 """
 import cmath
 from typing import Tuple, Sequence
@@ -18,6 +19,7 @@ except ImportError:
 from .types import Sequence3, Vector3, Vectors4, Scalars, Matrix4
 
 def abs_sqd(x):
+    """Element-wise absolute value squared."""
     return x.real**2 + x.imag**2
 
 if numba is None:
