@@ -22,12 +22,11 @@ Transformations performed with numpy.matmul, which means transform matrix is on 
 vectors. For other dimensions, broadcasting is implied.
 """
 import numpy as np
-import mathx
 import numba
 
 __all__ = ['dot', 'normalize', 'norm', 'cross', 'transform', 'stack_xyzw']
 
-
+# TODO make numba optional
 @numba.guvectorize([(numba.float64[:], numba.float64[:], numba.float64[:]),
                     (numba.complex128[:], numba.complex128[:], numba.complex128[:])], '(n),(n)->()', nopython=True)
 def _dot(a, b, c):
@@ -53,7 +52,10 @@ def dot(a: np.ndarray, b: np.ndarray = None) -> np.ndarray:
 
 
 def normalize(vector):
-    return mathx.divide0(vector, dot(vector)**0.5)
+    with np.errstate(invalid='ignore'):
+        c = vector/dot(vector)**0.5
+    c[np.isnan(c)] = 0
+    return c
 
 def norm(vector):
     return dot(vector)**0.5

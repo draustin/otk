@@ -5,9 +5,7 @@ from dataclasses import dataclass
 from abc import ABC, abstractmethod
 from typing import Sequence, Tuple, Mapping
 import numpy as np
-import otk.h4t
 import scipy.optimize
-import mathx
 from . import abcd, paraxial, functions, ri
 
 # TODO Make Interface composition of Surface and refractive indeices.
@@ -86,13 +84,13 @@ class Interface:
     def calc_mask(self, lamb, rho, derivative: bool = False):
         n1 = self.n1(lamb)
         n2 = self.n2(lamb)
-        deltak = 2*np.pi/lamb*(n1 - n2)
+        jdeltak = 2.j*np.pi/lamb*(n1 - n2)
 
         sag, grad_sag = self.calc_sag(rho, True)
 
-        f = mathx.expj(deltak*sag)
+        f = np.exp(jdeltak*sag)
         if derivative:
-            gradf = 1j*deltak*grad_sag*f
+            gradf = jdeltak*grad_sag*f
             return f, gradf
         else:
             return f

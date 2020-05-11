@@ -23,7 +23,7 @@ Vectors2 = np.ndarray # (..., 2)
 Vectors3 = np.ndarray # (..., 3)
 Vectors4 = np.ndarray # (..., 4)
 
-Numeric = Union[float, np.ndarray]
+Numeric = Union[float, np.ndarray, Sequence[float], Sequence[Sequence[float]]]
 
 # Numpy arrays of a certain number of dimensions.
 Array1D = np.ndarray

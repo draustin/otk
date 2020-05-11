@@ -53,7 +53,11 @@ def read_interface(file:TextIO, n1=ri.air) -> Tuple[trains.Interface, float, flo
     else:
         raise ValueError('Unknown surface type %s.'%surface_type)
 
-    mech_semi_dia = float(commands['MEMA'][0])*1e-3
+    if 'MEMA' in commands:
+        mech_semi_dia = float(commands['MEMA'][0])*1e-3
+    else:
+        mech_semi_dia = clear_radius
+
     if mech_semi_dia - clear_radius > 1e-6:
         # TODO tidy this up - get rid of rt first?
         # Somehow need to offset this surface (in z). No way of describing this at present. Could add an offset
@@ -63,7 +67,9 @@ def read_interface(file:TextIO, n1=ri.air) -> Tuple[trains.Interface, float, flo
         surface = trains.SegmentedSurface((inner_surface, outer_surface), (0, outer_sag))
     else:
         surface = inner_surface
+
     interface = surface.to_interface(n1, n2)
+
     return interface, n2, thickness
 
 def read_train(filename:str, n: ri.Index = ri.air, encoding: str = 'utf-16le') -> trains.Train:
@@ -84,7 +90,11 @@ def read_train(filename:str, n: ri.Index = ri.air, encoding: str = 'utf-16le') -
             words = line.split()
             if words[0] == 'SURF':
                 assert int(words[1]) == surface_num
-                interface, n, space = read_interface(file, n)
+                try:
+                    interface, n, space = read_interface(file, n)
+                except Exception as e:
+                    raise ValueError(f'Exception reading SURF {surface_num}.') from e
+
                 interfaces.append(interface)
                 spaces.append(space)
                 surface_num += 1
