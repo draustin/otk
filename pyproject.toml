@@ -13,7 +13,12 @@ numpy = "^1.18.4"
 numba = "^0.49.1"
 pyqt5 = "^5.14.2"
 pyopengl = "^3.1.5"
-mathx = "^0.1"
+mathx = "^0.2"
+pyyaml = "^5.3.1"
+pyfftw = "^0.12.0"
+opt_einsum = "^3.2.1"
+pyqtgraph_extensions = "^0.4.0"
+gizeh = "^0.1.11"
 
 [tool.poetry.dev-dependencies]
 ipython = "^7.14.0"
