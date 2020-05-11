@@ -10,7 +10,7 @@ import numpy as np
 from . import ROOT_DIR
 from .types import Numeric
 
-AGFS_DIR = os.path.join(ROOT_DIR, '..', 'glasses')
+AGFS_DIR = os.path.join(ROOT_DIR, '..', 'glasses', 'agfs')
 
 class ParseError(Exception):
     pass
