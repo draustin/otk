@@ -343,7 +343,7 @@ def _process_ray(self: Assembly, ray:Ray, sphere_trace_kwargs:dict) -> tuple:
             **sphere_trace_kwargs)
         if trace.d <= 0:
             if trace.steps >= sphere_trace_kwargs['max_steps']:
-                warn(f"Spheretrace reached max_steps ({sphere_trace_kwargs['max_steps']}.")
+                warn(f"Spheretrace reached max_steps={sphere_trace_kwargs['max_steps']}.")
             return None, ()
 
         # TODO some recomputation of transforms here

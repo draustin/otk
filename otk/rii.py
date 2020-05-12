@@ -1,13 +1,19 @@
+"""Functions for accessing the refractiveindex.info database."""
 import os
 import yaml
 from dataclasses import dataclass
 import numpy as np
 from typing import List, Dict, Tuple, Callable
+from otk import ROOT_DIR
 from otk.types import Numeric, Array1D
 
-db_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'database')
-db_path = os.path.join(db_dir, 'library.yml')
-library = yaml.load(open(db_path, 'r'), Loader=yaml.FullLoader)
+DB_DIR = os.path.realpath(os.path.join(ROOT_DIR, '..', 'properties', 'rii'))
+
+def get_library(cached=[None]) -> List[Dict]:
+    if cached[0] is None:
+        db_path = os.path.join(DB_DIR, 'library.yml')
+        cached[0] = yaml.load(open(db_path, 'r'), Loader=yaml.FullLoader)
+    return cached[0]
 
 def in_lim(x, a, b):
     """Greater than or equal to and less than or equal to."""
@@ -15,7 +21,7 @@ def in_lim(x, a, b):
 
 def print_lib():
     """Print all pages in the library in hierachical format."""
-    for shelf in library:
+    for shelf in get_library():
         print(shelf['name'])
         for book in shelf['content']:
             if not book.has_key('BOOK'):
@@ -28,7 +34,7 @@ def print_lib():
 
 
 def load_page(page: dict) -> Dict:
-    file = open(os.path.join(db_dir, page['path']), 'r')
+    file = open(os.path.join(DB_DIR, page['path']), 'r')
     string = ''
     for line in file:
         string = string + line.replace('\t', '')
@@ -141,7 +147,7 @@ def search(page_str: str = None, book_str: str = None, shelf_str: str = None) ->
     None means wildcard.
     """
     pages = []
-    for shelf in library:
+    for shelf in get_library():
         if shelf_str not in (shelf['name'], shelf['SHELF'], None):
             continue
         for book in shelf['content']:

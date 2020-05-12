@@ -1,2 +1,2 @@
 from otk import zemax
-zemax.read_train('US08934179-4.zmx')
+train = zemax.read_train('US02084714-1.zmx')

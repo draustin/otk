@@ -19,6 +19,7 @@ pyfftw = "^0.12.0"
 opt_einsum = "^3.2.1"
 pyqtgraph_extensions = "^0.4.0"
 gizeh = "^0.1.11"
+matplotlib = {version = "^3.2.1"}
 
 [tool.poetry.dev-dependencies]
 ipython = "^7.14.0"

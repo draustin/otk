@@ -3,19 +3,41 @@ import numpy as np
 from typing import TextIO, Tuple, Mapping, Dict
 from . import ri, trains, agf
 
-from . import ROOT_DIR
-AGFS_DIR = os.path.realpath(os.path.join(ROOT_DIR, '..', 'glasses', 'agfs'))
+from . import ROOT_DIR, CONFIG
+
+# Folder containing supplied (public domain) AGF files.
+SUPPLIED_AGFS_DIR = os.path.realpath(os.path.join(ROOT_DIR, '..', 'properties', 'agfs'))
 
 # Translate from Zemax glass database to ri module.
 #glasses = {'PMMA':ri.PMMA_Zemax, 'F_SILICA':ri.fused_silica, 'BK7':ri.N_BK7, 'K-VC89':ri.KVC89}
 
-glass_catalog_paths: Mapping[str, str] = {
-    'HOYA': os.path.join(AGFS_DIR, 'HOYA20200314_include_obsolete.agf'),
-    'SCHOTT': os.path.join(AGFS_DIR, 'schottzemax-20180601.agf'),
-    'OHARA': os.path.join(AGFS_DIR, 'OHARA_200306_CATALOG.agf'),
-    'SUMITA': os.path.join(AGFS_DIR, 'sumita-opt-dl-data-20200511235805.agf'),
-    'NIKON': os.path.join(AGFS_DIR, 'NIKON-HIKARI_201911.agf')
-}
+SUPPLIED_GLASS_CATALOG_PATHS = {
+    'HOYA': os.path.join(SUPPLIED_AGFS_DIR, 'HOYA20200314_include_obsolete.agf'),
+    'SCHOTT': os.path.join(SUPPLIED_AGFS_DIR, 'schottzemax-20180601.agf'),
+    'OHARA': os.path.join(SUPPLIED_AGFS_DIR, 'OHARA_200306_CATALOG.agf'),
+    'SUMITA': os.path.join(SUPPLIED_AGFS_DIR, 'sumita-opt-dl-data-20200511235805.agf'),
+    'NIKON': os.path.join(SUPPLIED_AGFS_DIR, 'NIKON-HIKARI_201911.agf')
+    }
+
+def get_default_glass_catalog_paths() -> Dict[str, str]:
+    dir = CONFIG.get('zemax_glass_catalog_dir')
+    paths = {}
+    if dir is None:
+        paths.update(SUPPLIED_GLASS_CATALOG_PATHS)
+    else:
+        paths = {}
+        dir = os.path.expanduser(dir)
+        for name in os.listdir(dir):
+            path = os.path.join(dir, name)
+            if not os.path.isfile(path): continue
+            root, ext = os.path.splitext(name)
+            if ext.lower() != '.agf': continue
+            paths[root.upper()] = path
+    return paths
+
+
+default_glass_catalog_paths = get_default_glass_catalog_paths()
+
 
 def read_interface(file:TextIO, n1, catalog: Dict[str, agf.Record], temperature: float) -> Tuple[trains.Interface, float, float]:
     commands = {}
@@ -86,13 +108,15 @@ def read_interface(file:TextIO, n1, catalog: Dict[str, agf.Record], temperature:
     return interface, n2, thickness
 
 
-def read_train(filename:str, n: ri.Index = ri.air, encoding: str = 'utf-16le', temperature: float = None) -> trains.Train:
+def read_train(filename:str, n: ri.Index = ri.air, encoding: str = 'utf-16le', temperature: float = None, glass_catalog_paths: Dict[str, str] = None) -> trains.Train:
     """Read optical train from Zemax file.
 
     The given refractive index defines the surrounding medium.
 
     If it doesn't read properly, try changing the encoding to 'ascii'.
     """
+    if glass_catalog_paths is None:
+        glass_catalog_paths = default_glass_catalog_paths
     surface_num = 0
     spaces = [0]
     interfaces = []
@@ -115,10 +139,10 @@ def read_train(filename:str, n: ri.Index = ri.air, encoding: str = 'utf-16le', t
                 surface_num += 1
             elif words[0] == 'GCAT':
                 for name in line.split()[1:]:
-                    full_catalog.update(get_glass_catalog(name))
+                    full_catalog.update(agf.load_catalog(glass_catalog_paths[name]))
     return trains.Train(interfaces, spaces)
 
 
 def get_glass_catalog(name: str) -> agf.Catalog:
-    path = glass_catalog_paths[name]
+    path = default_glass_catalog_paths[name]
     return agf.load_catalog(path)

@@ -22,7 +22,7 @@ def test_primitives():
 
     assert sdb.gen_getSDB(s2, ids) == dedent("""\
             float getSDB2(in vec4 x) {
-                return min(1.0*(length(x.xyz - vec3(1.0, 2.0, 3.6)) - 0.6), -1.*(x.z - 3.6));
+                return min(1.0*(length(x.xyz - vec3(1.0, 2.0, 3.6)) - 0.6), -1.0*(x.z - 3.6));
             }\n\n""")
 
     assert sdb.gen_getSDB(s3, ids) == dedent("""\

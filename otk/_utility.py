@@ -1,7 +1,21 @@
 """Miscellaneous non-optics, non-math stuff."""
 import os
+import yaml
 
 ROOT_DIR = os.path.dirname(__file__)
+
+def load_config() -> dict:
+    for path in os.curdir, os.path.expanduser('~'):
+        try:
+            with open(os.path.join(path, 'otk.yml'), 'rt') as file:
+                return yaml.load(file, Loader=yaml.FullLoader)
+        except FileNotFoundError:
+            pass
+    return {}
+
+
+CONFIG = load_config()
+
 
 class Delegate:
     # Inspired by https://gist.github.com/dubslow/b8996308fc6af2437bef436fa28e86fa.

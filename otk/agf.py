@@ -155,7 +155,7 @@ def parse_catalog(file: TextIO) -> Tuple[Sequence[str], Sequence[Record]]:
     return catalog_comments, records
 
 def load_catalog(path: str) -> Catalog:
-    with open(path, 'rt') as file:
+    with open(path, 'rt', encoding='latin-1') as file:
         comments, records = parse_catalog(file)
 
     catalog = {r.name:r for r in records}
