@@ -1,16 +1,22 @@
 import os
 import numpy as np
-from otk import zemax
+from numpy.testing import  assert_allclose
+from otk import zemax, trains, ri
 
 def test_read_train_conic_aspheric_telecentric_lens():
-    train_full = zemax.read_train(os.path.join(os.path.dirname(__file__), 'conic_aspheric_telecentric_lens.zmx'), encoding='ascii')
-    assert len(train_full.interfaces) == 9
-    train=train_full.subset(2, -1)
-    assert np.isclose(train.get_effective_focal_length(550e-9)*1e3, 199.1243, atol=0.5)
+    train = zemax.read_train(os.path.join(os.path.dirname(__file__), 'conic_aspheric_telecentric_lens.zmx'), encoding='ascii')
+    assert len(train.interfaces) == 9
+    assert_allclose(train.spaces, (0., np.inf, 10e-3, 20e-3, 6.757645743585563e-2, 20e-3, 2.868233931997107e-2, 20e-3, 7.045493144939738e-2, 0))
 
-    i0 = train.interfaces[0]
-    assert np.isclose(i0.kappa, 1 + 0.285773)
-    assert np.allclose(i0.alphas[1:5], [0, -2.866109e2, 0, -8.075138e4], rtol=1e-3)
-
-    i2 = train.interfaces[2]
-    assert np.allclose(i2.segments[0].kappa, 1 + -0.922024)
+    bk7 = zemax.get_glass_catalog('SCHOTT')['N-BK7'].fix_temperature()
+    radius0 = 2.723424614220823e-2
+    radius1 = 3.236562377922407e-2 - radius0
+    surface0 = trains.ConicSurface(-3.399643783726705e-2, radius0, 1 - 2.667544379512378E+000, (0, 0, -1.899747134198353e3, 0, 2.093291560636944e5))
+    surface1 = trains.SphericalSurface(np.inf, radius1)
+    interface = train.interfaces[4]
+    assert isinstance(interface, trains.SegmentedInterface)
+    assert interface.n1 == ri.air
+    assert interface.n2 == bk7
+    assert interface.segments[0].isclose(surface0)
+    assert interface.segments[1].isclose(surface1)
+    assert_allclose(interface.sags, (0, surface0.calc_sag(surface0.radius)))

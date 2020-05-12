@@ -4,13 +4,11 @@ Inspired by https://github.com/nzhagen/zemaxglass/blob/master/ZemaxGlass.py.
 """
 import os
 from enum import Enum
-from typing import Sequence, TextIO, Tuple, Dict
+from typing import Sequence, TextIO, Tuple, Dict, Callable
 from dataclasses import dataclass
 import numpy as np
-from . import ROOT_DIR
 from .types import Numeric
-
-AGFS_DIR = os.path.join(ROOT_DIR, '..', 'glasses', 'agfs')
+from . import ri
 
 class ParseError(Exception):
     pass
@@ -31,7 +29,7 @@ class Record:
     exclude_substitution: bool
     status: Status
     melt_freq: int
-    comment: str
+    comments: Sequence[str]
     tce: float
     density: float
     dPgF: float
@@ -39,13 +37,13 @@ class Record:
     dispersion_coefficients: Sequence[float]
     min_lamb: float # in micron
     max_lamb: float # in micron
-    d0: float
-    d1: float
-    d2: float
-    e0: float
-    e1: float
-    lamb_tk: float
-    reference_temperature: float
+    d0: float = 0.
+    d1: float = 0.
+    d2: float = 0.
+    e0: float = 0.
+    e1: float = 0.
+    lamb_tk: float = 0.
+    reference_temperature: float = 0.
 
     def calc_index(self, lamb: Numeric, temperature: float = None):
         """Calculate refractive index.
@@ -77,70 +75,93 @@ class Record:
 
         return n
 
+    def fix_temperature(self, temperature: float = None) -> 'Index':
+        return Index(self, temperature)
+
+@dataclass
+class Index(ri.Index):
+    record: Record
+    temperature: float
+
+    def __call__(self, lamb: Numeric) -> Numeric:
+        return self.record.calc_index(lamb, self.temperature)
+
+Catalog =  Dict[str, Record]
+
 def parse_catalog(file: TextIO) -> Tuple[Sequence[str], Sequence[Record]]:
     catalog_comments = []
     records = []
     data = None
-    for line in file:
-        if line.startswith('CC'):
-            catalog_comments.append(line[2:].strip())
+    for line_num, line in enumerate(file):
+        try:
+            if line.startswith('CC'):
+                catalog_comments.append(line[2:].strip())
 
-        elif line.startswith('NM'):
-            if data is not None:
-                records.append(Record(**data))
-            data = {}
-            terms = line.split()
+            elif line.startswith('NM'):
+                if data is not None:
+                    records.append(Record(**data))
+                data = {}
+                data['comments'] = []
 
-            data['name'] = terms[1]
-            data['dispersion_formula'] = int(terms[2])
-            # terms[3] is MIL#, not used.
-            data['nd'] = float(terms[4])
-            data['vd'] = float(terms[5])
-            data['exclude_substitution'] = bool(int(terms[6])) if len(terms) > 6 else False
-            data['status'] = Status(int(terms[7])) if len(terms) > 7 else Status.STANDARD
-            data['melt_freq'] = int(terms[8]) if len(terms) > 8 else 0
+                terms = line.split()
+                data['name'] = terms[1]
+                # Schott catalog sometimes uses exponential notation here and below.
+                data['dispersion_formula'] = int(float(terms[2]))
+                # terms[3] is MIL#, not used.
+                data['nd'] = float(terms[4])
+                data['vd'] = float(terms[5])
+                data['exclude_substitution'] = bool(int(float(terms[6]))) if len(terms) > 6 else False
+                data['status'] = Status(int(float(terms[7]))) if len(terms) > 7 else Status.STANDARD
+                data['melt_freq'] = int(terms[8]) if len(terms) > 8 and terms[8] != '-' else 0
 
-        elif line.startswith('GC'):
-            data['comment'] = line[2:].strip()
+            elif line.startswith('GC'):
+                data['comments'].append(line[2:].strip())
 
-        elif line.startswith('ED'): # Extra Data
-            terms = line.split()
-            data['tce'] = float(terms[1])
-            # terms[2] is TCE in 100 to 300 deg. range - not used
-            data['density'] = float(terms[3])
-            data['dPgF'] = float(terms[4])
-            data['ignore_thermal_expansion'] = bool(int(terms[5])) if len(terms) > 5 else False
+            elif line.startswith('ED'): # Extra Data
+                terms = line.split()
+                data['tce'] = float(terms[1])
+                # terms[2] is TCE in 100 to 300 deg. range - not used
+                data['density'] = float(terms[3])
+                data['dPgF'] = float(terms[4])
+                data['ignore_thermal_expansion'] = bool(int(terms[5])) if len(terms) > 5 else False
 
-        elif line.startswith('CD'): # Coefficient Data
-            terms = line.split()
-            data['dispersion_coefficients'] = [float(term) for term in terms[1:]]
+            elif line.startswith('CD'): # Coefficient Data
+                terms = line.split()
+                data['dispersion_coefficients'] = [float(term) for term in terms[1:]]
 
-        elif line.startswith('TD'): # Thermal Data
-            terms = line.split()
-            data['d0'] = float(terms[1])
-            data['d1'] = float(terms[2])
-            data['d2'] = float(terms[3])
-            data['e0'] = float(terms[4])
-            data['e1'] = float(terms[5])
-            data['lamb_tk'] = float(terms[6])
-            data['reference_temperature'] = float(terms[7])
+            elif line.startswith('TD'): # Thermal Data
+                terms = line.split()
+                if len(terms) == 1:
+                    # Schott catalog sometimes has empty TD lines.
+                    continue
+                data['d0'] = float(terms[1])
+                data['d1'] = float(terms[2])
+                data['d2'] = float(terms[3])
+                data['e0'] = float(terms[4])
+                data['e1'] = float(terms[5])
+                data['lamb_tk'] = float(terms[6])
+                data['reference_temperature'] = float(terms[7])
 
-        elif line.startswith('LD'): # Lambda Data
-            terms = line.split()
-            data['min_lamb'] = float(terms[1])
-            data['max_lamb'] = float(terms[2])
+            elif line.startswith('LD'): # Lambda Data
+                terms = line.split()
+                data['min_lamb'] = float(terms[1])
+                data['max_lamb'] = float(terms[2])
+        except Exception as e:
+            raise ParseError(f'Parse error in {file.name} line {line_num + 1}: {line}.') from e
 
     if data is not None:
         records.append(Record(**data))
 
     return catalog_comments, records
 
-def load_catalog(path: str) -> Dict[str, Record]:
+def load_catalog(path: str) -> Catalog:
     with open(path, 'rt') as file:
         comments, records = parse_catalog(file)
 
     catalog = {r.name:r for r in records}
     return catalog
+
+
 
 
 

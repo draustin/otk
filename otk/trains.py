@@ -161,8 +161,8 @@ class Train:
 
     TODO If needed, many methods are candidates for memoization.
     """
-    interfaces: Sequence
-    spaces: Sequence
+    interfaces: Tuple[Interface]
+    spaces: Tuple[float]
 
     def __post_init__(self):
         assert len(self.spaces) == len(self.interfaces) + 1
@@ -438,6 +438,9 @@ class Surface(ABC):
     def __eq__(self, other):
         return type(self) is type(other) and self.roc == other.roc and self.radius == other.radius
 
+    def isclose(self, other):
+        return np.isclose(self.roc, other.roc) and np.isclose(self.radius, other.radius)
+
     @property
     @abstractmethod
     def sag_range(self) -> np.ndarray:
@@ -544,7 +547,10 @@ class ConicSurface(Surface):
         return f'ConicSurface(roc={self.roc}, radius={self.radius}, kappa={self.kappa}, alphas={self.alphas})'
 
     def __eq__(self, other):
-        return Surface.__eq__(self, other) and self.kappa == other.kappa and np.array_equal(self.kappa, other.kappa)
+        return Surface.__eq__(self, other) and self.kappa == other.kappa and np.array_equal(self.alphas, other.alphas)
+
+    def isclose(self, other):
+        return Surface.isclose(self, other) and np.isclose(self.kappa, other.kappa) and np.allclose(self.alphas, other.alphas)
 
     def calc_sag(self, rho, derivative: bool = False):
         """Calculate sag of surface.

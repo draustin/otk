@@ -1,11 +1,23 @@
+import os
 import numpy as np
-from typing import TextIO, Tuple
-from . import ri, trains
+from typing import TextIO, Tuple, Mapping, Dict
+from . import ri, trains, agf
+
+from . import ROOT_DIR
+AGFS_DIR = os.path.realpath(os.path.join(ROOT_DIR, '..', 'glasses', 'agfs'))
 
 # Translate from Zemax glass database to ri module.
-glasses = {'PMMA':ri.PMMA_Zemax, 'F_SILICA':ri.fused_silica, 'BK7':ri.N_BK7, 'K-VC89':ri.KVC89}
+#glasses = {'PMMA':ri.PMMA_Zemax, 'F_SILICA':ri.fused_silica, 'BK7':ri.N_BK7, 'K-VC89':ri.KVC89}
 
-def read_interface(file:TextIO, n1=ri.air) -> Tuple[trains.Interface, float, float]:
+glass_catalog_paths: Mapping[str, str] = {
+    'HOYA': os.path.join(AGFS_DIR, 'HOYA20200314_include_obsolete.agf'),
+    'SCHOTT': os.path.join(AGFS_DIR, 'schottzemax-20180601.agf'),
+    'OHARA': os.path.join(AGFS_DIR, 'OHARA_200306_CATALOG.agf'),
+    'SUMITA': os.path.join(AGFS_DIR, 'sumita-opt-dl-data-20200511235805.agf'),
+    'NIKON': os.path.join(AGFS_DIR, 'NIKON-HIKARI_201911.agf')
+}
+
+def read_interface(file:TextIO, n1, catalog: Dict[str, agf.Record], temperature: float) -> Tuple[trains.Interface, float, float]:
     commands = {}
     parms = {}
     while True:
@@ -25,7 +37,8 @@ def read_interface(file:TextIO, n1=ri.air) -> Tuple[trains.Interface, float, flo
                 commands[words[0]]=words[1:]
 
     if 'GLAS' in commands:
-        n2 = glasses[commands['GLAS'][0]]
+        record = catalog[commands['GLAS'][0]]
+        n2 = record.fix_temperature(temperature)
     else:
         n2 = ri.air
     thickness = float(commands['DISZ'][0])*1e-3
@@ -72,7 +85,8 @@ def read_interface(file:TextIO, n1=ri.air) -> Tuple[trains.Interface, float, flo
 
     return interface, n2, thickness
 
-def read_train(filename:str, n: ri.Index = ri.air, encoding: str = 'utf-16le') -> trains.Train:
+
+def read_train(filename:str, n: ri.Index = ri.air, encoding: str = 'utf-16le', temperature: float = None) -> trains.Train:
     """Read optical train from Zemax file.
 
     The given refractive index defines the surrounding medium.
@@ -82,6 +96,7 @@ def read_train(filename:str, n: ri.Index = ri.air, encoding: str = 'utf-16le') -
     surface_num = 0
     spaces = [0]
     interfaces = []
+    full_catalog = {}
     with open(filename, 'rt', encoding=encoding) as file:
         while True:
             line = file.readline()
@@ -91,11 +106,19 @@ def read_train(filename:str, n: ri.Index = ri.air, encoding: str = 'utf-16le') -
             if words[0] == 'SURF':
                 assert int(words[1]) == surface_num
                 try:
-                    interface, n, space = read_interface(file, n)
+                    interface, n, space = read_interface(file, n, full_catalog, temperature)
                 except Exception as e:
                     raise ValueError(f'Exception reading SURF {surface_num}.') from e
 
                 interfaces.append(interface)
                 spaces.append(space)
                 surface_num += 1
+            elif words[0] == 'GCAT':
+                for name in line.split()[1:]:
+                    full_catalog.update(get_glass_catalog(name))
     return trains.Train(interfaces, spaces)
+
+
+def get_glass_catalog(name: str) -> agf.Catalog:
+    path = glass_catalog_paths[name]
+    return agf.load_catalog(path)
