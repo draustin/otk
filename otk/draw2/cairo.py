@@ -1,5 +1,5 @@
 from functools import singledispatch
-import cairo
+import cairocffi as cairo
 from . import *
 
 __all__ = ['draw']

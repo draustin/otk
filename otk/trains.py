@@ -7,6 +7,7 @@ from typing import Sequence, Tuple, Mapping
 import numpy as np
 import scipy.optimize
 from . import abcd, paraxial, functions, ri
+from .functions import calc_sphere_sag
 
 # TODO Make Interface composition of Surface and refractive indeices.
 
@@ -50,7 +51,7 @@ class Interface:
         """Returns (num_points, 2) array."""
         x = np.linspace(-self.radius, self.radius, num_points)
         # TODO use calc_sag.
-        h = math.calc_sphere_sag(self.roc, x)
+        h = calc_sphere_sag(self.roc, x)
         xys = np.c_[x, h]
         return xys
 

@@ -18,18 +18,13 @@ __all__ = ['view_assembly', 'application', 'view_elements']
 logger = logging.getLogger(__name__)
 
 def view_elements(elements: Sequence[Element], all_properties: Dict[sdb.Surface, Dict] = None,
-    surface: sdb.Surface = None, default_edge_width: float = None, projection_type: str = 'orthographic', zhat: Sequence[float]=None,
-    scale: bool = True):
+    surface: sdb.Surface = None, default_edge_width: float = None, projection_type: str = 'orthographic', zhat: Sequence[float]=None):
     if all_properties is None:
         all_properties = {}
     all_properties = defaultdict(dict, all_properties)
 
     if surface is None:
         surface = sdb.UnionOp([e.surface for e in elements])
-
-    if scale:
-        scale_factor = abs(surface.get_aabb(np.eye(4)).size[:3]).prod()**(-1/3)
-        surface = surface.scale(scale_factor)
 
     epsilon = norm(surface.get_aabb(np.eye(4)).size)*1e-3
 

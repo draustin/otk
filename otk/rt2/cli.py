@@ -15,7 +15,8 @@ def view_zmx():
     # Create assembly object for ray tracing.
     assembly = rt2.Assembly.make(elements, singlet_sequence.n_external)
 
-    view_surface = sdb.IntersectionOp((assembly.surface, sdb.Plane((-1, 0, 0), 0)), assembly.surface)
+    scale_factor = abs(assembly.surface.get_aabb(np.eye(4)).size[:3]).prod()**(-1/3)
+    view_surface = sdb.IntersectionOp((assembly.surface, sdb.Plane((-1, 0, 0), 0)), assembly.surface).scale(scale_factor)
 
     with rt2.application():
         viewer = rt2.view_assembly(assembly, surface=view_surface)

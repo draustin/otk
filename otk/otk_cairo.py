@@ -1,7 +1,7 @@
-"""Drawing using the pycairo as backend."""
+"""Drawing using pycairo or cairocffi as backend."""
 import numpy as np
 from typing import Sequence
-import cairo
+import cairocffi as cairo
 from . import trains, functions
 
 index_colors = {'air': (0.9, 0.9, 0.9, 1), 'fused_silica': (0, 0.5, 1, 1)}

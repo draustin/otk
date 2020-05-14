@@ -230,6 +230,9 @@ class InfiniteRectangularPrism(Primitive):
         q = abs(x[:2] - self.center) - (self.width/2, self.height/2)
         return norm(np.maximum(q, 0.0)) + np.minimum(np.maximum(q[..., 0], q[..., 1]), 0.0)
 
+    def scale(self, f: float) -> 'InfiniteRectangularPrism':
+        return InfiniteRectangularPrism(self.width*f, self.height*f, self.center*f)
+
 
 class Plane(Primitive):
     """Half-space boundaried by infinite plane.

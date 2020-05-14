@@ -1,5 +1,5 @@
 from typing import Sequence
-import cairo
+import cairocffi as cairo
 from . import *
 from ..draw2.draw2_cairo import draw
 

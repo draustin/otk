@@ -1,6 +1,7 @@
 import os
 import numpy as np
 from typing import TextIO, Tuple, Mapping, Dict
+import chardet
 from . import ri, trains, agf
 
 from . import ROOT_DIR, CONFIG
@@ -108,13 +109,16 @@ def read_interface(file:TextIO, n1, catalog: Dict[str, agf.Record], temperature:
     return interface, n2, thickness
 
 
-def read_train(filename:str, n: ri.Index = ri.air, encoding: str = 'utf-16le', temperature: float = None, glass_catalog_paths: Dict[str, str] = None) -> trains.Train:
+def read_train(filename:str, n: ri.Index = ri.air, encoding: str = None, temperature: float = None, glass_catalog_paths: Dict[str, str] = None) -> trains.Train:
     """Read optical train from Zemax file.
 
     The given refractive index defines the surrounding medium.
 
-    If it doesn't read properly, try changing the encoding to 'ascii'.
-    """
+    If encoding is not given it is detected automatically."""
+    if encoding is None:
+        with open(filename, 'rb') as file:
+            raw = file.read()
+        encoding = chardet.detect(raw)['encoding']
     if glass_catalog_paths is None:
         glass_catalog_paths = default_glass_catalog_paths
     surface_num = 0

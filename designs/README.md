@@ -1,0 +1,1 @@
+This folder contains Zemax lens designs intended for testing or demonstration purposes.

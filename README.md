@@ -2,13 +2,39 @@
 
 Tools for doing optics in Python
 
-![](screenshots/zemax_conic_telecentric_lens.png)
+<img src="screenshots/zemax_conic_telecentric_lens.png" width="400  " title="conic telecentric lens with rays">
+<img src="screenshots/cell-phone-lens.png" width="160" title="cell phone lens">
+<img src="screenshots/csg.png" width="160" title="cell phone lens">
 
 ## Installation
 
-In repository root folder, `pip install -e .` to install in editable mode.
+Installation methods include:
 
-## Contents
+* Clone repository and interact with it using [Poetry](https://python-poetry.org/) e.g. `poetry run view-zmx <zemax-file>` or `poetry shell`.
+* Install in development mode with pip: `pip install -e <path-to-local-repo>`.
+* Install from package repository (e.g. PyPi) with pip: `pip install otk`.
+* Development mode with [: `poetry add <path-to-local-repo>`.
+* From package repository (e.g. PyPi) with Poetry: `poetry add otk`.
+
+## Package management
+
+otk uses [Poetry](https://python-poetry.org/) for package management. This means that dependencies, version, entry points etc are all defined in [`pyproject.toml`](./pyproject.toml). [`setup.py`](./setup.py) is generated using `dephell deps convert` to support pip development mode installation.
+
+## Getting started
+
+1. Check out the scripts in [examples](./examples).
+2. View one of the lenses in [designs](./designs) with the command line tool `view-zmx`.
+
+## Folder contents
+
+* `otk` - the Python package itself.
+* `examples` - example scripts.
+* `properties` - material properties databases.
+* `notes` - miscellaneous notes including derivations.
+
+## Documentation
+
+(Yep, this is it at the moment.)
 
 * `otk.sdb` - Geometry library based on signed distance bounds.
 * `otk.rt1` - First attempt at ray tracing package. Superseded by otk.rt2.
