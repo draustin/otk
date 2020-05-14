@@ -160,6 +160,8 @@ class Train:
     of spaces to zero.
 
     TODO If needed, many methods are candidates for memoization.
+    TODO make frozen
+    TODO add make method instead of correcting in post_init (cleaner type checking).
     """
     interfaces: Tuple[Interface]
     spaces: Tuple[float]
@@ -423,6 +425,43 @@ class Train:
         else:
             spaces_stop = stop + 1
         return Train(self.interfaces[start:stop], self.spaces[start:spaces_stop])
+
+    def crop_to_finite(self) -> 'Train':
+        # Crop to exclude surfaces of infinite thickness.
+        infs = [n for n, space in enumerate(self.spaces) if np.isinf(space)]
+        if len(infs) == 0:
+            cropped = self
+        else:
+            if len(infs) == 1:
+                inf = infs[0]
+                if inf < len(self.spaces)/2:
+                    spaces = (0.,) + self.spaces[inf + 1:]
+                    interfaces = self.interfaces[inf:]
+                else:
+                    spaces = self.spaces[:inf] + (0.,)
+                    interfaces = self.interfaces[:inf]
+            else:
+                raise ValueError(f"Don't know how to handle {len(infs)} surfaces with infinite thickness.")
+            cropped = Train(interfaces, spaces)
+        return cropped
+
+    def consolidate(self) -> 'Train':
+        """Remove interfaces with same material on either side."""
+        # Remove same material interfaces
+        space = self.spaces[0]
+        n = self.interfaces[0].n1
+        spaces = []
+        interfaces = []
+        for next_space, interface in zip(self.spaces[1:], self.interfaces):
+            if interface.n2 == n:
+                space += next_space
+            else:
+                spaces.append(space)
+                interfaces.append(interface)
+                space = next_space
+                n = interface.n2
+        spaces.append(space)
+        return Train(interfaces, spaces)
 
 class Surface(ABC):
     """An axisymmetric surface between two media.
@@ -744,6 +783,11 @@ class SingletSequence:
         singlets = tuple(s.reverse() for s in self.singlets[::-1])
         return SingletSequence(singlets, self.spaces[::-1], self.n_external)
 
+    def split(self, index: int, frac: float = 0.5) -> Tuple['SingletSequence', 'SingletSequence']:
+        before = SingletSequence(self.singlets[:index], self.spaces[:index] + (self.spaces[index]*frac,), self.n_external)
+        after = SingletSequence(self.singlets[index:], (self.spaces[index]*(1 - frac),) + self.spaces[index+1:], self.n_external)
+        return before, after
+
     @classmethod
     def from_train(cls, train: Train, radii='equal'):
         assert len(train.interfaces)%2 == 0
@@ -767,6 +811,53 @@ class SingletSequence:
             singlets.append(Singlet((to_surface(i1, radius=radius), to_surface(i2, radius=radius)), thickness, n))
         spaces.append(train.spaces[-1])
         return cls(singlets, spaces, n_external)
+
+    @classmethod
+    def from_train2(cls, train: Train, radii_mode: str = 'equal'):
+        singlets = []
+        spaces = []
+        space = train.spaces[0]
+        index0 = 0
+        n_external = train.interfaces[0].n1
+        while index0 < len(train.interfaces):
+            interface0 = train.interfaces[index0]
+            if interface0.n1 != interface0.n2 and interface0.n2 != n_external:
+                spaces.append(space)
+                space = 0
+
+                radius = interface0.radius
+                for index1 in range(index0 + 1, len(train.interfaces)):
+                    interface1 = train.interfaces[index1]
+                    if radii_mode == 'max':
+                        radius = max(radius, interface1.radius)
+                    elif radii_mode == 'equal':
+                        if radius != interface1.radius:
+                            raise ValueError(f'Singlet that starts at interface {index0} has radius {radius} but interface {index1} has radius {interface1.radius}.')
+                    else:
+                        raise ValueError(f'Unknown radii_mode {radii_mode}.')
+                    if interface1.n2 != interface0.n2:
+                        thickness = sum(train.spaces[index0+1 : index1+1])
+                        # TODO tidy this up after reimplementing Interface as composition of Surface.
+                        def pad(i: Interface):
+                            outer_radius = radius - i.radius
+                            if outer_radius > 1e-6: # TODO civilize
+                                outer_surface = SphericalSurface(np.inf, outer_radius)
+                                outer_sag = i.calc_sag(i.radius)
+                                i = SegmentedInterface(i.n1, i.n2, (to_surface(i), outer_surface), (0, outer_sag))
+                            return i
+                        interface0 = pad(interface0)
+                        interface1 = pad(interface1)
+                        singlets.append(Singlet((to_surface(interface0, radius=radius), to_surface(interface1, radius=radius)), thickness, interface0.n2))
+                        break
+                else:
+                    raise ValueError(f'Singlet that starts at interface {index0} does not finish.')
+                index0 = index1
+            else:
+                index0 += 1
+                space += train.spaces[index0]
+        spaces.append(space)
+        return cls(singlets, spaces, n_external)
+
 
     @classmethod
     def design_symmetric_singlet_transform(cls, n: ri.Index, f_transform: float, working_distance: float,

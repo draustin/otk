@@ -4,9 +4,10 @@ Inspired by https://github.com/nzhagen/zemaxglass/blob/master/ZemaxGlass.py.
 """
 import os
 from enum import Enum
-from typing import Sequence, TextIO, Tuple, Dict, Callable
+from typing import Sequence, TextIO, Tuple, Dict, Callable, Iterable
 from dataclasses import dataclass
 import numpy as np
+import chardet
 from .types import Numeric
 from . import ri
 
@@ -88,11 +89,11 @@ class Index(ri.Index):
 
 Catalog =  Dict[str, Record]
 
-def parse_catalog(file: TextIO) -> Tuple[Sequence[str], Sequence[Record]]:
+def parse_catalog(lines: Iterable[str]) -> Tuple[Sequence[str], Sequence[Record]]:
     catalog_comments = []
     records = []
     data = None
-    for line_num, line in enumerate(file):
+    for line_num, line in enumerate(lines):
         try:
             if line.startswith('CC'):
                 catalog_comments.append(line[2:].strip())
@@ -147,17 +148,25 @@ def parse_catalog(file: TextIO) -> Tuple[Sequence[str], Sequence[Record]]:
                 data['min_lamb'] = float(terms[1])
                 data['max_lamb'] = float(terms[2])
         except Exception as e:
-            raise ParseError(f'Parse error in {file.name} line {line_num + 1}: {line}.') from e
+            raise ParseError(f'Parse error on line {line_num + 1}: {line}.') from e
 
     if data is not None:
         records.append(Record(**data))
 
     return catalog_comments, records
 
-def load_catalog(path: str) -> Catalog:
-    with open(path, 'rt', encoding='latin-1') as file:
-        comments, records = parse_catalog(file)
+def read_lines(path: str) -> Iterable[str]:
+    """Detect file encoding and read lines."""
+    with open(path, 'rb') as file:
+        raw = file.read()
+    encoding = chardet.detect(raw)['encoding']
+    text = raw.decode(encoding)
+    lines = text.splitlines()
+    return lines
 
+def load_catalog(path: str) -> Catalog:
+    lines = read_lines(path)
+    comments, records = parse_catalog(lines)
     catalog = {r.name:r for r in records}
     return catalog
 

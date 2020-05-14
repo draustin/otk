@@ -1,5 +1,6 @@
 from collections import defaultdict
 from typing import Dict, Sequence
+import logging
 
 import numpy as np
 
@@ -13,6 +14,8 @@ from ..sdb.glsl import gen_get_all_recursive
 from ..sdb.qt import SphereTraceViewer
 
 __all__ = ['view_assembly', 'application', 'view_elements']
+
+logger = logging.getLogger(__name__)
 
 def view_elements(elements: Sequence[Element], all_properties: Dict[sdb.Surface, Dict] = None,
     surface: sdb.Surface = None, default_edge_width: float = None, projection_type: str = 'orthographic', zhat: Sequence[float]=None):
@@ -35,6 +38,7 @@ def view_elements(elements: Sequence[Element], all_properties: Dict[sdb.Surface,
         zhat = -v4h.xhat
 
     sdb_glsl = gen_get_all_recursive(surface, all_properties)
+    logger.debug('sdb_glsl = \n' + sdb_glsl)
     viewer = SphereTraceViewer(sdb_glsl)
     viewer.epsilon = epsilon
     size = viewer.size()

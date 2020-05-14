@@ -7,7 +7,7 @@ everywhere? Could also make a decorator that applies njit if numba is installed.
 TODO move stuff in mathx.
 """
 import cmath
-from typing import Tuple, Sequence
+from typing import Tuple, Sequence, Callable
 import numpy as np
 from otk import v4hb, v4h
 
@@ -331,3 +331,33 @@ def make_perpendicular(u: Vectors4, v: Vectors4) -> Vectors4:
     w /= m**0.5
 
     return w
+
+def calc_zemax_conic_lipschitz(radius: float, roc: float, kappa: float = 1., alphas: Sequence[float] = ()):
+    # Compute bound on second derivative of sag.
+    ns = np.arange(2, len(alphas) + 2)
+    l1 = roc**2/(roc**2 - kappa*radius**2)**1.5 + sum(abs(alpha)*n*(n - 1)*radius**(n - 2) for n, alpha in zip(ns, alphas))
+    def absf1(rho):
+        return abs(rho/(roc**2 - kappa*rho**2)**0.5 + sum(alpha*n*rho**(n - 1) for n, alpha in zip(ns, alphas)))
+    return bound_upper1d(absf1, l1, 0., radius, 2.)
+
+
+def bound_upper1d(f: Callable[[float], float], lipschitz: float, a: float, b: float, alpha: float = 2., beta: float = 1e-3) -> float:
+    """Get upper bound on f(x) for x in [a, b] given Lipschitz constant.
+
+    The returned bound is no looser than max(alpha*max(f), beta*lipschitz*(b - a)).
+    """
+    assert lipschitz >= 0
+    assert alpha > 1.
+    assert beta > 0.
+    x = a
+    fx = f(x)
+    assert fx >= 0
+    bound = max(alpha*fx, beta*lipschitz*(b - a))
+    while x < b:
+        # Take maximum step such that Lipschitz condition doesn't increase bound.
+        dx = (bound - fx)/lipschitz
+        x = min(b, x + dx) # Want x==b exactly if at end of domain.
+        fx = f(x)
+        assert fx >= 0
+        bound = max(fx*alpha, bound)
+    return bound

@@ -1,11 +1,12 @@
 from typing import List
+import copy
 from dataclasses import dataclass
 from  itertools import  product
 from abc import ABC, abstractmethod
 from typing import Sequence, Tuple, Union
 import numpy as np
 from ..types import Sequence2, Vector2, Sequence3, Vector2Int, Vector3
-from ..functions import normalize
+from ..functions import normalize, calc_zemax_conic_lipschitz
 from ..h4t import make_translation
 from . import bounding
 
@@ -47,6 +48,10 @@ class Surface:
         """Returns generator of descendants in depth-first traversal."""
         raise NotImplementedError(self)
 
+    # def clone(self) -> 'Surface':
+    #     """Deep copy of self with no parent."""
+    #     raise NotImplementedError(self)
+
 @dataclass
 class ISDB:
     d: float
@@ -83,6 +88,10 @@ def get_root_to_local(self:Surface, x: np.ndarray) -> np.ndarray:
 class Primitive(Surface):
     def descendants(self):
         yield self
+
+    # def clone(self) -> 'Primitive':
+    #     s = copy.copy(self)
+    #     s._parent = None
 
 class Sphere(Primitive):
     def __init__(self, r:float, o:Sequence[float]=None, parent: Surface = None):
@@ -273,8 +282,8 @@ class ZemaxConic(Primitive):
         if alphas is None:
             alphas = []
         ns = np.arange(2, len(alphas) + 2)
-        # Calculate Lipschitz bound of the sag function. For now use loose Lipschitz bound equal to sum of bounds.
-        sag_lipschitz = radius/(roc**2 - kappa*radius**2)**0.5 + sum(abs(alpha)*n*radius**(n - 1) for n, alpha in zip(ns, alphas))
+        # Calculate Lipschitz bound of the sag function.
+        sag_lipschitz = calc_zemax_conic_lipschitz(radius, roc, kappa, alphas)
         if vertex is None:
             vertex = 0, 0, 0
         vertex = np.asarray(vertex)
