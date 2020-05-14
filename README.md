@@ -2,9 +2,7 @@
 
 Toolkit for doing optics in Python
 
-<img src="screenshots/zemax_conic_telecentric_lens.png" width="400  " title="conic telecentric lens with rays">
-<img src="screenshots/cell-phone-lens.png" width="160" title="cell phone lens">
-<img src="screenshots/csg.png" width="160" title="cell phone lens">
+<img src="screenshots/zemax_conic_telecentric_lens.png" width="400  " title="conic telecentric lens with rays"><img src="screenshots/cell-phone-lens.png" width="160" title="cell phone lens"><img src="screenshots/csg.png" width="160" title="cell phone lens">
 
 Features include
 
