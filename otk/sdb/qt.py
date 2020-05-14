@@ -219,12 +219,18 @@ class SphereTraceViewer(QtWidgets.QWidget):
         b.pressed.connect(self.go_home)
 
         # Place widgets in layout.
+        def label(widget, string):
+            hbox = QtWidgets.QHBoxLayout()
+            hbox.addWidget(QtWidgets.QLabel(string))
+            hbox.addWidget(widget)
+            return hbox
+
         hbox = QtWidgets.QHBoxLayout()
         self.setLayout(hbox)
         vbox = QtWidgets.QVBoxLayout()
         hbox.addLayout(vbox)
-        vbox.addWidget(max_steps)
-        vbox.addWidget(self._log10epsilon)
+        vbox.addLayout(label(self._max_steps, 'Max. steps:'))
+        vbox.addLayout(label(self._log10epsilon, 'log10(epsilon):'))
         vbox.addWidget(self._home_button)
         vbox.addStretch(1)
         hbox.addWidget(display_widget)

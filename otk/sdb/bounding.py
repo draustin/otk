@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from functools import singledispatch
 from typing import Sequence, Tuple
 import numpy as np
+from ..types import Vector4
 from .. import v4h, v3h
 
 __all__ = ['union', 'intersection', 'difference', 'isclose', 'Interval', 'AABR', 'AABB']
@@ -119,7 +120,7 @@ def _(b0: AABR, b1: AABR):
 @dataclass
 class AABB:
     """Axis-aligned bounding box."""
-    corners: Tuple[np.ndarray, np.ndarray]
+    corners: Tuple[Vector4, Vector4]
 
     def __post_init__(self):
         assert len(self.corners) == 2
@@ -131,11 +132,11 @@ class AABB:
         return any(self.corners[0] >= self.corners[1])
 
     @property
-    def size(self) -> np.ndarray:
+    def size(self) -> Vector4:
         return self.corners[1] - self.corners[0]
 
     @property
-    def center(self) -> np.ndarray:
+    def center(self) -> Vector4:
         return (self.corners[0] + self.corners[1])/2
 
     def split(self, axis: int) -> Tuple[Interval, AABR]:

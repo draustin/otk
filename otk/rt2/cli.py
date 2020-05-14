@@ -1,6 +1,6 @@
 import sys
 import numpy as np
-from .. import zemax, trains
+from .. import zemax, trains, sdb
 from otk.rt2 import rt2_scalar_qt as rt2
 
 def view_zmx():
@@ -15,7 +15,9 @@ def view_zmx():
     # Create assembly object for ray tracing.
     assembly = rt2.Assembly.make(elements, singlet_sequence.n_external)
 
+    view_surface = sdb.IntersectionOp((assembly.surface, sdb.Plane((-1, 0, 0), 0)), assembly.surface)
+
     with rt2.application():
-        viewer = rt2.view_assembly(assembly)
+        viewer = rt2.view_assembly(assembly, surface=view_surface)
 
 

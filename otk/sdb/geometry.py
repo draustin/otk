@@ -539,6 +539,7 @@ class UnionOp(Compound):
         ancestry.append(self)
         return ancestry, d
 
+# TODO bound should only be required if *no* children have bounds.
 class IntersectionOp(Compound):
     def __init__(self, surfaces:Sequence[Surface], bound:Surface = None, parent: Surface = None):
         Compound.__init__(self, surfaces, parent)
