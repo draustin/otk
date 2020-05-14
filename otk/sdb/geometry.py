@@ -1,11 +1,12 @@
 from typing import List
+import copy
 from dataclasses import dataclass
 from  itertools import  product
 from abc import ABC, abstractmethod
 from typing import Sequence, Tuple, Union
 import numpy as np
 from ..types import Sequence2, Vector2, Sequence3, Vector2Int, Vector3
-from ..functions import normalize
+from ..functions import normalize, calc_zemax_conic_lipschitz
 from ..h4t import make_translation
 from . import bounding
 
@@ -14,6 +15,7 @@ __all__ = ['Surface', 'Sphere', 'Box', 'Torus', 'Ellipsoid', 'InfiniteCylinder',
     'FiniteRectangularArray', 'ToroidalSag', 'BoundedParaboloid', 'ZemaxConic', 'SegmentedRadial', 'get_root_to_local',
     'ISDB']
 
+# TODO ABC?
 class Surface:
     """
     A parent of None means no parent / parent is root.
@@ -46,6 +48,17 @@ class Surface:
     def descendants(self):
         """Returns generator of descendants in depth-first traversal."""
         raise NotImplementedError(self)
+
+    def scale(self, f: float) -> 'Surface':
+        """Deep copy of self with coordinate system scaled by f.
+
+        E.g. if the units of all Surface s meters, then the units of s.scale(1000) are mm.
+        """
+        raise NotImplementedError(self)
+
+    # def clone(self) -> 'Surface':
+    #     """Deep copy of self with no parent."""
+    #     raise NotImplementedError(self)
 
 @dataclass
 class ISDB:
@@ -84,6 +97,10 @@ class Primitive(Surface):
     def descendants(self):
         yield self
 
+    # def clone(self) -> 'Primitive':
+    #     s = copy.copy(self)
+    #     s._parent = None
+
 class Sphere(Primitive):
     def __init__(self, r:float, o:Sequence[float]=None, parent: Surface = None):
         Primitive.__init__(self, parent)
@@ -98,6 +115,9 @@ class Sphere(Primitive):
         op = np.r_[self.o, 1].dot(m)
         rv = self.r, self.r, self.r, 0
         return bounding.AABB.make(op - rv, op + rv)
+
+    def scale(self, f: float) -> 'Sphere':
+        return Sphere(self.r*f, self.o*f)
 
 def get_box_vertices(center: Sequence[float], half_size: Sequence[float]) -> np.ndarray:
     vertices = []
@@ -128,6 +148,9 @@ class Box(Primitive):
     def get_aabb(self, m: np.ndarray) -> bounding.AABB:
         vertices = np.dot(self.get_hull_vertices(), m)
         return bounding.AABB((np.min(vertices, 0), np.max(vertices, 0)))
+
+    def scale(self, f: float) -> 'Box':
+        return Box(self.half_size*f, self.center*f, self.radius*f)
 
 class Torus(Primitive):
     """Circle of radius minor revolved around z axis."""
@@ -176,6 +199,9 @@ class InfiniteCylinder(Primitive):
         self.r = r
         self.o = o
 
+    def scale(self, f: float) -> 'InfiniteCylinder':
+        return InfiniteCylinder(self.r*f, self.o*f)
+
 class InfiniteRectangularPrism(Primitive):
     def __init__(self, width:float, height:float=None, center:Sequence[float]=None, parent: Surface = None):
         Primitive.__init__(self, parent)
@@ -200,6 +226,9 @@ class Plane(Primitive):
         Primitive.__init__(self, parent)
         self.n = normalize(n[:3])
         self.c = float(c)
+
+    def scale(self, f: float) -> 'Plane':
+        return Plane(self.n, self.c*f)
 
 class Hemisphere(Primitive):
     def __init__(self, r: float, o: Sequence[float] = None, sign: float = 1, parent: Surface = None):
@@ -240,6 +269,9 @@ class SphericalSag(Primitive):
     def center(self):
         return self.vertex + (0, 0, self.roc)
 
+    def scale(self, f: float) -> 'SphericalSag':
+        return SphericalSag(self.roc*f, self.side, self.vertex*f)
+
 class SagFunction(ABC):
     @property
     @abstractmethod
@@ -273,8 +305,8 @@ class ZemaxConic(Primitive):
         if alphas is None:
             alphas = []
         ns = np.arange(2, len(alphas) + 2)
-        # Calculate Lipschitz bound of the sag function. For now use loose Lipschitz bound equal to sum of bounds.
-        sag_lipschitz = radius/(roc**2 - kappa*radius**2)**0.5 + sum(abs(alpha)*n*radius**(n - 1) for n, alpha in zip(ns, alphas))
+        # Calculate Lipschitz bound of the sag function.
+        sag_lipschitz = calc_zemax_conic_lipschitz(radius, roc, kappa, alphas)
         if vertex is None:
             vertex = 0, 0, 0
         vertex = np.asarray(vertex)
@@ -286,6 +318,11 @@ class ZemaxConic(Primitive):
         self.lipschitz = (sag_lipschitz**2 + 1)**0.5
         self.vertex = vertex
         self.side = side
+
+    def scale(self, f: float) -> 'ZemaxConic':
+        ns = np.arange(2, len(self.alphas) + 2)
+        alphas = [alpha/f**(n - 1) for alpha, n in zip(self.alphas, ns)]
+        return ZemaxConic(self.roc*f, self.radius*f, self.side, self.kappa, alphas, self.vertex*f)
 
 class ToroidalSag(Primitive):
     # z-axis is normal at vertex. rocs are in x and y. sign convention is normal optical i.e. positive means curving towards
@@ -326,7 +363,6 @@ class Compound(Surface):
         for s in self.surfaces:
             yield from s.descendants()
         yield self
-
 
 class FiniteRectangularArray(Compound):
     """A finite rectangular array of unit surfaces in the xy plane.
@@ -385,6 +421,9 @@ class FiniteRectangularArray(Compound):
         corner1 = unit.corners[1] + np.r_[self.corner + self.pitch*(self.size - 0.5), 0, 0]
         return bounding.AABB((corner0, corner1))
 
+    def scale(self, f: float) -> 'FiniteRectangularArray':
+        return FiniteRectangularArray(self.pitch*f, self.size, self.surfaces[0].scale(f), self.corner*f)
+
 class BoundedParaboloid(Primitive):
     def __init__(self, roc: float, radius: float, side:bool, vertex:Sequence[float]=None, parent: Surface = None):
         """Paraboloid out to given radius, then flat.
@@ -408,6 +447,9 @@ class UnionOp(Compound):
     def get_aabb(self, m: np.ndarray) -> bounding.AABB:
         return bounding.union(*[s.get_aabb(m) for s in self.surfaces])
 
+    def scale(self, f: float) -> 'UnionOp':
+        return UnionOp([s.scale(f) for s in self.surfaces])
+
 class IntersectionOp(Compound):
     def __init__(self, surfaces:Sequence[Surface], bound:Surface = None, parent: Surface = None):
         Compound.__init__(self, surfaces, parent)
@@ -419,6 +461,13 @@ class IntersectionOp(Compound):
         else:
             return self.bound.get_aabb(m)
 
+    def scale(self, f: float) -> 'IntersectionOp':
+        if self.bound is None:
+            bound = None
+        else:
+            bound = self.bound.scale(f)
+        return IntersectionOp([s.scale(f) for s in self.surfaces], bound)
+
 class DifferenceOp(Compound):
     def __init__(self, s1:Surface, s2:Surface, bound:Surface = None, parent: Surface = None):
         Compound.__init__(self, (s1, s2), parent)
@@ -429,6 +478,13 @@ class DifferenceOp(Compound):
             return bounding.difference(self.surfaces[0].get_aabb(m), self.surfaces[1].get_aabb(m))
         else:
             return self.bound.get_aabb(m)
+
+    def scale(self, f: float) -> 'DifferenceOp':
+        if self.bound is None:
+            bound = None
+        else:
+            bound = self.bound.scale(f)
+        return DifferenceOp(self.surfaces[0].scale(f), self.surfaces[1].scale(f), bound)
 
 class AffineOp(Compound):
     def __init__(self, s:Surface, m:Sequence[Sequence[float]], parent: Surface = None):
@@ -476,6 +532,9 @@ class SegmentedRadial(Compound):
 
         self.radii = radii
         self.vertex = vertex
+
+    def scale(self, f: float) -> 'SegmentedRadial':
+        return SegmentedRadial([s.scale(f) for s in self.surfaces], self.radii*f, self.vertex*f)
 
 #get_intersection(x)
 # normal, interiors on either side (from already known but good to check), interface

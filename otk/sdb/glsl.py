@@ -295,7 +295,7 @@ def _(s:SegmentedRadial, ids:Mapping) -> str:
             if (rho <= {s.radii[0]}) return getSDB{ids[s.surfaces[0]]}(x);\n""") +
         '\n'.join(f'    else if (rho <= {r}) return getSDB{ids[s]}(x);' for r, s in zip(s.radii[1:], s.surfaces[1:-1])) +
         f'    else return getSDB{ids[s.surfaces[-1]]}(x);' +
-        '}')
+        '}\n\n')
 
 @gen_getColor.register
 def _(s:SegmentedRadial, ids:Mapping, properties:Mapping) -> str:

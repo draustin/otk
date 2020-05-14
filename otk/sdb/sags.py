@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import numpy as np
 from ..types import Vector2
 from . import *
-from ..functions import norm
+from ..functions import norm, calc_zemax_conic_lipschitz
 
 __all__ = ['ZemaxConicSagFunction', 'RectangularArraySagFunction', 'SinusoidSagFunction', "RectangularArrayLevel"]
 
@@ -24,9 +24,7 @@ class ZemaxConicSagFunction(SagFunction):
             raise ValueError(f'Surface is vertical with radius {radius}, roc {roc} and kappa {kappa}.')
         if alphas is None:
             alphas = []
-        ns = np.arange(2, len(alphas) + 2)
-        # For now use loose Lipschitz bound equal to sum of bounds.
-        lipschitz = radius/(roc**2 - kappa*radius**2)**0.5 + sum(abs(alpha)*n*radius**(n - 1) for n, alpha in zip(ns, alphas))
+        lipschitz = calc_zemax_conic_lipschitz(radius, roc, kappa, alphas)
 
         self.roc = roc
         self.radius = radius

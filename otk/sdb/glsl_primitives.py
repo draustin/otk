@@ -93,7 +93,7 @@ def _(s:ZemaxConic, ids:Mapping) -> str:
     if len(s.alphas) > 0:
         string += f'    float h = {s.alphas[-1]};\n'
         string += ''.join(f'    h = h*rho + {alpha};\n' for alpha in s.alphas[-2::-1])
-        string += '    z += h*rho*rho;'
+        string += '    z += h*rho*rho;\n'
     string += dedent(f"""\
         return {s.side}*(z - x.z)/{s.lipschitz};
     }}\n\n""")

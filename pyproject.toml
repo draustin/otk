@@ -11,7 +11,7 @@ repository = "https://github.com/draustin/otk"
 python = "^3.7"
 numpy = "^1.18.4"
 numba = "^0.49.1"
-pyqt5 = "^5.14.2"
+pyqt5 = "^5.12"
 pyopengl = "^3.1.5"
 mathx = "^0.2"
 pyyaml = "^5.3.1"
@@ -20,10 +20,19 @@ opt_einsum = "^3.2.1"
 pyqtgraph_extensions = "^0.4.0"
 gizeh = "^0.1.11"
 matplotlib = {version = "^3.2.1"}
+chardet = "^3.0.4"
+# Ideally these would be optional. But I'm getting weird behaviour suggestive of bugs in poetry, so want to keep it simple for now.
+# Spyder is currently a pain to install. See https://github.com/python-poetry/poetry/issues/1238. Tried various workarounds
+# but the nonhalting dependency resolution it was taking too long and I gave up.
+#spyder-kernels = { git = "https://github.com/danieltomasz/spyder-kernels.git", branch = "poetry", optional = false}
+#spyder = {version = "^4.1", optional = false}
+ipython = {version = "^7.14.0", optional = false}
 
-[tool.poetry.dev-dependencies]
-ipython = "^7.14.0"
+
+[tool.poetry.scripts]
+view-zmx = 'otk.rt2.cli:view_zmx'
 
 [build-system]
 requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"
+
