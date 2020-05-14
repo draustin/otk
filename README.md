@@ -77,8 +77,12 @@ To test that it installs properly,
 1. create and activate a virtual environment, and
 2. per [instructions](https://packaging.python.org/guides/using-testpypi/), `pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple otk`.
 
+However, I was unable to re-upload the same version (i.e. to correct a mistake) to test.pypi.org (even after logging in to the website and deleting the release).
+
+## Testing
+
+Test framework is [pytest](https://docs.pytest.org/en/latest/) and [tox](https://tox.readthedocs.io/en/latest/).
+
 ## Contributing
 
 Please do.
-
-Test framework uses `pytest` and `pytest-qt`.

@@ -35,5 +35,5 @@ setup(
     packages=['otk', 'otk.asbp', 'otk.asbp.test', 'otk.draw2', 'otk.rt1', 'otk.rt1.test', 'otk.rt2', 'otk.rt2.test', 'otk.rtm4', 'otk.sdb', 'otk.sdb.npscalar', 'otk.sdb.numba', 'otk.sdb.test', 'otk.sdb.webex', 'otk.test'],
     package_dir={"": "."},
     package_data={"otk.sdb": ["*.glsl"], "otk.sdb.webex": ["*.js", "*.md"]},
-    install_requires=['chardet==3.*,>=3.0.4', 'gizeh==0.*,>=0.1.11', 'ipython==7.*,>=7.14.0', 'mathx==0.*,>=0.2.0', 'matplotlib==3.*,>=3.2.1', 'numba==0.*,>=0.49.1', 'numpy==1.*,>=1.18.4', 'opt-einsum==3.*,>=3.2.1', 'pyfftw==0.*,>=0.12.0', 'pyopengl==3.*,>=3.1.5', 'pyqt5==5.*,>=5.12.0', 'pyqtgraph-extensions==0.*,>=0.4.0', 'pyyaml==5.*,>=5.3.1'],
+    install_requires=['cairocffi==1.*,>=1.1.0', 'chardet==3.*,>=3.0.4', 'gizeh==0.*,>=0.1.11', 'ipython==7.*,>=7.14.0', 'mathx==0.*,>=0.2.0', 'matplotlib==3.*,>=3.2.1', 'numba==0.*,>=0.49.1', 'numpy==1.*,>=1.18.4', 'opt-einsum==3.*,>=3.2.1', 'pyfftw==0.*,>=0.12.0', 'pyopengl==3.*,>=3.1.5', 'pyqt5==5.*,>=5.12.0', 'pyqtgraph-extensions==0.*,>=0.4.0', 'pyyaml==5.*,>=5.3.1'],
 )
