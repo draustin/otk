@@ -13,11 +13,12 @@ from dataclasses import dataclass
 from typing import Sequence, Union, List
 
 import otk.functions
+from ..types import Sequence4, Matrix4
 from ..functions import normalize, dot, norm_squared
 from .. import functions
 from .. import sdb
 from .. import v4h
-from .. sdb import npscalar
+from .. sdb import npscalar, Surface
 from . import *
 
 logger = logging.getLogger(__name__)
@@ -277,7 +278,25 @@ def _(self: Assembly, lamb: float, x: Sequence[float]) -> np.ndarray:
     else:
         return element.get_dielectric_tensor(lamb, x)
 
-def _get_transformed_element(self: Assembly, x) -> TransformedElement:
+def get_root_to_local(self, x: Sequence4, ancestry: List[Surface] = None) -> Matrix4:
+    if ancestry is None:
+        ancestry = self.get_ancestry_at(x)[0]
+    m = np.eye(4)
+    for surface0 in ancestry[::-1]:
+        m0 = surface0.get_parent_to_child(x)
+        m = np.dot(m, m0)
+        x = np.dot(x, m0)
+    return m
+
+def get_root_to_local(x: Sequence4, ancestry: List[Surface]) -> Matrix4:
+    m = np.eye(4)
+    for surface0 in ancestry[::-1]:
+        m0 = surface0.get_parent_to_child(x)
+        m = np.dot(m, m0)
+        x = np.dot(x, m0)
+    return m
+
+def _get_transformed_element(self: Assembly, x: Sequence4) -> TransformedElement:
     # insides = []
     # for surface, d in npscalar.traverse(self.surface, x):
     #     if d <= 0 and surface in self.elements:
@@ -302,11 +321,23 @@ def _get_transformed_element(self: Assembly, x) -> TransformedElement:
     #         if surface0 in surface.descendants():
     #             return TransformedElement(sdb.get_root_to_local(surface, x), element)
 
-    isdb = backend.identify(self.surface, x)
-    if isdb.d <= 0:
-        for surface, element in self.elements.items():
-            if isdb.surface in surface.descendants():
-                return TransformedElement(sdb.get_root_to_local(surface, x), element)
+    ancestry, d = self.surface.get_ancestry_at(x)
+    if d > 0:
+        return None
+
+    for num, surface in enumerate(ancestry):
+        try:
+            element = self.elements[surface]
+        except KeyError:
+            pass
+        else:
+            break
+    else:
+        raise ValueError('No element found.')
+
+    root_to_local = get_root_to_local(x, ancestry[num:])
+
+    return TransformedElement(root_to_local, element)
 
     # if len(insides) == 0:
     #     return None
