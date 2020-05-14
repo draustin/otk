@@ -335,7 +335,9 @@ def make_perpendicular(u: Vectors4, v: Vectors4) -> Vectors4:
 def calc_zemax_conic_lipschitz(radius: float, roc: float, kappa: float = 1., alphas: Sequence[float] = ()):
     # Compute bound on second derivative of sag.
     ns = np.arange(2, len(alphas) + 2)
-    l1 = roc**2/(roc**2 - kappa*radius**2)**1.5 + sum(abs(alpha)*n*(n - 1)*radius**(n - 2) for n, alpha in zip(ns, alphas))
+    l1 = sum(abs(alpha)*n*(n - 1)*radius**(n - 2) for n, alpha in zip(ns, alphas))
+    if np.isfinite(roc):
+        l1 += roc**2/(roc**2 - kappa*radius**2)**1.5
     def absf1(rho):
         return abs(rho/(roc**2 - kappa*rho**2)**0.5 + sum(alpha*n*rho**(n - 1) for n, alpha in zip(ns, alphas)))
     return bound_upper1d(absf1, l1, 0., radius, 2.)
