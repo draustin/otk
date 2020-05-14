@@ -2,24 +2,23 @@ import numpy as np
 from typing import Sequence, Callable
 from dataclasses import dataclass
 from functools import singledispatch
+from ...types import Sequence4
 from ...functions import norm, normalize
 
 from ..geometry import *
 
-__all__ = ['getsdb', 'identify', 'spheretrace', 'getnormal', 'getsag',
-    'traverse', 'ISDB']
+__all__ = ['getsdb', 'identify', 'spheretrace', 'getnormal', 'traverse', 'ISDB']
 
-@singledispatch
-def getsdb(surface: Surface, x: Sequence[float]) -> float:
+def getsdb(surface: Surface, x: Sequence4) -> float:
     """Get signed distance bound.
 
     Args:
         x: Position 4-vector.
     """
-    raise NotImplementedError(surface)
+    return surface.getsdb(x)
 
 @singledispatch
-def identify(surface: Surface, x: Sequence[float]) -> ISDB:
+def identify(surface: Surface, x: Sequence4) -> ISDB:
     """Identify bounding surface.
 
     Args:
@@ -27,28 +26,21 @@ def identify(surface: Surface, x: Sequence[float]) -> ISDB:
     """
     raise NotImplementedError(surface)
 
-@singledispatch
-def getsag(s, x: Sequence[float]) -> float:
-    """
-
-    Args:
-        s:
-        x: Position 2-vector.
-    """
-    raise NotImplementedError()
+# @singledispatch
+# def getsag(s, x: Sequence[float]) -> float:
+#     """
+#
+#     Args:
+#         s:
+#         x: Position 2-vector.
+#     """
+#     raise NotImplementedError()
 
 @singledispatch
 def getnormal(surface:Surface, x, h=1e-9) -> np.ndarray:
     ks = (np.asarray((1, 1, 1, 0)), np.asarray((1, -1, -1, 0)),
         np.asarray((-1, 1, -1, 0)), np.asarray((-1, -1, 1, 0)))
     return normalize(sum(k*getsdb(surface, x + k*h) for k in ks))
-
-@getsdb.register
-def _(self:UnionOp, p):
-    d = getsdb(self.surfaces[0], p)
-    for surface in self.surfaces[1:]:
-        d = min(d, getsdb(surface, p))
-    return d
 
 @identify.register
 def _(s: UnionOp, x):
@@ -95,13 +87,6 @@ def _(self:DifferenceOp, x:Sequence[float]):
     yield self, d
     return d
 
-@getsdb.register
-def _(self:IntersectionOp, x):
-    d = getsdb(self.surfaces[0], x)
-    for surface in self.surfaces[1:]:
-        d = max(d, getsdb(surface, x))
-    return d
-
 @identify.register
 def _(s: IntersectionOp, x):
     isdb0 = identify(s.surfaces[0], x)
@@ -128,22 +113,11 @@ def _(self:IntersectionOp, x:Sequence[float]):
     yield self, d
     return d
 
-@getsdb.register
-def _(self:DifferenceOp, p) -> np.ndarray:
-    d0 = getsdb(self.surfaces[0], p)
-    d1 = getsdb(self.surfaces[1], p)
-    return max(d0, -d1)
-
 @identify.register
 def _(s: DifferenceOp, x):
     isdb0 = identify(s.surfaces[0], x)
     isdb1 = identify(s.surfaces[1], x)
     return isdb0.max(isdb1.negate())
-
-@getsdb.register
-def _(self:AffineOp, p:Sequence[float]) -> int:
-    d = getsdb(self.surfaces[0], np.dot(p, self.invm))
-    return d*self.scale
 
 @traverse.register
 def _(self:AffineOp, x:Sequence[float]):
@@ -153,14 +127,6 @@ def _(self:AffineOp, x:Sequence[float]):
 @identify.register
 def _(self: AffineOp, x):
     return identify(self.surfaces[0], np.dot(x, self.invm)).times(self.scale)
-
-@getsdb.register
-def _(s:SegmentedRadial, x):
-    rho = norm(x[:2] - s.vertex)
-    for ss, r in zip(s.surfaces[:-1], s.radii):
-        if rho <= r:
-            return getsdb(ss, x)
-    return getsdb(s.surfaces[-1], x)
 
 @traverse.register
 def _(s:SegmentedRadial, x):
@@ -181,10 +147,6 @@ def _(s: SegmentedRadial, x):
         if rho <= r:
             return identify(ss, x)
     return identify(s.surfaces[-1], x)
-
-@getsdb.register
-def _(s:FiniteRectangularArray, x):
-    return getsdb(s.surfaces[0], s.transform(x))
 
 @traverse.register
 def _(s:FiniteRectangularArray, x):

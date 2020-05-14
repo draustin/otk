@@ -1,9 +1,9 @@
 from typing import Sequence, Union
 from dataclasses import dataclass
 import numpy as np
-from ..types import Vector2
+from ..types import Vector2, Sequence2
 from . import *
-from ..functions import norm, calc_zemax_conic_lipschitz
+from ..functions import norm, calc_zemax_conic_lipschitz, norm_squared, dot
 
 __all__ = ['ZemaxConicSagFunction', 'RectangularArraySagFunction', 'SinusoidSagFunction', "RectangularArrayLevel"]
 
@@ -35,6 +35,21 @@ class ZemaxConicSagFunction(SagFunction):
     @property
     def lipschitz(self) -> float:
         return self._lipschitz
+
+    def getsag(self, x: Sequence2) -> float:
+        rho2 = min(norm_squared(x[:2]), self.radius**2)
+        rho = rho2**0.5
+        if np.isfinite(self.roc):
+            z = rho2/(self.roc*(1 + (1 - self.kappa*rho2/self.roc**2)**0.5))
+        else:
+            z = 0
+        if len(self.alphas) > 0:
+            h = self.alphas[-1]
+            for alpha in self.alphas[-2::-1]:
+                h = h*rho + alpha
+            z += h*rho2
+        return z
+
 
 @dataclass
 class RectangularArrayLevel:
@@ -114,6 +129,16 @@ class RectangularArraySagFunction(SagFunction):
             sag = RectangularArraySagFunction(sag, l.pitch, l.size, l.clamp)
         return sag
 
+    def getsag(self, x: Sequence2) -> float:
+        if self.size is None:
+            q = abs(np.mod(x + self.pitch/2, self.pitch) - self.pitch/2)
+        else:
+            n = np.clip(np.floor(x/self.pitch + self.size/2), 0, self.size - 1)
+            q = abs(x - (n + 0.5 - self.size/2)*self.pitch)
+            if self.clamp:
+                q = np.minimum(q, self.pitch/2)
+        return self.unit.getsag(q)
+
 class SinusoidSagFunction(SagFunction):
     """Fixed wave-vector sinusoidal sag function.
 
@@ -129,3 +154,6 @@ class SinusoidSagFunction(SagFunction):
     @property
     def lipschitz(self) -> float:
         return self._lipschitz
+
+    def getsag(self, x: Sequence2) -> float:
+        return self.amplitude*np.cos(dot(x, self.vector))
