@@ -11,3 +11,4 @@ settings.json
 README.rst 
 dist
 .tox
+pip-wheel-metadata

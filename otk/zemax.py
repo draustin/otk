@@ -19,6 +19,8 @@ SUPPLIED_GLASS_CATALOG_PATHS = {
     'NIKON': os.path.join(SUPPLIED_AGFS_DIR, 'NIKON-HIKARI_201911.agf')
     }
 
+default_glass_catalog_paths = SUPPLIED_GLASS_CATALOG_PATHS.copy()
+
 
 def read_glass_catalog_dir(dir: str) -> Dict[str, str]:
     paths = {}
@@ -112,7 +114,7 @@ def read_train(filename:str, n: ri.Index = ri.air, encoding: str = None, tempera
             raw = file.read()
         encoding = chardet.detect(raw)['encoding']
     if glass_catalog_paths is None:
-        glass_catalog_paths = SUPPLIED_GLASS_CATALOG_PATHS
+        glass_catalog_paths = default_glass_catalog_paths
     surface_num = 0
     spaces = [0]
     interfaces = []
