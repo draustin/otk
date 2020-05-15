@@ -1,4 +1,4 @@
-from ._utility import ROOT_DIR, CONFIG
+from ._utility import DESIGNS_DIR, PROPERTIES_DIR
 # Constantly debating what to include in otk namespace.
 # from .types import Sequence2V, Sequence2VH, Sequence3V, Sequence3VH
 # from . import math

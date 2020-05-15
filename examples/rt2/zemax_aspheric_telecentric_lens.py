@@ -5,12 +5,11 @@ from matplotlib import colors as mcolors
 import mathx
 from PyQt5 import QtWidgets
 from otk.sdb import lookat, projection
-from otk import zemax, trains
-from otk import ri, sdb, ROOT_DIR
+from otk import zemax, trains, ri, sdb, DESIGNS_DIR
 from otk.rt2 import rt2_scalar_qt as rt2
 
 # Load Zemax file.
-train_full = zemax.read_train(os.path.join(ROOT_DIR, '..', 'designs',  'aspheric_telecentric_lens.zmx'), encoding='ascii')
+train_full = zemax.read_train(os.path.join(DESIGNS_DIR,  'aspheric_telecentric_lens.zmx'), encoding='ascii')
 # Remove object, stop and image surfaces.
 train = train_full.subset(2, -1)
 # Convert to a sequence of axisymemtric singlet lenses.

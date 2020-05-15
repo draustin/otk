@@ -2,12 +2,11 @@ import os
 import numpy as np
 from typing import TextIO, Tuple, Mapping, Dict
 import chardet
-from . import ri, trains, agf
+from . import ri, trains, agf, PROPERTIES_DIR
 
-from . import ROOT_DIR, CONFIG
 
 # Folder containing supplied (public domain) AGF files.
-SUPPLIED_AGFS_DIR = os.path.realpath(os.path.join(ROOT_DIR, '..', 'properties', 'agfs'))
+SUPPLIED_AGFS_DIR = os.path.join(PROPERTIES_DIR, 'agfs')
 
 # Translate from Zemax glass database to ri module.
 #glasses = {'PMMA':ri.PMMA_Zemax, 'F_SILICA':ri.fused_silica, 'BK7':ri.N_BK7, 'K-VC89':ri.KVC89}
@@ -20,24 +19,17 @@ SUPPLIED_GLASS_CATALOG_PATHS = {
     'NIKON': os.path.join(SUPPLIED_AGFS_DIR, 'NIKON-HIKARI_201911.agf')
     }
 
-def get_default_glass_catalog_paths() -> Dict[str, str]:
-    dir = CONFIG.get('zemax_glass_catalog_dir')
+
+def read_glass_catalog_dir(dir: str) -> Dict[str, str]:
     paths = {}
-    if dir is None:
-        paths.update(SUPPLIED_GLASS_CATALOG_PATHS)
-    else:
-        paths = {}
-        dir = os.path.expanduser(dir)
-        for name in os.listdir(dir):
-            path = os.path.join(dir, name)
-            if not os.path.isfile(path): continue
-            root, ext = os.path.splitext(name)
-            if ext.lower() != '.agf': continue
-            paths[root.upper()] = path
+    dir = os.path.expanduser(dir)
+    for name in os.listdir(dir):
+        path = os.path.join(dir, name)
+        if not os.path.isfile(path): continue
+        root, ext = os.path.splitext(name)
+        if ext.lower() != '.agf': continue
+        paths[root.upper()] = path
     return paths
-
-
-default_glass_catalog_paths = get_default_glass_catalog_paths()
 
 
 def read_interface(file:TextIO, n1, catalog: Dict[str, agf.Record], temperature: float) -> Tuple[trains.Interface, float, float]:
@@ -120,7 +112,7 @@ def read_train(filename:str, n: ri.Index = ri.air, encoding: str = None, tempera
             raw = file.read()
         encoding = chardet.detect(raw)['encoding']
     if glass_catalog_paths is None:
-        glass_catalog_paths = default_glass_catalog_paths
+        glass_catalog_paths = SUPPLIED_GLASS_CATALOG_PATHS
     surface_num = 0
     spaces = [0]
     interfaces = []
@@ -145,8 +137,3 @@ def read_train(filename:str, n: ri.Index = ri.air, encoding: str = None, tempera
                 for name in line.split()[1:]:
                     full_catalog.update(agf.load_catalog(glass_catalog_paths[name]))
     return trains.Train(interfaces, spaces)
-
-
-def get_glass_catalog(name: str) -> agf.Catalog:
-    path = default_glass_catalog_paths[name]
-    return agf.load_catalog(path)

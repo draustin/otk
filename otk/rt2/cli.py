@@ -1,11 +1,19 @@
 import sys
 import numpy as np
-from .. import zemax, trains, sdb
+from .. import zemax, trains, sdb, _utility
 from otk.rt2 import rt2_scalar_qt as rt2
 
+
 def view_zmx():
+    config = _utility.load_config()
+    dir = config.get('zemax_glass_catalog_dir')
+    if dir is not None:
+        glass_catalog_paths = zemax.read_glass_catalog_dir(dir)
+    else:
+        glass_catalog_paths = zemax.SUPPLIED_GLASS_CATALOG_PATHS
+
     filename = sys.argv[1]
-    train0 = zemax.read_train(filename)
+    train0 = zemax.read_train(filename, glass_catalog_paths=glass_catalog_paths)
     train1 = train0.crop_to_finite()
 
     # Convert to a sequence of axisymemtric singlet lenses.

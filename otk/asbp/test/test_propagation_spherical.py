@@ -1,3 +1,4 @@
+import pytest
 import numpy as np
 import mathx
 import otk.h4t
@@ -169,6 +170,7 @@ def test_propagate_curved_paraxial_surface_1d():
     # plot.plot(r2*1e6, abs(Er2), pen=pg.mkPen('r', width=2))
     # plot.plot(r2*1e6, abs(Er2_theory), pen='g')
 
+@pytest.mark.slow
 def test_propagate_plane_to_curved_spherical():
     k = 2*np.pi/860e-9
     num_pointss = np.asarray((2**6, 2**7))
@@ -203,6 +205,7 @@ def test_propagate_plane_to_curved_spherical():
     # Er2_fig = asbp.plot_abs_waves_r_q(r2_supports, Er2, r2_centers, qs_center)
     # Er2_theory_fig = asbp.plot_abs_waves_r_q(r2_supports, Er2_theory, r2_centers, qs_center)
 
+@pytest.mark.slow
 def test_propagate_plane_to_curved_spherical_arbitrary():
     k = 2*np.pi/860e-9
     num_pointss = np.asarray((2**6, 2**7))
@@ -245,6 +248,7 @@ def test_propagate_plane_to_curved_spherical_arbitrary():
     # Er2_fig = asbp.plot_abs_waves_r_q(r2_supports, Er2, r2_centers, qs_center)
     # Er2_theory_fig = asbp.plot_abs_waves_r_q(r2_supports, Er2_theory, r2_centers, qs_center)
 
+@pytest.mark.slow
 def test_propagate_plane_to_curved_spherical_gradxy_localxy():
     """Use propagate_plane_to_curved_spherical with plane surface to allow numerical calculation of the gradient."""
     k = 2*np.pi/860e-9
@@ -306,6 +310,7 @@ def test_invert_plane_to_curved_spherical():
     # Er1_fig = asbp.plot_abs_waves_r_q(rs_support, Er1, rs_center, qs_center)
     # Er1_theory_fig = asbp.plot_abs_waves_r_q(rs_support, Er1_theory, rs_center, qs_center)
 
+@pytest.mark.slow
 def test_invert_plane_to_curved_spherical_arbitrary():
     # Number of points to invert to.
     num_pointss1 = 48, 64
@@ -385,7 +390,7 @@ def test_invert_plane_to_curved_spherical_arbitrary():
         absEr1_diff_fig = asbp.plot_r_q_polar(r1_supports, abs(Er1) - abs(Er1_theory), r1_centers, qs_center)
         absEr1_diff_fig[0].setWindowTitle('abs Er1 diff')
 
-
+@pytest.mark.slow
 def test_curved_interface_collimate():
     lamb = 587.6e-9
     waist0 = 150e-6
@@ -410,7 +415,7 @@ def test_curved_interface_collimate():
     Er2_theory *= mathx.expj(np.angle(Er2[0, 0]/Er2_theory[0, 0]))
     assert mathx.allclose(Er2, Er2_theory, 1e-3)
 
-
+@pytest.mark.slow
 def test_curved_interface_collimate_offset():
     lamb = 587.6e-9
     waist0 = 30e-6

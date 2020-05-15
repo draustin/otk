@@ -4,12 +4,14 @@ import yaml
 from dataclasses import dataclass
 import numpy as np
 from typing import List, Dict, Tuple, Callable
-from otk import ROOT_DIR
 from otk.types import Numeric, Array1D
+from otk import PROPERTIES_DIR
 
-DB_DIR = os.path.realpath(os.path.join(ROOT_DIR, '..', 'properties', 'rii'))
+DB_DIR = os.path.join(PROPERTIES_DIR, 'rii')
+
 
 def get_library(cached=[None]) -> List[Dict]:
+    print('DB_DIR = ', DB_DIR)
     if cached[0] is None:
         db_path = os.path.join(DB_DIR, 'library.yml')
         cached[0] = yaml.load(open(db_path, 'r'), Loader=yaml.FullLoader)

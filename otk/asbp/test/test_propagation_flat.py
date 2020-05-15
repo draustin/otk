@@ -1,3 +1,4 @@
+import pytest
 import mathx
 import otk.h4t
 from mathx import matseq
@@ -56,7 +57,7 @@ def test_propagate_plane_to_plane_flat():
     # Er2_fig = asbp.plot_abs_waves_r_q(rs_support, Er2, rs_center, qs_center)
     # Er2_theory_fig = asbp.plot_abs_waves_r_q(rs_support, Er2_theory, rs_center, qs_center)
 
-
+@pytest.mark.slow
 def test_propagate_curved_to_plane_flat():
     k = 2*np.pi/860e-9
     num_pointss = np.asarray((2**7, 2**7))
@@ -117,7 +118,7 @@ def test_propagate_plane_to_curved_flat():
     #Er2_fig = asbp.plot_abs_waves_r_q(rs_support, Er2, rs_center, qs_center)
     #Er2_theory_fig = asbp.plot_abs_waves_r_q(rs_support, Er2_theory, rs_center, qs_center)
 
-
+@pytest.mark.slow
 def test_propagate_plane_to_curved_flat_arbitrary():
     k = 2*np.pi/860e-9
     num_pointss = np.asarray((2**6, 2**7))

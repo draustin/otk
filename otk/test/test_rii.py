@@ -1,7 +1,7 @@
 from otk import rii
 
 
-def testrii():
+def test_rii():
     pages = rii.search('Eimerl-o', 'BaB2O4')
     assert len(pages) == 1
     entry = rii.load_page(pages[0])

@@ -16,7 +16,6 @@ Features include
 Installation methods include:
 
 * Clone repository and interact with it using [Poetry](https://python-poetry.org/) e.g. `poetry run view-zmx <zemax-file>` or `poetry shell`.
-* Install in development mode with pip: `pip install -e <path-to-local-repo>`.
 * Install from package repository (e.g. PyPi) with pip: `pip install otk`.
 * Development mode with [: `poetry add <path-to-local-repo>`.
 * From package repository (e.g. PyPi) with Poetry: `poetry add otk`.
@@ -58,14 +57,14 @@ Installation methods include:
 
 ## Folder contents
 
-* `otk` - the Python package itself.
+* `otk` - the Python package itself. Package data includes
+  * `otk/properties` - material properties databases.
+  * `otk/notes` - miscellaneous notes including derivations.
 * `examples` - example scripts.
-* `properties` - material properties databases.
-* `notes` - miscellaneous notes including derivations.
 
 ## Package management
 
-otk uses [Poetry](https://python-poetry.org/) for package management. This means that dependencies, version, entry points etc are all defined in [`pyproject.toml`](./pyproject.toml). [`setup.py`](./setup.py) is generated using `dephell deps convert` to support pip development mode installation.
+otk uses [Poetry](https://python-poetry.org/) for package management. This means that dependencies, version, entry points etc are all defined in [`pyproject.toml`](./pyproject.toml).
 
 ### Using [PyPi test instance](test.pypi.org)
 

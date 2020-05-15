@@ -2,7 +2,8 @@
 import os
 import yaml
 
-ROOT_DIR = os.path.dirname(__file__)
+DESIGNS_DIR = os.path.join(os.path.dirname(__file__), 'designs')
+PROPERTIES_DIR = os.path.join(os.path.dirname(__file__), 'properties')
 
 def load_config() -> dict:
     for path in os.curdir, os.path.expanduser('~'):
@@ -12,9 +13,6 @@ def load_config() -> dict:
         except FileNotFoundError:
             pass
     return {}
-
-
-CONFIG = load_config()
 
 
 class Delegate:

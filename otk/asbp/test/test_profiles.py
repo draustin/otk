@@ -1,8 +1,10 @@
+import pytest
 import numpy as np
 from numpy import testing
 import mathx
 from otk import asbp, beams, bvar, trains, ri
 
+@pytest.mark.slow
 def test_profile_propagation():
     # Propagate Gaussian beam onto curved surface. Plane 0 is the waist, plane 1 is the start surface and plane 2 is the
     # final surface.
