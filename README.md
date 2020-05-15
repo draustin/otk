@@ -55,6 +55,16 @@ Installation methods include:
 * `otk.v4b` - broadcasting operations on homogeneous vectors in 3D
 * `otk.zemax` - reading Zemax files
 
+## Roadmap
+
+* Import of wavelengths, field, and stop from Zemax.
+* Variables to allow rapid changes for animation and optimization.
+* Cool demos: rainbow, lighthouse.
+* Improve physical & wave optics.
+  * Upgrade parabasal Gaussians to use rt2.
+  * Upgrade asbp to use rt2.
+  * Demos e.g. spherical aberration acting on Gaussian beam, Arago spot.
+
 ## Folder contents
 
 * `otk` - the Python package itself. Package data includes
