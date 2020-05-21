@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "otk"
-version = "0.1.1"
+version = "0.1.2"
 description = "Optics Tool Kit"
 authors = ["Dane Austin <dane_austin@fastmail.com.au>"]
 license = "MIT"
