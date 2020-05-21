@@ -11,7 +11,7 @@ DB_DIR = os.path.join(PROPERTIES_DIR, 'rii')
 
 
 def get_library(cached=[None]) -> List[Dict]:
-    print('DB_DIR = ', DB_DIR)
+    # print('DB_DIR = ', DB_DIR)
     if cached[0] is None:
         db_path = os.path.join(DB_DIR, 'library.yml')
         cached[0] = yaml.load(open(db_path, 'r'), Loader=yaml.FullLoader)
