@@ -79,6 +79,9 @@ class Record:
     def fix_temperature(self, temperature: float = None) -> 'Index':
         return Index(self, temperature)
 
+    def __str__(self):
+        return self.name
+
 @dataclass
 class Index(ri.Index):
     record: Record
@@ -86,6 +89,9 @@ class Index(ri.Index):
 
     def __call__(self, lamb: Numeric) -> Numeric:
         return self.record.calc_index(lamb, self.temperature)
+
+    def __str__(self):
+        return self.record.name
 
 Catalog =  Dict[str, Record]
 

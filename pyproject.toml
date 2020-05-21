@@ -38,8 +38,8 @@ view-zmx = 'otk.rt2.cli:view_zmx'
 pytest = "^5.4.2"
 pytest-qt = "^3.3.0"
 
-# To generate setup.py, install dephell and then `dephell deps convert`.
 [tool.dephell.main]
+# To generate setup.py, install dephell and then `dephell deps convert`.
 from = {format = "poetry", path = "pyproject.toml"}
 to = {format = "setuppy", path = "setup.py"}
 
