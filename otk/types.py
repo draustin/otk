@@ -11,6 +11,7 @@ Sequence4 = Sequence
 Vector2 = np.ndarray # (2,)
 Vector3 = np.ndarray # (3,)
 Vector4 = np.ndarray # (4,)
+Matrix2 = np.ndarray # (2, 2)
 Matrix3 = np.ndarray # (3, 3)
 Matrix4 = np.ndarray # (4, 4)
 
