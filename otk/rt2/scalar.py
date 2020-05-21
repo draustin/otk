@@ -31,6 +31,7 @@ backend = npscalar
 
 def set_backend(module):
     global backend
+    logging.info(f'Set rt2 scalar ray math backend to {module.__name__}.')
     backend = module
 
 

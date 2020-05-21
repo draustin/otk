@@ -76,7 +76,7 @@ Installation methods include:
 
 otk uses [Poetry](https://python-poetry.org/) for package management. This means that dependencies, version, entry points etc are all defined in [`pyproject.toml`](./pyproject.toml).
 
-### Using [PyPi test instance](test.pypi.org)
+### Using [PyPi test instance](https://test.pypi.org/)
 
 To setup, add test.pypi.org to your Poetry configuration with `poetry config repositories.test https://test.pypi.org/legacy/`. Note the [trailing slash](https://github.com/python-poetry/poetry/issues/742).
 
