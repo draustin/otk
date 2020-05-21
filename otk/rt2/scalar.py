@@ -12,9 +12,8 @@ from functools import singledispatch
 from dataclasses import dataclass
 from typing import Sequence, Union, List
 
-import otk.functions
-from ..types import Sequence4, Matrix4
-from ..functions import normalize, dot, norm_squared
+from ..types import Sequence4, Matrix4, Vector4
+from ..functions import normalize, dot, norm_squared, reflect_vector, make_perpendicular
 from .. import functions
 from .. import sdb
 from .. import v4h
@@ -23,13 +22,17 @@ from . import *
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['Line', 'Ray', 'make_line', 'make_ray', 'perfect_refractor', 'Branch', 'get_points',
-    'get_deflector', 'intersect', 'Segment', 'nonseq_trace', 'set_backend', 'form_ray']
+__all__ = ['Line', 'Ray', 'make_line', 'make_ray', 'perfect_refractor', 'Branch', 'get_points', 'get_deflector',
+           'intersect', 'Segment', 'nonseq_trace', 'set_backend', 'form_ray']
+
 
 backend = npscalar
+
+
 def set_backend(module):
     global backend
     backend = module
+
 
 @dataclass
 class Line:
@@ -57,10 +60,12 @@ class Line:
         t = intersect(surface, self)
         return self.advance(t)
 
+
 @singledispatch
 def intersect(surface: sdb.Surface, line: Line) -> float:
     """First intersection of line with surface."""
     raise NotImplementedError()
+
 
 @intersect.register
 def _(s: sdb.Plane, l: Line) -> float:
@@ -71,8 +76,10 @@ def _(s: sdb.Plane, l: Line) -> float:
         t = float('inf')
     return t
 
+
 def make_line(ox, oy, oz,  vx, vy, vz):
     return Line(np.array((ox, oy, oz, 1.)), np.array((vx, vy, vz, 0.)))
+
 
 @dataclass
 class TransformedElement:
@@ -93,6 +100,7 @@ class TransformedElement:
     def get_deflector(self, x:Sequence[float]) -> Deflector:
         xp = np.dot(x, self.root_to_local)
         return get_deflector(self.element, xp).transform(self.local_to_root)
+
 
 @dataclass
 class Ray:
@@ -169,6 +177,23 @@ def deflect_ray(self:Deflector, ray: Ray, x0:np.ndarray, x1:np.ndarray, dielectr
     dielectric1: np.ndarray, element1: TransformedElement) -> tuple:
     raise NotImplementedError()
 
+def refract_vector(incident: Vector4, normal: Vector4, n_ratio: float) -> Union[Vector4, None]:
+    """Calculate refracted wave vector given incident, normal and ratio of refractive indices.
+
+    Surface normal must be normalized.
+
+    Result has length of incident vector.
+    """
+    incident_normal_component = dot(incident, normal)
+    projected = incident - normal*incident_normal_component
+    epsilon = n_ratio**2*norm_squared(incident) - norm_squared(projected)
+    if epsilon < 0:
+        # Total internal reflection.
+        return None
+    refracted_normal_component = np.sign(incident_normal_component)*epsilon**0.5
+    refracted = (refracted_normal_component*normal + projected)/n_ratio
+    return refracted
+
 @deflect_ray.register
 def deflect_ray(self: SimpleDeflector, ray: Ray, x0:np.ndarray, x1:np.ndarray, dielectric0: np.ndarray, normal: np.ndarray,
     dielectric1: np.ndarray, element1: TransformedElement) -> tuple:
@@ -179,15 +204,13 @@ def deflect_ray(self: SimpleDeflector, ray: Ray, x0:np.ndarray, x1:np.ndarray, d
     n_ratio = n1/n0
 
     # Calculate normalized refracted and reflected vectors.
-    refracted_vector = otk.functions.refract_vector(ray.line.vector, normal, n_ratio)/n_ratio
-    reflected_vector = otk.functions.reflect_vector(ray.line.vector, normal)
+    refracted_vector = refract_vector(ray.line.vector, normal, n_ratio)
+    reflected_vector = reflect_vector(ray.line.vector, normal)
 
     # Generate unit vector perpendicular to normal and incident.
-    s_pol_vector = otk.functions.make_perpendicular(normal, ray.line.vector)
-
+    s_pol_vector = make_perpendicular(normal, ray.line.vector)
     incident_p_pol_vector = v4h.cross(ray.line.vector, s_pol_vector)
-    refracted_p_pol_vector = v4h.cross(refracted_vector, s_pol_vector)
-    reflected_p_pol_vector = v4h.cross(reflected_vector, s_pol_vector)
+
 
     cos_theta0 = abs(dot(normal, ray.line.vector))
     amplitudes = calc_amplitudes(self.interface, n0, n1, cos_theta0, ray.lamb)
@@ -204,9 +227,11 @@ def deflect_ray(self: SimpleDeflector, ray: Ray, x0:np.ndarray, x1:np.ndarray, d
 
     rays = []
     if self.reflects:
+        reflected_p_pol_vector = v4h.cross(reflected_vector, s_pol_vector)
         rays.append(
             calc_ray(x0, amplitudes[0], (reflected_p_pol_vector, s_pol_vector), reflected_vector, n0, ray.element))
-    if self.refracts:
+    if self.refracts and refracted_vector is not None:
+        refracted_p_pol_vector = v4h.cross(refracted_vector, s_pol_vector)
         rays.append(calc_ray(x1, amplitudes[1], (refracted_p_pol_vector, s_pol_vector), refracted_vector, n1, element1))
 
     return tuple(rays)
@@ -347,6 +372,7 @@ def _get_transformed_element(self: Assembly, x: Sequence4) -> TransformedElement
     # else:
     #     raise ValueError(f'Point {x} is inside {len(insides)} elements.')
 
+
 def _process_ray(self: Assembly, ray:Ray, sphere_trace_kwargs:dict) -> tuple:
     """Intersect ray with geometry, the deflect it."""
     # Ray travels from element/medium 0 to 1.
@@ -406,6 +432,7 @@ def _process_ray(self: Assembly, ray:Ray, sphere_trace_kwargs:dict) -> tuple:
     deflected_rays = deflect_ray(deflector, ray, x0, x1, tensor0, normal, tensor1, element1)
     return trace.tm, deflected_rays
 
+
 def nonseq_trace(self: Assembly, start_ray:Ray, sphere_trace_kwargs_:dict=None, min_flux:float=None, num_deflections:int=None) -> Branch:
     if sphere_trace_kwargs_ is None:
         sphere_trace_kwargs_ = {}
@@ -424,6 +451,7 @@ def nonseq_trace(self: Assembly, start_ray:Ray, sphere_trace_kwargs_:dict=None, 
         segments.append(nonseq_trace(self, ray, sphere_trace_kwargs, min_flux, num_deflections))
     return Branch(start_ray, length, segments)
 
+
 @make_ray.register
 def _(self: Assembly, ox, oy, oz, vx, vy, vz, px, py, pz, lamb, flux=1, phase_origin=0):
     x = v4h.to_vector((ox, oy, oz))
@@ -433,6 +461,7 @@ def _(self: Assembly, ox, oy, oz, vx, vy, vz, px, py, pz, lamb, flux=1, phase_or
     n = dielectric[0, 0]**0.5
     element = _get_transformed_element(self, x)
     return make_ray(ox, oy, oz, vx, vy, vz, px, py, pz, n, flux, phase_origin, lamb, element)
+
 
 def form_ray(assembly: Assembly, line: Line, pol: np.ndarray, lamb: float, flux: float=1., phase_origin: float=0.):
     dielectric = get_dielectric_tensor(assembly, lamb, line.origin)
