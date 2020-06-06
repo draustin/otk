@@ -5,14 +5,10 @@ from typing import Sequence
 import numpy as np
 from otk.h4t import make_rotation
 
-try:
-    import gizeh
-except ImportError:
-    pass
-from . import interfaces
-from .surfaces import Surface
+from . import _interfaces
+from ._surfaces import Surface
 from ..v4hb import *
-from .lines import Line
+from ._lines import Line
 
 @dataclass
 class Ray:
@@ -83,14 +79,7 @@ class Ray:
         """Copy self flipping direction."""
         return Ray(self.line.flip(), self.polarization, self.flux, self.phase_origin, self.lamb, self.n)
 
-    def make_gizeh_wavefront(self, phase: float, inverse_matrix: np.ndarray, color=(1, 0, 0)) -> gizeh.Element:
-        """Make gizeh polyline representing a wavefront.
 
-        Advances origin by phase and plots x, y components.
-        """
-        d = phase/self.k
-        points = np.matmul(self.line.advance(d).origin, inverse_matrix)[..., :2].reshape((-1, 2))
-        return gizeh.polyline(points, stroke=color, stroke_width=1)
 
     def to_fan(self, normal, half_angle, num_rays):
         """Given a central ray, make a ray fan formed by rotating the ray vector through a uniformly spaced set of angles.
@@ -134,7 +123,7 @@ class Ray:
         # TODO implement - modify phase_origin and flux
         return self
 
-    def to_local_interface_mode(self, mode: interfaces.InterfaceMode) -> 'Ray':
+    def to_local_interface_mode(self, mode: _interfaces.InterfaceMode) -> 'Ray':
         """Project self onto precalculated mode of an interface.
 
         Self must be in surface local coordinates.
@@ -367,23 +356,6 @@ class RaySegment:
     def __add__(self, other):
         return self.connect(other)
 
-    def make_gizeh_ray(self, inverse_matrix, stroke_width=1):
-        """Make Gizeh element containing a line for each ray.
-
-        Args:
-            inverse_matrix (4x4 array): Transforms from segment parent coordinate system to Gizeh element coordinates.
-
-        Returns:
-            gizeh.Group
-        """
-        assert self.length is not None  # todo more elegant way of dealing with open segments
-        starts = np.matmul(self.ray.line.origin, inverse_matrix)[..., :2].reshape((-1, 2))
-        stops = np.matmul(self.ray.line.advance(self.length).origin, inverse_matrix)[..., :2].reshape((-1, 2))
-        elements = []
-        for start, stop in zip(starts, stops):
-            elements.append(gizeh.polyline(np.vstack((start, stop)), stroke_width=stroke_width, stroke=(1, 0, 0)))
-        return gizeh.Group(elements)
-
     @classmethod
     def make_lines(cls, segments):
         """
@@ -417,25 +389,6 @@ class RaySegment:
 
         return pointss
 
-    @classmethod
-    def make_multi_gizeh_ray(cls, segments, inverse_matrix, stroke_width=1):
-        liness = cls.make_lines(segments)
-        elements = []
-        for lines in liness:
-            lines_projected = np.matmul(lines, inverse_matrix)[..., :2]
-            for line in lines_projected:
-                element = gizeh.polyline(line, stroke_width=stroke_width, stroke=(1, 0, 0))
-                elements.append(element)
-        group = gizeh.Group(elements)
-        return group
-
-    @classmethod
-    def make_multi_gizeh_wavefront(cls, segments, inverse_matrix, phase, color=(1, 0, 0), stroke_width=2):
-        """Draw wavefront in first segment that contains phase."""
-        points_parent = cls.connect_iso_phase(segments, phase)
-        points = np.matmul(points_parent, inverse_matrix)[..., :2].reshape((-1, 2))
-        element = gizeh.polyline(points, stroke_width=stroke_width, stroke=color)
-        return element
 
     @classmethod
     def connect_iso_phase(cls, segments, phase):

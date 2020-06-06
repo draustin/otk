@@ -7,7 +7,7 @@ import numpy as np
 import opt_einsum
 import pyqtgraph_extended as pg
 from . import sa, math, fsq, source, plotting
-from .. import bvar, rt1, trains
+from .. import bvar, v4hb, trains
 
 logger = logging.getLogger(__name__)
 
@@ -83,11 +83,11 @@ class Profile:
         self.kz_center = math.calc_kz(self.k, *self.qs_center)
 
         # Calculate 3D vectors.
-        vector_center = rt1.normalize(rt1.stack_xyzw(*self.qs_center, self.kz_center, 0))
+        vector_center = v4hb.normalize(v4hb.stack_xyzw(*self.qs_center, self.kz_center, 0))
         polarizationz = -(polarizationxy*vector_center[:2]).sum()/vector_center[2]
-        origin_center = rt1.stack_xyzw(*self.rs_center, self.z_center, 1)
+        origin_center = v4hb.stack_xyzw(*self.rs_center, self.z_center, 1)
         polarization = polarizationxy[0], polarizationxy[1], polarizationz, 0
-        y = rt1.cross(vector_center, polarization)
+        y = v4hb.cross(vector_center, polarization)
         self.frame = np.c_[
             polarization, y, vector_center, origin_center].T
 
@@ -230,11 +230,11 @@ class Profile:
     def calc_points(self):
         """Return sampling points as nxmx4 array."""
         x, y, z = np.broadcast_arrays(self.x, self.y, self.z)
-        return rt1.stack_xyzw(x, y, z, 1)
+        return v4hb.stack_xyzw(x, y, z, 1)
 
     def calc_normalized_wavevector(self):
         """Calculate nornmalized propagation vector"""
-        vector = rt1.normalize(rt1.stack_xyzw(*self.Igradphi, 0))
+        vector = v4hb.normalize(v4hb.stack_xyzw(*self.Igradphi, 0))
         assert np.isfinite(vector).all()
         return vector
 

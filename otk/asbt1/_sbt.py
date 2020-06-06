@@ -1,20 +1,14 @@
 """Sequential beam tracing."""
 from dataclasses import dataclass
 from typing import Tuple, Sequence, Iterable
-from  .. import rt1
-from .tracing import Beam
+from .. import rt1
+from ._tracing import Beam
 
-__all__ = ['trace_surfaces']
 
 @dataclass
 class BeamSegment:
-    """
-    Args:
-        surfaces:
-        beams: In global coordinates.
-    """
     surfaces: Tuple[rt1.Surface, rt1.Surface]
-    beams: Tuple[Beam, Beam]
+    beams: Tuple[Beam, Beam] # in global coordinates
     planarized_beam: Beam
 
     def __post_init__(self):

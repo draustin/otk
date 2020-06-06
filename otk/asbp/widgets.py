@@ -4,7 +4,6 @@ import pyqtgraph_extended as pg
 from PyQt5 import QtWidgets, Qt
 import mathx
 from . import sa, profiles, plotting
-from .. import rt1 as rt
 
 scatter_kwargs = dict(pen=None, brush='g', size=4)
 

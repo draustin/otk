@@ -2,14 +2,14 @@ from typing import Iterable, Sequence, List
 
 import otk.functions
 import otk.h4t
-import otk.rt1.lines
+import otk.rt1._lines
 import scipy.optimize
 import numpy as np
 from .. import ri
-from . import profiles, boundaries, interfaces
+from . import _profiles, _boundaries, _interfaces
 from .. import v4hb, trains
 import mathx
-from .lines import Line
+from ._lines import Line
 
 
 class MutableTransformable:
@@ -85,8 +85,8 @@ class Surface(MutableTransform):
 
     boundary_clip_r_support_factor = 1.05
 
-    def __init__(self, profile: profiles.Profile, matrix: np.array = None, name='', boundary=None, mask=None,
-            interface:interfaces.Interface=None):
+    def __init__(self, profile: _profiles.Profile, matrix: np.array = None, name='', boundary=None, mask=None,
+                 interface:_interfaces.Interface=None):
         """A surface in 3D space.
 
         Args:
@@ -98,7 +98,7 @@ class Surface(MutableTransform):
         self.profile = profile
         self.name = name
         if boundary is None:
-            boundary = boundaries.InfiniteBoundary()
+            boundary = _boundaries.InfiniteBoundary()
         self.boundary = boundary
         self.mask = mask
         self.interface = interface
@@ -288,25 +288,25 @@ def make_spherical_lens_surfaces(roc1, roc2, thickness, n, n_out=ri.vacuum, boun
     Returns:
         2-tuple of OpticalSurface: The first has its vertex at (0, 0, -thickness/2) and the second on the other side.
     """
-    interface = interfaces.FresnelInterface(n_out, n)
-    s1 = Surface(profiles.SphericalProfile(roc1), otk.h4t.make_translation(0, 0, -thickness/2), '', boundary, None, interface)
-    s2 = Surface(profiles.SphericalProfile(roc2), otk.h4t.make_translation(0, 0, thickness/2), '', boundary, None, interface.flip())
+    interface = _interfaces.FresnelInterface(n_out, n)
+    s1 = Surface(_profiles.SphericalProfile(roc1), otk.h4t.make_translation(0, 0, -thickness / 2), '', boundary, None, interface)
+    s2 = Surface(_profiles.SphericalProfile(roc2), otk.h4t.make_translation(0, 0, thickness / 2), '', boundary, None, interface.flip())
     return s1, s2
 
 def make_surface(interface: trains.Interface, shape:str, matrix:np.ndarray=None, name:str=None) -> Surface:
     if matrix is None:
         matrix = np.eye(4)
-    profile = profiles.to_profile(interface)
+    profile = _profiles.to_profile(interface)
     if shape == 'circle':
-        boundary = boundaries.CircleBoundary(interface.radius/2)
+        boundary = _boundaries.CircleBoundary(interface.radius / 2)
     elif shape == 'square':
-        boundary = boundaries.SquareBoundary(interface.radius*2**0.5)
+        boundary = _boundaries.SquareBoundary(interface.radius * 2 ** 0.5)
     else:
         boundary = None
-    surface = Surface(profile, matrix, name, boundary, None, interfaces.FresnelInterface(interface.n1, interface.n2))
+    surface = Surface(profile, matrix, name, boundary, None, _interfaces.FresnelInterface(interface.n1, interface.n2))
     return surface
 
-def make_surfaces_lattice(self:trains.Train, lattice: mathx.Lattice, boundary: boundaries.Boundary = None, names: Sequence[str] = None):
+def make_surfaces_lattice(self:trains.Train, lattice: mathx.Lattice, boundary: _boundaries.Boundary = None, names: Sequence[str] = None):
     """Make optical surface for each interface with lattice surface profiles.
 
     The surfaces are placed along the z axis.
@@ -328,16 +328,16 @@ def make_surfaces_lattice(self:trains.Train, lattice: mathx.Lattice, boundary: b
     for num, (interface, space, name) in enumerate(zip(self.interfaces, self.spaces[1:], names)):
         profile = interface.make_profile()
         if lattice is not None:
-            profile = profiles.LatticeProfile(lattice, profile)
+            profile = _profiles.LatticeProfile(lattice, profile)
         matrix = otk.h4t.make_translation(0, 0, z)
-        surface = Surface(profile, matrix, name, boundary, None, interfaces.FresnelInterface(interface.n1, interface.n2))
+        surface = Surface(profile, matrix, name, boundary, None, _interfaces.FresnelInterface(interface.n1, interface.n2))
         surfaces.append(surface)
         z += space
     return surfaces
 
 def make_analysis_surfaces(train: trains.Train):
     lens_surfaces = make_surfaces(train)
-    image_surface = Surface(profiles.PlanarProfile(), otk.h4t.make_translation(0, 0, train.length))
+    image_surface = Surface(_profiles.PlanarProfile(), otk.h4t.make_translation(0, 0, train.length))
     keys = ['transmitted']*len(lens_surfaces) + ['incident']
     surfaces = lens_surfaces + [image_surface]
     return surfaces, keys

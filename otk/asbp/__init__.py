@@ -21,8 +21,6 @@ from .fsq import calc_gradxyE, calc_gradxyE_spherical, propagate_plane_to_plane_
     propagate_plane_to_curved_spherical_arbitrary, propagate_plane_to_curved_flat_arbitrary, \
     invert_plane_to_curved_spherical_arbitrary, propagate_arbitrary_curved_to_plane_spherical
 from .profiles import NullProfileError, PlaneProfile, CurvedProfile, calc_quadratic_phase_mask
-from .tracing import *
-from .sbt import *
 from .plotting import plot_r_q_polar, make_Eq_image_item, make_Er_image_item, plot_projection
 from .widgets import PlaneCurvedProfileWidget, PlaneProfileWidget, CurvedProfileWidget, MultiProfileWidget, \
     make_profile_widget

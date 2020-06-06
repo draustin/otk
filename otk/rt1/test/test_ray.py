@@ -1,9 +1,9 @@
 import otk.h4t
-import otk.rt1.lines
+import otk.rt1._lines
 import numpy as np
 
-import otk.rt1.raytrace
-from otk import rt1, paraxial, ri
+import otk.rt1._raytrace
+from otk import rt1, paraxial, ri, v4hb
 
 def test_ray():
     half_angle = 1e-3
@@ -25,9 +25,9 @@ def test_refraction():
     interface = rt1.FresnelInterface(ri.FixedIndex(n1), ri.FixedIndex(n2))
     s = rt1.Surface(rt1.SphericalProfile(f*(n2 - n1)), otk.h4t.make_translation(*r0[:3]), interface=interface)
     origin = r0 + (0, 0, -f*n1, 0)
-    line = rt1.Line(origin, rt1.normalize((0.001, 0.001, 1, 0)))
-    pol = rt1.cross(line.vector, [0,1,0,0])
-    ray = rt1.raytrace.Ray(line, pol, 0, 860e-9, n1)
+    line = rt1.Line(origin, v4hb.normalize((0.001, 0.001, 1, 0)))
+    pol = v4hb.cross(line.vector, [0,1,0,0])
+    ray = rt1.Ray(line, pol, 0, 860e-9, n1)
     segments = ray.trace_surfaces((s,), ('transmitted', ))[0]
     assert len(segments) == 2
     assert segments[-1].ray.n == n2
@@ -47,9 +47,9 @@ def test_make_spherical_lens_surfaces():
     n = 1.5
     f, h1, h2 = paraxial.calc_thick_spherical_lens(n, roc1, -roc2, d)
     surfaces = rt1.make_spherical_lens_surfaces(roc1, -roc2, d, ri.FixedIndex(n))
-    line = rt1.Line((0, 0, -f + h1 - d/2, 1), rt1.normalize((1e-4, 1e-4, 1, 0)))
-    pol = rt1.cross(line.vector, [0,1,0,0])
-    ray = rt1.raytrace.Ray(line, pol, 0, 860e-9, 1)
+    line = rt1.Line((0, 0, -f + h1 - d/2, 1), v4hb.normalize((1e-4, 1e-4, 1, 0)))
+    pol = v4hb.cross(line.vector, [0,1,0,0])
+    ray = rt1.Ray(line, pol, 0, 860e-9, 1)
     segments = ray.trace_surfaces(surfaces, ['transmitted']*2)[0]
     assert len(segments) == 3
     assert segments[1].ray.n == n
@@ -65,8 +65,8 @@ def test_reflect_Surface():
     s = rt1.Surface(rt1.PlanarProfile(), interface=rt1.Mirror())
     s.rotate_y(np.pi/4)
     line = rt1.Line((0, 0, -1, 1), (0, 0, 1, 0))
-    pol = rt1.cross(line.vector, [0,1,0,0])
-    ray = rt1.raytrace.Ray(line, pol, 0, 860e-9, 1)
+    pol = v4hb.cross(line.vector, [0,1,0,0])
+    ray = rt1._raytrace.Ray(line, pol, 0, 860e-9, 1)
     segments = ray.trace_surfaces([s], ['reflected'])[0]
     assert len(segments) == 2
     assert np.allclose(segments[-1].ray.line.vector, (-1, 0, 0, 0))

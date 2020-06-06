@@ -6,7 +6,8 @@ import mathx
 AbsPhase = namedtuple('AbsPhase', ('abs', 'phase'))
 RQ = namedtuple('RQ', ('r', 'q'))
 
-def arange_centered(num, axis = -1):
+
+def arange_centered(num: int, axis: int = -1) -> np.ndarray:
     return mathx.reshape_vec(np.arange(num)-(num-1)/2, axis)
 
 def to_scalar_pair(x):
@@ -20,7 +21,7 @@ def to_scalar_pair(x):
         x = np.asarray(x)
     except TypeError:
         x = np.asarray((x, x))
-    assert all(np.isscalar(e) for e in x)
+    assert np.issubdtype(x.dtype, np.number)
     return x
 
 def is_scalar_pair(x):

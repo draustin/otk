@@ -5,13 +5,11 @@ import numpy as np
 import mathx
 import otk.functions
 import otk.h4t
-
-from . import profiles
 from .. import rt1
+from ..asbp import profiles
+from .. import v4hb
 
 logger = logging.getLogger(__name__)
-
-__all__ = ['Beam']
 
 
 class ImmutableTransform:
@@ -57,10 +55,10 @@ class ImmutableTransform:
         return self.transform(otk.h4t.make_translation(0, 0, z), frame)
 
     def to_global(self, r):
-        return rt1.transform(r, self.matrix)
+        return v4hb.transform(r, self.matrix)
 
     def to_local(self, r):
-        return rt1.transform(r, self.inverse_matrix)
+        return v4hb.transform(r, self.inverse_matrix)
 
 
 class Beam(ImmutableTransform):
@@ -80,9 +78,9 @@ class Beam(ImmutableTransform):
         self.segment_string = segment_string
         self.frame = self.to_global(self.profile.frame)
         # Return sampling points as nxmx4 array.
-        self.rs = rt1.transform(self.profile.calc_points(), self.matrix)
-        self.x, self.y = rt1.to_xy(self.rs)
-        self.normalized_wavevector = rt1.transform(self.profile.calc_normalized_wavevector(), self.matrix)
+        self.rs = v4hb.transform(self.profile.calc_points(), self.matrix)
+        self.x, self.y = v4hb.to_xy(self.rs)
+        self.normalized_wavevector = v4hb.transform(self.profile.calc_normalized_wavevector(), self.matrix)
 
     def _set_matrix(self, matrix):
         return Beam(self.profile, matrix)
@@ -106,10 +104,10 @@ class Beam(ImmutableTransform):
         profile = self.profile
         if matrix is None:
             matrix = np.eye(4)
-        compound_matrix = rt1.transform(self.matrix, matrix)
+        compound_matrix = v4hb.transform(self.matrix, matrix)
         if ravel:
             x, y, z = np.broadcast_arrays(profile.x, profile.y, profile.z)
-            points = rt1.transform(rt1.stack_xyzw(x.ravel(), y.ravel(), z.ravel(), 1), compound_matrix)
+            points = v4hb.transform(v4hb.stack_xyzw(x.ravel(), y.ravel(), z.ravel(), 1), compound_matrix)
             return points
         else:
             x, y, z, w = mathx.mult_vec_mat((profile.x, profile.y, profile.z, 1), compound_matrix)
@@ -128,7 +126,7 @@ class Beam(ImmutableTransform):
             kx, ky, kz: arrays of same shape as profile.Er.
         """
         profile = self.profile
-        kx, ky, kz, _ = mathx.mult_vec_mat((profile.kx, profile.ky), rt1.transform(self.matrix, matrix))
+        kx, ky, kz, _ = mathx.mult_vec_mat((profile.kx, profile.ky), v4hb.transform(self.matrix, matrix))
         return kx, ky, kz
 
     def fourier_transform(self, f):
@@ -164,7 +162,7 @@ class Beam(ImmutableTransform):
         return incident_beam, planarized_beam
 
     def propagate_plane_to_surface(self, surface: rt1.Surface, curved_r_support_factor: float = 1,
-            curved_num_points_support_factor: float = 1, kz_mode='local_xy'):
+            curved_num_points_support_factor: float = 1, kz_mode: str = 'local_xy'):
         """Propagate to a Surface object.
 
         Args:
@@ -239,15 +237,15 @@ class Beam(ImmutableTransform):
     def refract(self, normal, n, scale_Er, polarization):
         normal_local = normal.dot(self.inverse_matrix)
         polarization_local = polarization.dot(self.inverse_matrix)
-        profile = self.profile.refract(rt1.to_xyz(normal_local), n, scale_Er, polarization_local[:2])
+        profile = self.profile.refract(v4hb.to_xyz(normal_local), n, scale_Er, polarization_local[:2])
         return Beam(profile, self.matrix)
 
     def reflect(self, normal, n, scale_Er, polarization):
         normal_local = normal.dot(self.inverse_matrix)
         polarization_local = polarization.dot(self.inverse_matrix)
-        profile = self.profile.reflect(rt1.to_xyz(normal_local), n, scale_Er, polarization_local[:2])
+        profile = self.profile.reflect(v4hb.to_xyz(normal_local), n, scale_Er, polarization_local[:2])
         # Reflect about plane z_local = profile.z at rs_center. WTF?
-        matrix = rt1.transform(
+        matrix = v4hb.transform(
             otk.functions.calc_mirror_matrix(otk.h4t.make_translation(0, 0, profile.z_center)), self.matrix)
         return Beam(profile, matrix)
 
@@ -261,9 +259,9 @@ class Beam(ImmutableTransform):
             mode = modes[key]
             polarization = self.frame[0, :]
             new_polarization = np.einsum('...i, ...ij', polarization, mode.matrix)
-            pol_Er_factor = (rt1.dot(new_polarization)**0.5).reshape(self.profile.Er.shape)
+            pol_Er_factor = (v4hb.dot(new_polarization)**0.5).reshape(self.profile.Er.shape)
             # Take mean polarization.
-            new_polarization = rt1.normalize(
+            new_polarization = v4hb.normalize(
                 (new_polarization.reshape((-1, 4))*mathx.abs_sqd(self.profile.Er).reshape((-1, 1))).sum(axis=0))
             Er_factor = pol_Er_factor*(mode.n/self.profile.n)**0.5
             if mode.direction == rt1.Directions.TRANSMITTED:
@@ -273,9 +271,19 @@ class Beam(ImmutableTransform):
 
         return to_mode
 
-
-
-    # DON'T DELETE - THIS WAS FIRST ATTEMPT. THEN DECIDED FOR TIME BEING WILL HAVE HOMOGENOUS POLARIZATION IN PROFILE.  # WILL ADD NONUNIFORM POLARIZATION LATER.  #  def _apply_interface(self, surface: rt.Surface, graph: nx.DiGraph):  #     # Transform beam local sampling points into surface local points.  #     point_local = self.transform_local_rs(surface.inverse_matrix, True)  #  #  Calculate surface normal in surface local coordinates.  #     normal_local = surface.profile.calc_normal(point_local)  #  #  Calculate incidence vector.  #     incident_vector = mathx.divide0(self.profile.Igradphi, mathx.abs_sqd(self.profile.Er), 0)  #     incident_vector_local = surface.to_local(incident_vector)  #     # Calculate interface modes at each point.  #     modes = surface.interface.calc_modes(point_local, normal_local, self.profile.lamb, incident_vector_local,  #         self.profile.n)
+# DON'T DELETE - THIS WAS FIRST ATTEMPT. THEN DECIDED FOR TIME BEING WILL HAVE HOMOGENOUS POLARIZATION IN PROFILE.
+# WILL ADD NONUNIFORM POLARIZATION LATER.
+#  def _apply_interface(self, surface: rt.Surface, graph: nx.DiGraph):
+#     # Transform beam local sampling points into surface local points.
+#     point_local = self.transform_local_rs(surface.inverse_matrix, True)
+#  #  Calculate surface normal in surface local coordinates.
+#     normal_local = surface.profile.calc_normal(point_local)
+#  #  Calculate incidence vector.
+#     incident_vector = mathx.divide0(self.profile.Igradphi, mathx.abs_sqd(self.profile.Er), 0)
+#     incident_vector_local = surface.to_local(incident_vector)
+#     # Calculate interface modes at each point.  #
+#     modes = surface.interface.calc_modes(point_local, normal_local, self.profile.lamb, incident_vector_local,
+#         self.profile.n)
 
 
 class SurfaceZSampling:
@@ -302,7 +310,7 @@ class SurfaceZSampling:
         xv, yv = np.broadcast_arrays(x, y)
         xv = xv.ravel()
         yv = yv.ravel()
-        zv = self.surface.intersect_other(self.matrix, rt1.stack_xyzw(xv, yv, 0, 1), rt1.stack_xyzw(0, 0, 1, 0))
+        zv = self.surface.intersect_other(self.matrix, v4hb.stack_xyzw(xv, yv, 0, 1), v4hb.stack_xyzw(0, 0, 1, 0))
         z = zv.reshape(np.broadcast(x, y).shape)
         return z
 

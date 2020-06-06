@@ -8,7 +8,7 @@ import otk.functions
 from .. import functions
 from .. import v4hb
 from .. import trains
-from . import boundaries
+from . import _boundaries
 
 class Profile:
     def intersect_line(self, line):
@@ -135,7 +135,7 @@ class SphericalProfile(Profile):
 
 class BinaryProfile(Profile):
     """profiles[0] for points in boundary. Otherwise profiles[1]."""
-    def __init__(self, profiles:Tuple[Profile, Profile], boundary:boundaries.Boundary):
+    def __init__(self, profiles:Tuple[Profile, Profile], boundary:_boundaries.Boundary):
         self.profiles = profiles
         self.boundary = boundary
 

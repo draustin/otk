@@ -5,7 +5,7 @@ import pyqtgraph_extended as pg
 import numpy as np
 import mathx
 from otk import rt1
-from otk import asbp, ri, paraxial
+from otk import asbp, ri, paraxial, asbt1
 
 
 class SimpleLensPropagator(QtWidgets.QWidget):
@@ -222,16 +222,14 @@ class SimpleLensPropagator(QtWidgets.QWidget):
 
         profile0 = asbp.PlaneProfile(lamb, 1, source_z, r0_support, Er0, asbp.calc_gradxyE(r0_support, Er0, q0_centers),
             r0_centers, q0_centers)
-        b0 = asbp.Beam(profile0)
+        b0 = asbt1.Beam(profile0)
         s1 = rt1.Surface(rt1.SphericalProfile(roc1), otk.h4t.make_translation(0, 0, w1),
                         interface=rt1.PerfectRefractor(ri.air, n))
         s2 = rt1.Surface(rt1.SphericalProfile(-roc2), otk.h4t.make_translation(0, 0, w1 + d),
                         interface=rt1.PerfectRefractor(n, ri.air))
         s3 = rt1.Surface(rt1.PlanarProfile(), otk.h4t.make_translation(0, 0, w1 + d + w2))
 
-
-
-        segments = asbp.trace_surfaces(b0, (s1, s2, s3), ('transmitted', 'transmitted', None))[0]
+        segments = asbt1.trace_surfaces(b0, (s1, s2, s3), ('transmitted', 'transmitted', None))[0]
         b1_incident = segments[0].beams[1]
         b1_refracted = segments[1].beams[0]
         b1_plane = segments[1].planarized_beam

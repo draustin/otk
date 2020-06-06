@@ -4,7 +4,7 @@ from typing import Sequence, Tuple
 import numpy as np
 import pyqtgraph_extended as pg
 import pyqtgraph_extended.opengl as pgl
-from . import surfaces
+from . import _surfaces
 from OpenGL import GL
 from .. import v4hb
 
@@ -45,8 +45,8 @@ def plot_surfaces(surfaces):
 
 
 class SurfaceItem(pgl.GLSurfacePlotItem):
-    def __init__(self, surface: surfaces.Surface, color: Tuple[float] = (0, 0, 1, 0.2), smooth: bool = True,
-            shader: str = 'balloon', glOptions: str = 'additive', **kwargs):
+    def __init__(self, surface: _surfaces.Surface, color: Tuple[float] = (0, 0, 1, 0.2), smooth: bool = True,
+                 shader: str = 'balloon', glOptions: str = 'additive', **kwargs):
         """Sample surface and create item.
 
         The default drawing style is translucent blue, which is good for a black background. Another good set of choices
