@@ -16,18 +16,17 @@ def test_tracing():
     normal = v4h.to_vector((0, 0, -1))
     constant = 0
     surface = sdb.Plane(normal, constant)
-    deflector = rt2.make_fresnel_deflector()
     n0 = 1
     n0fun = ri.FixedIndex(n0)
     n1  = 1.5
     n1fun = ri.FixedIndex(n1)
-    element = rt2.SimpleElement(surface, rt2.UniformIsotropic(n1fun), deflector)
+    element = rt2.Element(surface, rt2.UniformIsotropic(n1fun), rt2.FresnelInterface())
 
-    assert rt2.get_deflector(element, np.asarray((1, 2, 3, 1))) is deflector
+    #assert rt2.get_deflector(element, np.asarray((1, 2, 3, 1))) is deflector
 
     assembly = rt2.Assembly(element.surface, [element], rt2.UniformIsotropic(n0fun))
     assert _get_transformed_element(assembly, v4h.to_point((1, 2, -1))) is None
-    assert _get_transformed_element(assembly, v4h.to_point((1, 2, 1))).element is element
+    affine_surface = _get_transformed_element(assembly, v4h.to_point((1, 2, 1))).surface
 
     lamb = 800e-9
     incident_ray = rt2.make_ray(assembly, 1., 2, -1, 0, 1, 1, 1, 0, 0, lamb)
@@ -52,9 +51,9 @@ def test_parabolic_mirror():
     vertex = np.asarray((0., 0, 0))
     # Creater a parabolic mirror pointing along +z axis.
     surface = sdb.BoundedParaboloid(roc, 1.5*roc, True, vertex)
-    deflector = rt2.make_constant_deflector(1, 1, 0, 0, True, False)
     n = ri.vacuum
-    assembly = rt2.Assembly(surface, [rt2.SimpleElement(surface, rt2.UniformIsotropic(n), deflector)], rt2.UniformIsotropic(n))
+    assembly = rt2.Assembly(surface, [rt2.Element(surface, rt2.UniformIsotropic(n), rt2.perfect_reflector)],
+                            rt2.UniformIsotropic(n))
     lamb = 800e-9
     epsilon = 1e-9
     focus = vertex + (0, 0, f)
@@ -84,7 +83,7 @@ def test_biconvex_lens():
     assert np.isclose(npscalar.getsdb(surface, vertex0 + (0, 0, -thickness, 0)), thickness)
 
 
-    element = rt2.SimpleElement(surface, rt2.UniformIsotropic(n), rt2.perfect_refractor)
+    element = rt2.Element(surface, rt2.UniformIsotropic(n), rt2.perfect_refractor)
     assembly = rt2.Assembly(surface, [element], rt2.UniformIsotropic(ne))
     sphere_trace_kwargs = dict(epsilon=1e-9, t_max=1e9, max_steps=100)
 
@@ -133,7 +132,7 @@ def test_hyperbolic_lens():
     kappa = 0.55555 # 0.55555
     f = roc*n2/(n2 - n1)
     surface = sdb.ZemaxConic(roc, 0.3, 1, kappa)
-    element = rt2.SimpleElement(surface, rt2.UniformIsotropic(ri.FixedIndex(n2)), rt2.perfect_refractor)
+    element = rt2.Element(surface, rt2.UniformIsotropic(ri.FixedIndex(n2)), rt2.perfect_refractor)
     assembly = rt2.Assembly(surface, [element], rt2.UniformIsotropic(ri.FixedIndex(n1)))
     sphere_trace_kwargs = dict(epsilon=1e-9, t_max=1e9, max_steps=100)
     focus = (0, 0, f, 1)

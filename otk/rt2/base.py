@@ -4,17 +4,14 @@ from functools import singledispatch
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from otk import ri
-from ..sdb import Surface, UnionOp
+from otk.types import Matrix4
+from ..sdb import Surface, UnionOp, AffineOp
 
-__all__ = ['Medium', 'UniformIsotropic', 'Element', 'SimpleElement', 'Deflector', 'SimpleInterface', 'ConstantInterface',
-    'calc_amplitudes', 'perfect_reflector',
-    'FresnelInterface', 'SimpleDeflector', 'make_constant_deflector', 'make_fresnel_deflector', 'perfect_refractor',
-    'Assembly']
 
 class Medium(ABC):
     @property
     @abstractmethod
-    def uniform(self):
+    def uniform(self) -> bool:
         pass
 
     @classmethod
@@ -25,6 +22,18 @@ class Medium(ABC):
             n = float(x)
             return UniformIsotropic(ri.FixedIndex(n))
 
+    @abstractmethod
+    def transform(self, to_local: Matrix4) -> 'Medium':
+        """Return copy of self with transformed coordinate system.
+
+        Transform rule: if
+            new = old.transform()
+        and f is a scalar property then
+            new.f(x) = old.f(x@to_local)
+        """
+        pass
+
+
 @dataclass
 class UniformIsotropic(Medium):
     n: ri.Index
@@ -33,61 +42,61 @@ class UniformIsotropic(Medium):
     def uniform(self):
         return True
 
-class Deflector(ABC):
+    def transform(self, to_local: Matrix4) -> 'Medium':
+        return self
+
+class Interface(ABC):
     @abstractmethod
-    def transform(self, m: np.ndarray) -> 'Deflector':
+    def transform(self, to_local: Matrix4) -> 'Interface':
+        """Return copy of self with transformed coordinate system.
+
+        Transform rule: if
+            new = old.transform()
+        and f is a scalar property then
+            new.f(x) = old.f(x@to_local)
+        """
         pass
+
 
 @dataclass
 class Element:
     surface: Surface
     medium: Medium
+    interface: Interface
 
-@dataclass
-class SimpleElement(Element):
-    deflector: Deflector
+    def transform(self, to_local: Matrix4) -> 'Element':
+        """Return copy of self with transformed coordinate system.
 
-class SimpleInterface(ABC):
-    @abstractmethod
-    def transform(self, m: np.ndarray) -> 'SimpleInterface':
-        pass
+        Transform rule: if
+            new = old.transform()
+        and f is a scalar property then
+            new.f(x) = old.f(x@to_local)
+        """
+        surface = AffineOp(self.surface, np.linalg.inv(to_local)) # TODO check direction
+        medium = self.medium.transform(to_local)
+        interface = self.interface.transform(to_local)
+        return Element(surface, medium, interface)
 
-class FresnelInterface(SimpleInterface):
+
+class FresnelInterface(Interface):
     def transform(self, m: np.ndarray):
         return self
 
+
 @dataclass
-class ConstantInterface(SimpleInterface):
+class ConstantInterface(Interface):
     rp: float
     rs: float
     tp: float
     ts: float
 
-    def transform(self, m: np.ndarray):
+    def transform(self, to_local: Matrix4):
         return self
 
-@singledispatch
-def calc_amplitudes(self:SimpleInterface, n0: float, n1:float, cos_theta0: float, lamb: float) -> tuple:
-    raise NotImplementedError()
 
-@dataclass
-class SimpleDeflector(Deflector):
-    interface: SimpleInterface
-    reflects: bool
-    refracts: bool
+perfect_refractor = ConstantInterface(0, 0, 1, 1)
+perfect_reflector = ConstantInterface(1, 1, 0, 0)
 
-    def transform(self, m: np.ndarray):
-        return SimpleDeflector(self.interface.transform(m), self.reflects, self.refracts)
-
-def make_constant_deflector(rp:float, rs:float, tp:float, ts:float, reflects:bool = True, refracts:bool = True):
-    return SimpleDeflector(ConstantInterface(rp, rs, tp, ts), reflects, refracts)
-
-def make_fresnel_deflector(reflects:bool = True, refracts:bool = True):
-    #calc_amplitudes = lambda n0, n1, cos_theta0, lamb: omath.calc_fresnel_coefficients(n0, n1, cos_theta0)
-    return SimpleDeflector(FresnelInterface(), reflects, refracts)
-
-perfect_refractor = make_constant_deflector(0, 0, 1, 1, False, True)
-perfect_reflector = make_constant_deflector(1, 1, 0, 0, True, False)
 
 class Assembly:
     def __init__(self, surface: Surface, elements:Sequence[Element], exterior: Medium):

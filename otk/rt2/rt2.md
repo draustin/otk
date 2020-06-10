@@ -22,6 +22,9 @@ High level:
 * huge number of (implicitly defined) surfaces
 * cross sections
 * edge/corner rounding
+* moving parts
+* absorptive media
+* diffraction gratings (nonuniform)
 
 ### Organization
 

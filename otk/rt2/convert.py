@@ -85,9 +85,9 @@ def make_element(obj, *args, **kwargs) -> Element:
     raise NotImplementedError()
 
 @make_element.register
-def  _(obj: trains.Singlet, shape:str='circle', vertex:Sequence[float]=None) -> Element:
+def  _(obj: trains.Singlet, shape: str = 'circle', vertex: Sequence[float] = None) -> Element:
     surface = make_surface(obj, shape, vertex)
-    return SimpleElement(surface, UniformIsotropic(obj.n), perfect_refractor)
+    return Element(surface, UniformIsotropic(obj.n), perfect_refractor)
 
 # end make_element
 
@@ -151,7 +151,7 @@ def to_rectangular_array_surface(singlet: trains.Singlet, levels: Sequence[Recta
 
 def to_rectangular_array_element(singlet: trains.Singlet, levels: Sequence[RectangularArrayLevel], center: Sequence3 = (0., 0., 0.)) -> Element:
     surface = to_rectangular_array_surface(singlet, levels, center)
-    return SimpleElement(surface, UniformIsotropic(singlet.n), perfect_refractor)
+    return Element(surface, UniformIsotropic(singlet.n), perfect_refractor)
 
 def to_rectangular_array_elements(train: trains.SingletSequence, levels: Sequence[RectangularArrayLevel], center: Sequence3 = (0., 0., 0.)) -> List[Element]:
     center = np.array(center, float)

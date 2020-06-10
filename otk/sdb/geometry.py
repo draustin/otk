@@ -1,7 +1,7 @@
 from typing import List
 import copy
 from dataclasses import dataclass
-from  itertools import  product
+from itertools import product
 from abc import ABC, abstractmethod
 from typing import Sequence, Tuple, Union
 import numpy as np
@@ -10,26 +10,23 @@ from ..functions import normalize, calc_zemax_conic_lipschitz, norm, norm_square
 from ..h4t import make_translation
 from . import bounding
 
-__all__ = ['Surface', 'Sphere', 'Box', 'Torus', 'Ellipsoid', 'InfiniteCylinder', 'Plane', 'Sag', 'SagFunction', 'UnionOp', 'IntersectionOp',
-    'DifferenceOp', 'AffineOp', 'Compound', 'Primitive', 'SphericalSag', 'Hemisphere', 'InfiniteRectangularPrism',
-    'FiniteRectangularArray', 'ToroidalSag', 'BoundedParaboloid', 'ZemaxConic', 'SegmentedRadial', 'ISDB']
+__all__ = ['Surface', 'Sphere', 'Box', 'Torus', 'Ellipsoid', 'InfiniteCylinder', 'Plane', 'Sag', 'SagFunction',
+           'UnionOp', 'IntersectionOp',
+           'DifferenceOp', 'AffineOp', 'Compound', 'Primitive', 'SphericalSag', 'Hemisphere',
+           'InfiniteRectangularPrism',
+           'FiniteRectangularArray', 'ToroidalSag', 'BoundedParaboloid', 'ZemaxConic', 'SegmentedRadial', 'ISDB']
+
 
 # TODO ABC?
 class Surface:
-    """
-    A parent of None means no parent / parent is root.
-    """
-    def __init__(self, parent:'Surface'=None):
-        self._parent = parent
-
-    def get_ancestors(self) -> List['Surface']:
-        """Return list of ancestors starting from self going to root."""
-        surface = self
-        surfaces = []
-        while surface is not None:
-            surfaces.append(surface)
-            surface = surface._parent
-        return surfaces
+    # def get_ancestors(self) -> List['Surface']:
+    #     """Return list of ancestors starting from self going to root."""
+    #     surface = self
+    #     surfaces = []
+    #     while surface is not None:
+    #         surfaces.append(surface)
+    #         surface = surface._parent
+    #     return surfaces
 
     def get_parent_to_child(self, x: Sequence4) -> np.ndarray:
         return np.eye(4)
@@ -67,6 +64,7 @@ class Surface:
         """Return ([active surface at x, parent of active surface at x, ..., self], signed distance)."""
         raise NotImplementedError(self)
 
+
 @dataclass
 class ISDB:
     d: float
@@ -89,7 +87,7 @@ class ISDB:
         return ISDB(-self.d, self.surface, self.face)
 
     def times(self, f: float):
-        return ISDB(self.d*f, self.surface, self.face)
+        return ISDB(self.d * f, self.surface, self.face)
 
 
 class Primitive(Surface):
@@ -101,8 +99,8 @@ class Primitive(Surface):
 
 
 class Sphere(Primitive):
-    def __init__(self, r:float, o:Sequence[float]=None, parent: Surface = None):
-        Primitive.__init__(self, parent)
+    def __init__(self, r: float, o: Sequence[float] = None):
+        Primitive.__init__(self)
         if o is None:
             o = (0.0, 0.0, 0.0)
         assert len(o) == 3
@@ -116,7 +114,7 @@ class Sphere(Primitive):
         return bounding.AABB.make(op - rv, op + rv)
 
     def scale(self, f: float) -> 'Sphere':
-        return Sphere(self.r*f, self.o*f)
+        return Sphere(self.r * f, self.o * f)
 
     def getsdb(self, x: Sequence4) -> float:
         return norm(x[:3] - self.o) - self.r
@@ -125,14 +123,15 @@ class Sphere(Primitive):
 def get_box_vertices(center: Sequence[float], half_size: Sequence[float]) -> np.ndarray:
     vertices = []
     for signs in product((-1, 1), repeat=3):
-        vertex = [center + sign*half_size for center, sign, half_size in zip(center, signs, half_size)] + [1]
+        vertex = [center + sign * half_size for center, sign, half_size in zip(center, signs, half_size)] + [1]
         vertices.append(vertex)
     vertices = np.asarray(vertices)
     return vertices
 
+
 class Box(Primitive):
-    def __init__(self, half_size:Sequence[float], center:Sequence[float]=None, radius: float = 0., parent: Surface = None):
-        Primitive.__init__(self, parent)
+    def __init__(self, half_size: Sequence[float], center: Sequence[float] = None, radius: float = 0.):
+        Primitive.__init__(self)
         half_size = np.array(half_size, float)
         assert half_size.shape == (3,)
 
@@ -153,16 +152,18 @@ class Box(Primitive):
         return bounding.AABB((np.min(vertices, 0), np.max(vertices, 0)))
 
     def scale(self, f: float) -> 'Box':
-        return Box(self.half_size*f, self.center*f, self.radius*f)
+        return Box(self.half_size * f, self.center * f, self.radius * f)
 
     def getsdb(self, x: Sequence4) -> float:
         q = abs(x[:3] - self.center) - (self.half_size - self.radius)
         return norm(np.maximum(q, 0.)) + min(max(q[0], max(q[1], q[2])), 0.0) - self.radius
 
+
 class Torus(Primitive):
     """Circle of radius minor revolved around z axis."""
-    def __init__(self, major: float, minor: float, center: Sequence[float]=None, parent: Surface = None):
-        Primitive.__init__(self, parent)
+
+    def __init__(self, major: float, minor: float, center: Sequence[float] = None):
+        Primitive.__init__(self)
         if center is None:
             center = 0, 0, 0
         assert len(center) == 3
@@ -178,9 +179,10 @@ class Torus(Primitive):
         vertices = np.dot(self.get_hull_vertices(), m)
         return bounding.AABB((np.min(vertices, 0), np.max(vertices, 0)))
 
+
 class Ellipsoid(Primitive):
-    def __init__(self, radii: Sequence[float], center: Sequence[float]=None, parent: Surface = None):
-        Primitive.__init__(self, parent)
+    def __init__(self, radii: Sequence[float], center: Sequence[float] = None):
+        Primitive.__init__(self)
         assert len(radii) == 3
         if center is None:
             center = 0, 0, 0
@@ -195,9 +197,10 @@ class Ellipsoid(Primitive):
         vertices = np.dot(self.get_hull_vertices(), m)
         return bounding.AABB((np.min(vertices, 0), np.max(vertices, 0)))
 
+
 class InfiniteCylinder(Primitive):
-    def __init__(self, r:float, o:Sequence[float]=None, parent: Surface = None):
-        Primitive.__init__(self, parent)
+    def __init__(self, r: float, o: Sequence[float] = None):
+        Primitive.__init__(self)
         if o is None:
             o = 0., 0.
         o = np.array(o, float)
@@ -207,15 +210,15 @@ class InfiniteCylinder(Primitive):
         self.o = o
 
     def scale(self, f: float) -> 'InfiniteCylinder':
-        return InfiniteCylinder(self.r*f, self.o*f)
+        return InfiniteCylinder(self.r * f, self.o * f)
 
     def getsdb(self, x: Sequence4) -> float:
         return norm(x[:2] - self.o) - self.r
 
 
 class InfiniteRectangularPrism(Primitive):
-    def __init__(self, width:float, height:float=None, center:Sequence[float]=None, parent: Surface = None):
-        Primitive.__init__(self, parent)
+    def __init__(self, width: float, height: float = None, center: Sequence[float] = None):
+        Primitive.__init__(self)
         if height is None:
             height = width
         if center is None:
@@ -227,11 +230,11 @@ class InfiniteRectangularPrism(Primitive):
         self.center = center
 
     def getsdb(self, x: Sequence4) -> float:
-        q = abs(x[:2] - self.center) - (self.width/2, self.height/2)
+        q = abs(x[:2] - self.center) - (self.width / 2, self.height / 2)
         return norm(np.maximum(q, 0.0)) + np.minimum(np.maximum(q[..., 0], q[..., 1]), 0.0)
 
     def scale(self, f: float) -> 'InfiniteRectangularPrism':
-        return InfiniteRectangularPrism(self.width*f, self.height*f, self.center*f)
+        return InfiniteRectangularPrism(self.width * f, self.height * f, self.center * f)
 
 
 class Plane(Primitive):
@@ -240,21 +243,23 @@ class Plane(Primitive):
      Signed distance equation:
         d = n.x + c
     """
+
     # TODO get rid of normalize - make factory method instead
-    def __init__(self, n: Sequence[float], c: float, parent: Surface = None):
-        Primitive.__init__(self, parent)
+    def __init__(self, n: Sequence[float], c: float):
+        Primitive.__init__(self)
         self.n = normalize(n[:3])
         self.c = float(c)
 
     def scale(self, f: float) -> 'Plane':
-        return Plane(self.n, self.c*f)
+        return Plane(self.n, self.c * f)
 
     def getsdb(self, x: Sequence4) -> float:
         return np.dot(x[:3], self.n) + self.c
 
+
 class Hemisphere(Primitive):
-    def __init__(self, r: float, o: Sequence[float] = None, sign: float = 1, parent: Surface = None):
-        Primitive.__init__(self, parent)
+    def __init__(self, r: float, o: Sequence[float] = None, sign: float = 1):
+        Primitive.__init__(self)
         if o is None:
             o = (0.0, 0.0, 0.0)
         assert len(o) == 3
@@ -263,15 +268,15 @@ class Hemisphere(Primitive):
         self.sign = sign
 
     def getsdb(self, x: Sequence4) -> float:
-        return np.minimum(norm(x[:3] - self.o) - self.r, self.sign*(x[2] - self.o[2]))
+        return np.minimum(norm(x[:3] - self.o) - self.r, self.sign * (x[2] - self.o[2]))
 
 
 class SphericalSag(Primitive):
     roc: float
-    side: float # +/- 1.
+    side: float  # +/- 1.
     vertex: Vector3
 
-    def __init__(self, roc: float, side: float = 1., vertex: Sequence3 = (0., 0., 0.), parent: Surface = None):
+    def __init__(self, roc: float, side: float = 1., vertex: Sequence3 = (0., 0., 0.)):
         """Spherical sag profile.
 
         Spherical profile applies out to circle of radius |roc| in z=vertex[2] plane beyond which it continues in this
@@ -283,7 +288,7 @@ class SphericalSag(Primitive):
             side: 1 for inside on +z side, -1 for inside on -z side.
             vertex: position of vertex - defaults to origin.
         """
-        Primitive.__init__(self, parent)
+        Primitive.__init__(self)
         self.roc = float(roc)
         assert np.isclose(abs(side), 1)
         self.side = float(side)
@@ -296,17 +301,18 @@ class SphericalSag(Primitive):
         return self.vertex + (0, 0, self.roc)
 
     def scale(self, f: float) -> 'SphericalSag':
-        return SphericalSag(self.roc*f, self.side, self.vertex*f)
+        return SphericalSag(self.roc * f, self.side, self.vertex * f)
 
     def getsdb(self, x: Sequence4) -> float:
         if np.isfinite(self.roc):
-            inside = self.side*np.sign(self.roc)
-            a = inside*(norm(x[:3] - self.center) - abs(self.roc))
-            b = -self.side*(x[2] - self.center[2])
+            inside = self.side * np.sign(self.roc)
+            a = inside * (norm(x[:3] - self.center) - abs(self.roc))
+            b = -self.side * (x[2] - self.center[2])
             fun = np.minimum if inside > 0 else np.maximum
             return fun(a, b)
         else:
-            return self.side*(self.vertex[2] - x[2])
+            return self.side * (self.vertex[2] - x[2])
+
 
 # TODO move to sags.py
 class SagFunction(ABC):
@@ -319,10 +325,12 @@ class SagFunction(ABC):
     def getsag(self, x: Sequence2) -> float:
         pass
 
+
 class Sag(Primitive):
     """Surface defined by f(r_x - o_x, r_y - o_y) = r_z - o_z."""
-    def __init__(self, sagfun: SagFunction, side: float = 1., origin: Sequence3 = None, parent: Surface = None):
-        Primitive.__init__(self, parent)
+
+    def __init__(self, sagfun: SagFunction, side: float = 1., origin: Sequence3 = None):
+        Primitive.__init__(self)
         self.sagfun = sagfun
         self.side = float(side)
         if origin is None:
@@ -333,20 +341,21 @@ class Sag(Primitive):
 
     @property
     def lipschitz(self):
-        return (self.sagfun.lipschitz**2 + 1)**0.5
+        return (self.sagfun.lipschitz ** 2 + 1) ** 0.5
 
     def getsdb(self, x: Sequence4) -> float:
         sag = self.sagfun.getsag(x[:2] - self.origin[:2])
-        return self.side*(sag + self.origin[2] - x[2])/self.lipschitz
+        return self.side * (sag + self.origin[2] - x[2]) / self.lipschitz
 
 
 class ZemaxConic(Primitive):
-    def __init__(self, roc: float, radius: float, side: float = 1., kappa: float = 1., alphas: Sequence[float] = None, vertex: Sequence[float] = None, parent: Surface = None):
-        Primitive.__init__(self, parent)
+    def __init__(self, roc: float, radius: float, side: float = 1., kappa: float = 1., alphas: Sequence[float] = None,
+                 vertex: Sequence[float] = None):
+        Primitive.__init__(self)
         assert radius > 0
         side = float(side)
         assert side in (-1., 1.)
-        if kappa*radius**2 >= roc**2:
+        if kappa * radius ** 2 >= roc ** 2:
             raise ValueError(f'Surface is vertical with radius {radius}, roc {roc} and kappa {kappa}.')
         if alphas is None:
             alphas = []
@@ -361,35 +370,37 @@ class ZemaxConic(Primitive):
         self.radius = radius
         self.kappa = kappa
         self.alphas = alphas
-        self.lipschitz = (sag_lipschitz**2 + 1)**0.5
+        self.lipschitz = (sag_lipschitz ** 2 + 1) ** 0.5
         self.vertex = vertex
         self.side = side
 
     def scale(self, f: float) -> 'ZemaxConic':
         ns = np.arange(2, len(self.alphas) + 2)
-        alphas = [alpha/f**(n - 1) for alpha, n in zip(self.alphas, ns)]
-        return ZemaxConic(self.roc*f, self.radius*f, self.side, self.kappa, alphas, self.vertex*f)
+        alphas = [alpha / f ** (n - 1) for alpha, n in zip(self.alphas, ns)]
+        return ZemaxConic(self.roc * f, self.radius * f, self.side, self.kappa, alphas, self.vertex * f)
 
     def getsdb(self, x: Sequence4) -> float:
         xp = x[:3] - self.vertex
-        rho2 = min(norm_squared(xp[:2]), self.radius**2)
-        rho = rho2**0.5
+        rho2 = min(norm_squared(xp[:2]), self.radius ** 2)
+        rho = rho2 ** 0.5
         if np.isfinite(self.roc):
-            z = rho2/(self.roc*(1 + (1 - self.kappa*rho2/self.roc**2)**0.5))
+            z = rho2 / (self.roc * (1 + (1 - self.kappa * rho2 / self.roc ** 2) ** 0.5))
         else:
             z = 0
         if len(self.alphas) > 0:
             h = self.alphas[-1]
             for alpha in self.alphas[-2::-1]:
-                h = h*rho + alpha
-            z += h*rho2
-        return self.side*(z - xp[2])/self.lipschitz
+                h = h * rho + alpha
+            z += h * rho2
+        return self.side * (z - xp[2]) / self.lipschitz
+
 
 class ToroidalSag(Primitive):
     # z-axis is normal at vertex. rocs are in x and y. sign convention is normal optical i.e. positive means curving towards
     # postiive z. side is 1 for inside on +z side. axis of revolution is x.
     # Useful intro: https://spie.org/news/designing-with-toroids?SSO=1
-    def __init__(self, rocs:Tuple[float, float], side:float=1, vertex:Sequence[float]=None, parent: Surface = None):
+    def __init__(self, rocs: Tuple[float, float], side: float = 1, vertex: Sequence[float] = None,
+                 parent: Surface = None):
         Primitive.__init__(self, parent)
         self.rocs = np.asarray(rocs)
         self.side = side
@@ -405,19 +416,17 @@ class ToroidalSag(Primitive):
 
     @property
     def inside_x(self):
-        return self.side*np.sign(self.rocs[0])
+        return self.side * np.sign(self.rocs[0])
 
     @property
     def ror(self):
         """Radius of revolution"""
         return abs(self.rocs[0] - self.rocs[1])
 
+
 class Compound(Surface):
-    def __init__(self, surfaces:Sequence[Surface], parent: Surface = None):
-        Surface.__init__(self, parent)
-        for s in surfaces:
-            assert s._parent is None
-            s._parent = self
+    def __init__(self, surfaces: Sequence[Surface]):
+        Surface.__init__(self)
         self.surfaces = surfaces
 
     def descendants(self):
@@ -436,19 +445,20 @@ class FiniteRectangularArray(Compound):
     size: Vector2Int
     corner: Vector2
 
-    def __init__(self, pitch: Union[Sequence2, float], size: Union[Sequence2[int], int], unit:Surface, center: Sequence2 = None, corner: Sequence2 = None, parent: Surface = None):
-        Compound.__init__(self, [unit], parent)
+    def __init__(self, pitch: Union[Sequence2, float], size: Union[Sequence2[int], int], unit: Surface,
+                 center: Sequence2 = None, corner: Sequence2 = None):
+        Compound.__init__(self, [unit])
 
-        pitch = np.broadcast_to(pitch, (2, )).astype(float)
-        size = np.broadcast_to(size, (2, )).astype(int)
+        pitch = np.broadcast_to(pitch, (2,)).astype(float)
+        size = np.broadcast_to(size, (2,)).astype(int)
 
         if center is None:
             if corner is None:
-                corner = -pitch*size/2
+                corner = -pitch * size / 2
         else:
             assert corner is None
             center = np.array(center, float)
-            corner = center - pitch*size/2
+            corner = center - pitch * size / 2
         corner = np.array(corner, float)
         assert corner.shape == (2,)
 
@@ -458,11 +468,11 @@ class FiniteRectangularArray(Compound):
 
     def get_center(self, x: Sequence2) -> Vector2:
         """Return nearest unit center."""
-        index = np.clip(np.floor((x - self.corner)/self.pitch), 0, self.size - 1)
-        center = (index + 0.5)*self.pitch + self.corner
+        index = np.clip(np.floor((x - self.corner) / self.pitch), 0, self.size - 1)
+        center = (index + 0.5) * self.pitch + self.corner
         return center
 
-    def transform(self, x:Sequence[float]) -> np.ndarray:
+    def transform(self, x: Sequence[float]) -> np.ndarray:
         """
 
         Args:
@@ -479,12 +489,12 @@ class FiniteRectangularArray(Compound):
 
     def get_aabb(self, m: np.ndarray) -> bounding.AABB:
         unit = self.surfaces[0].get_aabb(m)
-        corner0 = unit.corners[0] + np.r_[self.corner + self.pitch/2, 0, 0]
-        corner1 = unit.corners[1] + np.r_[self.corner + self.pitch*(self.size - 0.5), 0, 0]
+        corner0 = unit.corners[0] + np.r_[self.corner + self.pitch / 2, 0, 0]
+        corner1 = unit.corners[1] + np.r_[self.corner + self.pitch * (self.size - 0.5), 0, 0]
         return bounding.AABB((corner0, corner1))
 
     def scale(self, f: float) -> 'FiniteRectangularArray':
-        return FiniteRectangularArray(self.pitch*f, self.size, self.surfaces[0].scale(f), self.corner*f)
+        return FiniteRectangularArray(self.pitch * f, self.size, self.surfaces[0].scale(f), self.corner * f)
 
     def getsdb(self, x: Sequence4) -> float:
         return self.surfaces[0].getsdb(self.transform(x))
@@ -494,8 +504,9 @@ class FiniteRectangularArray(Compound):
         ancestry.append(self)
         return ancestry, d
 
+
 class BoundedParaboloid(Primitive):
-    def __init__(self, roc: float, radius: float, side:bool, vertex:Sequence[float]=None, parent: Surface = None):
+    def __init__(self, roc: float, radius: float, side: bool, vertex: Sequence[float] = None):
         """Paraboloid out to given radius, then flat.
 
         Surface equation is
@@ -504,21 +515,22 @@ class BoundedParaboloid(Primitive):
 
         side True means interior is negative z side.
         """
-        Primitive.__init__(self, parent)
+        Primitive.__init__(self)
         self.roc = roc
         self.radius = radius
         self.side = side
         if vertex is None:
             vertex = 0, 0, 0
         self.vertex = np.asarray(vertex)
-        self.cos_theta = (1 + (self.radius/self.roc)**2)**-0.5
+        self.cos_theta = (1 + (self.radius / self.roc) ** 2) ** -0.5
 
     def getsdb(self, x: Sequence4) -> float:
         xp = x[:3] - self.vertex
-        d = (xp[2] - min(xp[0]**2 + xp[1]**2, self.radius**2)/(2*self.roc))*self.cos_theta
+        d = (xp[2] - min(xp[0] ** 2 + xp[1] ** 2, self.radius ** 2) / (2 * self.roc)) * self.cos_theta
         if not self.side:
             d = -d
         return d
+
 
 class UnionOp(Compound):
     def get_aabb(self, m: np.ndarray) -> bounding.AABB:
@@ -542,10 +554,11 @@ class UnionOp(Compound):
         ancestry.append(self)
         return ancestry, d
 
+
 # TODO bound should only be required if *no* children have bounds.
 class IntersectionOp(Compound):
-    def __init__(self, surfaces:Sequence[Surface], bound:Surface = None, parent: Surface = None):
-        Compound.__init__(self, surfaces, parent)
+    def __init__(self, surfaces: Sequence[Surface], bound: Surface = None):
+        Compound.__init__(self, surfaces)
         self.bound = bound
 
     def get_aabb(self, m: np.ndarray) -> bounding.AABB:
@@ -576,9 +589,10 @@ class IntersectionOp(Compound):
         ancestry.append(self)
         return ancestry, d
 
+
 class DifferenceOp(Compound):
-    def __init__(self, s1:Surface, s2:Surface, bound:Surface = None, parent: Surface = None):
-        Compound.__init__(self, (s1, s2), parent)
+    def __init__(self, s1: Surface, s2: Surface, bound: Surface = None):
+        Compound.__init__(self, (s1, s2))
         self.bound = bound
 
     def get_aabb(self, m: np.ndarray) -> bounding.AABB:
@@ -610,15 +624,13 @@ class DifferenceOp(Compound):
         ancestry.append(self)
         return ancestry, d
 
-class AffineOp(Compound):
-    def __init__(self, s:Surface, m:Sequence[Sequence[float]], parent: Surface = None):
-        """
 
-        Args:
-            s:
-            m: Child to parent transform.
-        """
-        Compound.__init__(self, [s], parent)
+class AffineOp(Compound):
+    # Transform row vector from own to parent coordinate system.
+    m: Matrix4
+
+    def __init__(self, s: Surface, m: Sequence[Sequence[float]]):
+        Compound.__init__(self, [s])
         m = np.asarray(m)
         assert m.shape == (4, 4)
 
@@ -627,9 +639,8 @@ class AffineOp(Compound):
         orthonormal = np.isclose(a[0, 1], 0.0) & np.isclose(a[0, 2], 0.0) & np.isclose(a[1, 2], 0.0) & \
                       np.isclose(a[1, 1], a[0, 0]) & np.isclose(a[2, 2], a[0, 0])
         # TODO currently scale only correct for orthonormal. For not orthonormal want a bound. Geometric mean?
-        scale = abs(a[0, 0])**0.5
+        scale = abs(a[0, 0]) ** 0.5
 
-        self.s = s
         self.m = m
         self.invm = np.linalg.inv(m)
         self.orthonormal = orthonormal
@@ -643,7 +654,7 @@ class AffineOp(Compound):
 
     def getsdb(self, x: Sequence4) -> float:
         d = self.surfaces[0].getsdb(np.dot(x, self.invm))
-        return d*self.scale
+        return d * self.scale
 
     def get_ancestry_at(self, x: Sequence4) -> Tuple[List['Surface'], float]:
         ancestry, d = self.surfaces[0].get_ancestry_at(np.dot(x, self.invm))
@@ -654,14 +665,14 @@ class AffineOp(Compound):
 
 # TODO change to piecewise function of rho with Lipschitz the maximum Lipschitz.
 class SegmentedRadial(Compound):
-    def __init__(self, segments: Sequence[Surface], radii: Sequence[float], vertex: Sequence[float] = None, parent: Surface = None):
-        Compound.__init__(self, segments, parent)
+    def __init__(self, segments: Sequence[Surface], radii: Sequence[float], vertex: Sequence[float] = None):
+        Compound.__init__(self, segments)
         segments = np.asarray(segments, Surface)
         assert segments.ndim == 1
         radii = np.asarray(radii, float)
-        assert radii.shape == (segments.size - 1, )
+        assert radii.shape == (segments.size - 1,)
         if vertex is None:
-            vertex = 0 ,0
+            vertex = 0, 0
         vertex = np.asarray(vertex, float)
         assert vertex.shape == (2,)
 
@@ -669,7 +680,7 @@ class SegmentedRadial(Compound):
         self.vertex = vertex
 
     def scale(self, f: float) -> 'SegmentedRadial':
-        return SegmentedRadial([s.scale(f) for s in self.surfaces], self.radii*f, self.vertex*f)
+        return SegmentedRadial([s.scale(f) for s in self.surfaces], self.radii * f, self.vertex * f)
 
     def getsdb(self, x: Sequence4) -> float:
         rho = norm(x[:2] - self.vertex)
@@ -689,6 +700,5 @@ class SegmentedRadial(Compound):
         ancestry.append(self)
         return ancestry, d
 
-
-#get_intersection(x)
+# get_intersection(x)
 # normal, interiors on either side (from already known but good to check), interface
