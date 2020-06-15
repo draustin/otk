@@ -20,7 +20,7 @@ assert np.isclose(f_, f)
 
 r = 20e-3
 surface = lens.make_spherical_singlet(roc0, roc1, thickness, lens.make_circle(r), vertex0[:3])
-element = rt2.SimpleElement(surface, rt2.UniformIsotropic(n), rt2.perfect_refractor)
+element = rt2.Element(surface, rt2.UniformIsotropic(n), rt2.perfect_refractor)
 assembly = rt2.Assembly(surface, [element], rt2.UniformIsotropic(ne))
 sphere_trace_kwargs = dict(epsilon=1e-9, t_max=1e9, max_steps=100)
 

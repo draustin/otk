@@ -17,5 +17,5 @@ def make_MLA150(small:bool=False):
     sides = sdb.InfiniteRectangularPrism(w, h)
     back = sdb.Plane((0, 0, 1), -t)
     surface = sdb.IntersectionOp((front, sides, back), sdb.Box((w/2, h/2, t/2), (0, 0, t/2)))
-    element = SimpleElement(surface, UniformIsotropic(ri.fused_silica), perfect_refractor)
+    element = Element(surface, UniformIsotropic(ri.fused_silica), perfect_refractor)
     return element

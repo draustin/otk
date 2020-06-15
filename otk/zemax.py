@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from typing import TextIO, Tuple, Mapping, Dict
+from typing import TextIO, Tuple, Mapping, Dict, List, Sequence
 import chardet
 from . import ri, trains, agf, PROPERTIES_DIR
 
@@ -16,7 +16,8 @@ SUPPLIED_GLASS_CATALOG_PATHS = {
     'SCHOTT': os.path.join(SUPPLIED_AGFS_DIR, 'schottzemax-20180601.agf'),
     'OHARA': os.path.join(SUPPLIED_AGFS_DIR, 'OHARA_200306_CATALOG.agf'),
     'SUMITA': os.path.join(SUPPLIED_AGFS_DIR, 'sumita-opt-dl-data-20200511235805.agf'),
-    'NIKON': os.path.join(SUPPLIED_AGFS_DIR, 'NIKON-HIKARI_201911.agf')
+    'NIKON': os.path.join(SUPPLIED_AGFS_DIR, 'NIKON-HIKARI_201911.agf'),
+    'HIKARI': os.path.join(SUPPLIED_AGFS_DIR, 'NIKON-HIKARI_201911.agf')
     }
 
 default_glass_catalog_paths = SUPPLIED_GLASS_CATALOG_PATHS.copy()
@@ -33,8 +34,13 @@ def read_glass_catalog_dir(dir: str) -> Dict[str, str]:
         paths[root.upper()] = path
     return paths
 
+class GlassNotInCatalogError(Exception):
+    def __init__(self, glasses: Sequence[str]):
+        Exception.__init__(self, f"Glass {glasses} not in catalog.")
+        self.glasses = glasses
 
-def read_interface(file:TextIO, n1, catalog: Dict[str, agf.Record], temperature: float) -> Tuple[trains.Interface, float, float]:
+
+def read_interface(file:TextIO, n1, catalog: Dict[str, agf.Record], temperature: float, try_n_prefix: bool = False) -> Tuple[trains.Interface, float, float]:
     commands = {}
     parms = {}
     while True:
@@ -54,7 +60,18 @@ def read_interface(file:TextIO, n1, catalog: Dict[str, agf.Record], temperature:
                 commands[words[0]]=words[1:]
 
     if 'GLAS' in commands:
-        record = catalog[commands['GLAS'][0]]
+        glass = commands['GLAS'][0]
+        try:
+            record = catalog[glass]
+        except KeyError as ex:
+            if try_n_prefix:
+                nglass = 'N-' + glass
+                try:
+                    record = catalog[nglass]
+                except KeyError:
+                    raise GlassNotInCatalogError((glass, nglass))
+            else:
+                raise GlassNotInCatalogError([glass]) from ex
         n2 = record.fix_temperature(temperature)
     else:
         n2 = ri.air
@@ -102,8 +119,17 @@ def read_interface(file:TextIO, n1, catalog: Dict[str, agf.Record], temperature:
 
     return interface, n2, thickness
 
+class GlassNotFoundError(Exception):
+    def __init__(self, glasses: Sequence[str], sources: List[Tuple[str, str]], surface_num: int):
+        Exception.__init__(self, f"Glass {glasses} of surface {surface_num} not found in the following catalogs: {sources}.")
 
-def read_train(filename:str, n: ri.Index = ri.air, encoding: str = None, temperature: float = None, glass_catalog_paths: Dict[str, str] = None) -> trains.Train:
+class NoCatalogError(Exception):
+    def __init__(self, name: str):
+        Exception.__init__(self, f'Catalog {name} not known.')
+        self.name = name
+
+def read_train(filename:str, n: ri.Index = ri.air, encoding: str = None, temperature: float = None,
+               glass_catalog_paths: Dict[str, str] = None, try_n_prefix: bool = False) -> trains.Train:
     """Read optical train from Zemax file.
 
     The given refractive index defines the surrounding medium.
@@ -119,6 +145,7 @@ def read_train(filename:str, n: ri.Index = ri.air, encoding: str = None, tempera
     spaces = [0]
     interfaces = []
     full_catalog = {}
+    full_catalog_sources = []
     with open(filename, 'rt', encoding=encoding) as file:
         while True:
             line = file.readline()
@@ -128,7 +155,9 @@ def read_train(filename:str, n: ri.Index = ri.air, encoding: str = None, tempera
             if words[0] == 'SURF':
                 assert int(words[1]) == surface_num
                 try:
-                    interface, n, space = read_interface(file, n, full_catalog, temperature)
+                    interface, n, space = read_interface(file, n, full_catalog, temperature, try_n_prefix)
+                except GlassNotInCatalogError as ex:
+                    raise GlassNotFoundError(ex.glasses, full_catalog_sources, surface_num) from ex
                 except Exception as e:
                     raise ValueError(f'Exception reading SURF {surface_num}.') from e
 
@@ -137,5 +166,11 @@ def read_train(filename:str, n: ri.Index = ri.air, encoding: str = None, tempera
                 surface_num += 1
             elif words[0] == 'GCAT':
                 for name in line.split()[1:]:
-                    full_catalog.update(agf.load_catalog(glass_catalog_paths[name]))
+                    try:
+                        catalog_path = glass_catalog_paths[name]
+                    except KeyError as e:
+                        raise NoCatalogError(name) from e
+                    full_catalog_sources.append((name, catalog_path))
+                    catalog = agf.load_catalog(catalog_path)
+                    full_catalog.update(catalog)
     return trains.Train(interfaces, spaces)
