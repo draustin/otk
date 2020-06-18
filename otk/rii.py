@@ -56,7 +56,7 @@ class TabNK:
         check_range = (check_range if check_range is not None else self.check_range)
         lamb = np.array(lamb)
         mum = lamb * 1e6
-        if check_range and in_lim(mum, *self.range).all():
+        if check_range and not in_lim(mum, *self.range).all():
             raise ValueError('Out of range ({0}--{1} micron). Pass check_range=False to ignore.'.format(*self.range))
         # interp gives error if passed complex valued yp, so must split up
         # real and imaginary parts
@@ -64,7 +64,7 @@ class TabNK:
         return np.interp(lamb, self._lamb, self._n) + 1j*np.interp(lamb, self._lamb, self._k)
 
     @classmethod
-    def from_entry(cls, entry: dict, check_range: bool = True):
+    def from_entry(cls, entry: dict, check_range: bool = True, has_k: bool = True):
         data = []
         for line in entry['data'].split('\n'):
             try:
@@ -74,9 +74,13 @@ class TabNK:
         data = np.array(data)
         _lamb = data[:, 0] * 1e-6
         _n = data[:, 1]
-        _k = data[:, 2]
+        if has_k:
+            _k = data[:, 2]
+        else:
+            _k = np.zeros(_n.shape)
         range = _lamb.min() * 1e6, _lamb.max() * 1e6
         return cls(_lamb, _n, _k, range, check_range)
+
 
 @dataclass
 class Formula:
@@ -137,6 +141,8 @@ def parse_entry(entry: dict, check_range: bool = True) -> Callable:
     type = entry['type']
     if type == 'tabulated nk':
         return TabNK.from_entry(entry, check_range)
+    elif type == 'tabulated n':
+        return TabNK.from_entry(entry, check_range, False)
     elif type[0:7] == 'formula':
         return Formula.from_entry(entry, check_range)
     else:
