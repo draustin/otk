@@ -1,42 +1,50 @@
-"""Functions of a sampled quantities."""
+"""Functions of a sampled quantities.
+
+TODO rename spherical to sst for Sziklas-Siegman transform.
+"""
 import logging
+from typing import Tuple
 import numpy as np
 import opt_einsum
 import mathx
 from mathx import matseq
+from ..types import Array1D
 from . import sa, math
 from .. import bvar
+
 logger = logging.getLogger(__name__)
 
-def shift_r_center_1d(r_support, num_points, Er, delta_r_center, q_center, k_on_roc = 0, axis = -1):
-    r = sa.calc_r(r_support, num_points, axis = axis)
-    q = sa.calc_q(r_support, num_points, q_center, axis = axis)
+
+def shift_r_center_1d(r_support, num_points, Er, delta_r_center, q_center, k_on_roc=0, axis=-1):
+    r = sa.calc_r(r_support, num_points, axis=axis)
+    q = sa.calc_q(r_support, num_points, q_center, axis=axis)
     # Remove quadratic phase and tilt.
-    Er *= mathx.expj(-(q[0]*r+k_on_roc*r**2/2))
+    Er *= mathx.expj(-(q[0] * r + k_on_roc * r ** 2 / 2))
     Ek = math.fft(Er, axis)
-    Ek *= mathx.expj(delta_r_center*q)
+    Ek *= mathx.expj(delta_r_center * q)
     Er = math.ifft(Ek, axis)
-    Er *= mathx.expj(q[0]*r+k_on_roc*(r+delta_r_center)**2/2)
+    Er *= mathx.expj(q[0] * r + k_on_roc * (r + delta_r_center) ** 2 / 2)
     return Er
 
 
-def prepare_curved_paraxial_propagation_1d(k, r_support, Er, z, m, r_center = 0, q_center = 0, axis = -1, carrier = True):
+def prepare_curved_paraxial_propagation_1d(k, r_support, Er, z, m, r_center=0., q_center=0., axis=-1, carrier=True):
     """Modifies Er."""
     assert not (np.isclose(z, 0) ^ np.isclose(m, 1))
     if np.isclose(z, 0):
         return 1, 1, r_center
     num_points = Er.shape[axis]
-    roc = z/(m-1)
+    roc = z / (m - 1)
     r = sa.calc_r(r_support, num_points, r_center, axis)
-    q = sa.calc_q(r_support, num_points, q_center, axis)#-q_center
+    q = sa.calc_q(r_support, num_points, q_center, axis)  # -q_center
     Er *= math.calc_quadratic_phase_1d(-k, r - r_center, roc)
-    propagator = math.calc_propagator_quadratic_1d(k*m, q - k*r_center/roc, z)
+    propagator = math.calc_propagator_quadratic_1d(k * m, q - k * r_center / roc, z)
 
-    ro_center = r_center + q_center/k*z
-    ro = sa.calc_r(r_support*m, num_points, ro_center, axis)
-    post_factor = math.calc_quadratic_phase_1d(k, ro, roc+z)*mathx.expj(k*(r_center**2/(2*roc) - r_center*ro/(roc*m)))/m**0.5
+    ro_center = r_center + q_center / k * z
+    ro = sa.calc_r(r_support * m, num_points, ro_center, axis)
+    post_factor = math.calc_quadratic_phase_1d(k, ro, roc + z) * mathx.expj(
+        k * (r_center ** 2 / (2 * roc) - r_center * ro / (roc * m))) / m ** 0.5
     if carrier:
-        post_factor *= mathx.expj(k*z)
+        post_factor *= mathx.expj(k * z)
 
     return propagator, post_factor, ro_center
 
@@ -44,9 +52,10 @@ def prepare_curved_paraxial_propagation_1d(k, r_support, Er, z, m, r_center = 0,
 def calc_gradxyE(rs_support, Er, qs_center=(0, 0)):
     Ek = math.fft2(Er)
     kx, ky = sa.calc_kxky(rs_support, Ek.shape, qs_center)
-    gradxE = math.ifft2(Ek*1j*kx)
-    gradyE = math.ifft2(Ek*1j*ky)
+    gradxE = math.ifft2(Ek * 1j * kx)
+    gradyE = math.ifft2(Ek * 1j * ky)
     return gradxE, gradyE
+
 
 def calc_gradxyE_spherical(k, rs_support, Er, rocs, rs_center=(0, 0), qs_center=(0, 0)):
     rs_support = sa.to_scalar_pair(rs_support)
@@ -56,26 +65,28 @@ def calc_gradxyE_spherical(k, rs_support, Er, rocs, rs_center=(0, 0), qs_center=
     yp = y - rs_center[1]
     Qx = math.calc_quadratic_phase_1d(k, xp, rocs[0])
     Qy = math.calc_quadratic_phase_1d(k, yp, rocs[1])
-    Erp = Er*Qx.conj()*Qy.conj()
+    Erp = Er * Qx.conj() * Qy.conj()
     Eqp = math.fft2(Erp)
     kx, ky = sa.calc_kxky(rs_support, Er.shape, qs_center)
-    gradxE = math.ifft2(Eqp*1j*kx)*Qx*Qy + Er*1j*k*xp/rocs[0]
-    gradyE = math.ifft2(Eqp*1j*ky)*Qx*Qy + Er*1j*k*yp/rocs[1]
+    gradxE = math.ifft2(Eqp * 1j * kx) * Qx * Qy + Er * 1j * k * xp / rocs[0]
+    gradyE = math.ifft2(Eqp * 1j * ky) * Qx * Qy + Er * 1j * k * yp / rocs[1]
     return gradxE, gradyE
+
 
 def calc_Igradphi(k, Er, gradxyEr, Ir=None) -> list:
     if Ir is None:
         Ir = mathx.abs_sqd(Er)
 
     # Calculate phase gradient times intensity.
-    Igradxyphi = [(component*Er.conj()).imag for component in gradxyEr]
+    Igradxyphi = [(component * Er.conj()).imag for component in gradxyEr]
 
     # The phase gradient is the eikonal (with scalar k included). In the short wavelength approximation (geometrical optics)
     # the length of the eikonal is k. (See  Born & Wolf eq. 15b in sec. 3.1.)
-    Igradzphi = np.maximum((Ir*k)**2 - matseq.dot(Igradxyphi), 0)**0.5
+    Igradzphi = np.maximum((Ir * k) ** 2 - matseq.dot(Igradxyphi), 0) ** 0.5
     Igradphi = Igradxyphi + [Igradzphi]
 
     return Igradphi
+
 
 def refract_field_gradient(normal, k1, Er, gradxyEr1, k2, Ir=None):
     """Apply local Snell's law at an interface given derivatives of the field.
@@ -91,20 +102,19 @@ def refract_field_gradient(normal, k1, Er, gradxyEr1, k2, Ir=None):
         Igradphi2 (3-tuple): product of intensity |Er|^2 and gradient of phase w.r.t. coordinate axes.
         Ir: |Er|^2 (for reuse).
     """
-    assert np.all(normal[2]>0)
+    assert np.all(normal[2] > 0)
     assert len(gradxyEr1) == 2
     if Ir is None:
         Ir = mathx.abs_sqd(Er)
 
     # Calculate intensity-scaled phase gradient (3 vector).
-    Igradphi=calc_Igradphi(k1, Er, gradxyEr1, Ir)
+    Igradphi = calc_Igradphi(k1, Er, gradxyEr1, Ir)
 
     Igradphi_tangent = mathx.project_onto_plane(Igradphi, normal)[0]
-    Igradphi_normal = np.maximum((Ir*k2)**2-mathx.dot(Igradphi_tangent), 0)**0.5
-    Igradphi2 = [tc+nc*Igradphi_normal for tc, nc in zip(Igradphi_tangent, normal)]
+    Igradphi_normal = np.maximum((Ir * k2) ** 2 - mathx.dot(Igradphi_tangent), 0) ** 0.5
+    Igradphi2 = [tc + nc * Igradphi_normal for tc, nc in zip(Igradphi_tangent, normal)]
 
     return Igradphi2
-
 
 
 def calc_beam_properties(rs_support, z, Er, Igradphi, rs_center=(0, 0)):
@@ -132,30 +142,31 @@ def calc_beam_properties(rs_support, z, Er, Igradphi, rs_center=(0, 0)):
     rs_center[0], rs_center[1], varx, vary, _ = mathx.mean_and_variance2(x, y, Ir, sumIr)
 
     # Mean transverse wavenumber is intensity-weighted average of transverse gradient of phase.
-    qs_center = np.asarray([component.sum() for component in Igradphi[:2]])/sumIr
+    qs_center = np.asarray([component.sum() for component in Igradphi[:2]]) / sumIr
 
-    meanz=mathx.moment(z, Ir, 1, sumIr)
+    meanz = mathx.moment(z, Ir, 1, sumIr)
 
     # Correct spatial phase for surface curvature - approximate propagation from z to meanz.
-    Er=Er*mathx.expj((meanz-z)*mathx.divide0(Igradphi[2], Ir))
+    Er = Er * mathx.expj((meanz - z) * mathx.divide0(Igradphi[2], Ir))
 
     # Do this twice, since on the first pass we are using qs_center from Igradphi which is just an estimate.
     for _ in range(2):
         # Calculate phase of quadratic component at RMS distance from center. Proportional to A in Siegman IEE J. Quantum Electronics Vol. 27
         # 1991. Positive means diverging.
-        phi_cx = 0.5*((x-rs_center[0])*(Igradphi[0]-Ir*qs_center[0])).sum()/sumIr
-        phi_cy = 0.5*((y-rs_center[1])*(Igradphi[1]-Ir*qs_center[1])).sum()/sumIr
+        phi_cx = 0.5 * ((x - rs_center[0]) * (Igradphi[0] - Ir * qs_center[0])).sum() / sumIr
+        phi_cy = 0.5 * ((y - rs_center[1]) * (Igradphi[1] - Ir * qs_center[1])).sum() / sumIr
 
         # Fourier transform Er with quadratic phase removed.
-        Ek = math.fft2(Er*mathx.expj(-(x-rs_center[0])**2*phi_cx/varx)*mathx.expj(-(y-rs_center[1])**2*phi_cy/vary))
+        Ek = math.fft2(Er * mathx.expj(-(x - rs_center[0]) ** 2 * phi_cx / varx) * mathx.expj(
+            -(y - rs_center[1]) ** 2 * phi_cy / vary))
         kx, ky = sa.calc_kxky(rs_support, Er.shape, qs_center)
 
         # Calculate mean square sizes of Fourier transform with quadratic phase removed.
-        #qs_center[0], qs_center[1], varkxp, varkyp, _ = mathx.mean_and_variance2(kx, ky, mathx.abs_sqd(Ek))
+        # qs_center[0], qs_center[1], varkxp, varkyp, _ = mathx.mean_and_variance2(kx, ky, mathx.abs_sqd(Ek))
         qs_center[0] = mathx.moment(kx, abs(Ek), 1)
         qs_center[1] = mathx.moment(ky, abs(Ek), 1)
 
-        Ik=mathx.abs_sqd(Ek)
+        Ik = mathx.abs_sqd(Ek)
         sumIk = Ik.sum()
         varkxp = mathx.moment(kx - qs_center[0], Ik, 2, sumIk)
         varkyp = mathx.moment(ky - qs_center[1], Ik, 2, sumIk)
@@ -164,137 +175,147 @@ def calc_beam_properties(rs_support, z, Er, Igradphi, rs_center=(0, 0)):
         varkx = bvar.infer_angular_variance_spherical(varx, phi_cx, varkxp)
         varky = bvar.infer_angular_variance_spherical(vary, phi_cy, varkyp)
 
-    return meanz, rs_center, np.asarray((varx, vary)), qs_center, np.asarray((varkx, varky)), np.asarray((phi_cx, phi_cy))
+    return meanz, rs_center, np.asarray((varx, vary)), qs_center, np.asarray((varkx, varky)), np.asarray(
+        (phi_cx, phi_cy))
 
 
-
-def calc_propagation_spherical(k, r_support, zi, Er, z, Igradphi=None, rs_center=(0, 0), qs_center=(0, 0), f_nexts=(np.inf, np.inf), qfds=(1, 1)):
+def calc_propagation_spherical(k, r_support, zi, Er, z, Igradphi=None, rs_center=(0, 0), qs_center=(0, 0),
+                               f_nexts=(np.inf, np.inf), qfds=(1, 1)):
     assert np.isscalar(z)
 
     Ir = mathx.abs_sqd(Er)
 
     if Igradphi is None:
-        Ek=math.fft2(Er)
+        Ek = math.fft2(Er)
         kx, ky = sa.calc_kxky(r_support, Ek.shape, qs_center)
-        gradxEx = math.ifft2(Ek*1j*kx)
-        gradyEy = math.ifft2(Ek*1j*ky)
+        gradxEx = math.ifft2(Ek * 1j * kx)
+        gradyEy = math.ifft2(Ek * 1j * ky)
         Igradphi = calc_Igradphi(k, Er, (gradxEx, gradyEy), Ir)
 
-    zi_mean, rs_center, var_rs, qs_center, var_qs, phi_cs=calc_beam_properties(k, r_support, zi, Er, Igradphi, rs_center)
+    zi_mean, rs_center, var_rs, qs_center, var_qs, phi_cs = calc_beam_properties(k, r_support, zi, Er, Igradphi,
+                                                                                 rs_center)
 
-    if isinstance(z,str) and z=='waist':
+    if isinstance(z, str) and z == 'waist':
         return_z = True
         z, var_r0, Msqd, z_R = bvar.calc_waist(k, var_rs, phi_cs, var_qs)
-        z=np.mean(z)
+        z = np.mean(z)
     else:
         return_z = False
 
-    m = bvar.calc_propagation_ms(k, r_support, var_rs, phi_cs, var_qs, z-zi_mean, Er.shape, f_nexts, qfds)
+    m = bvar.calc_propagation_ms(k, r_support, var_rs, phi_cs, var_qs, z - zi_mean, Er.shape, f_nexts, qfds)
 
     if return_z:
-        return m, z, rs_center, qs_center, zi_mean, rs_center + qs_center/k*(z - zi_mean)
+        return m, z, rs_center, qs_center, zi_mean, rs_center + qs_center / k * (z - zi_mean)
     else:
-        return m, rs_center, qs_center, zi_mean, rs_center + qs_center/k*(z - zi_mean)
+        return m, rs_center, qs_center, zi_mean, rs_center + qs_center / k * (z - zi_mean)
 
-def calc_refracted_propagation_spherical(r_support, z12, normal12, k1, Er1, gradEr1, k2, z, r1_centers=(0, 0), qs_center=(0,), f_nexts=(np.inf, np.inf), qfds=(1, 1)):
+
+def calc_refracted_propagation_spherical(r_support, z12, normal12, k1, Er1, gradEr1, k2, z, r1_centers=(0, 0),
+                                         qs_center=(0,), f_nexts=(np.inf, np.inf), qfds=(1, 1)):
     """Refract"""
     Ir1 = mathx.abs_sqd(Er1)
     Igradphi1 = refract_field_gradient(normal12, k1, Er1, gradEr1, k2, Ir1)
-    return calc_propagation_spherical(k2, r_support, z12,  Er1, z, Igradphi1, r1_centers, qs_center, f_nexts, qfds)
+    return calc_propagation_spherical(k2, r_support, z12, Er1, z, Igradphi1, r1_centers, qs_center, f_nexts, qfds)
 
 
-
-def calc_kxky_moment(rs_support, Iq, qs_center = (0, 0)):
+def calc_kxky_moment(rs_support, Iq, qs_center=(0, 0)):
     kxu, kyu, Iqu = sa.unroll_q(rs_support, Iq, qs_center)
     return mathx.moment(kxu, Iqu, 1), mathx.moment(kyu, Iqu, 1)
 
 
-def propagate_plane_to_plane_flat_1d(k, r_support, Er, z, q_center=0, axis=-1, paraxial=False):
+def propagate_plane_to_plane_flat_1d(k: float, r_support: float, Er: np.ndarray, z: float, q_center: float = 0.,
+                                     axis: int = -1, paraxial: bool = False) -> np.ndarray:
+    """Propagate 1D field Er a distance z between planes.
+
+    k is the wavevector length, r_support the spatial support, q_center the transverse angular domain center, and
+    axis the spatial axis of Er along which to work. If paraxial is True then paraxial propagation is used; otherwise
+    the exact propagator is used.
+    """
     num_points = Er.shape[axis]
     Eq = math.fft(Er, axis)
     q = sa.calc_q(r_support, num_points, q_center, axis)
     if paraxial:
-        Eq *= mathx.expj((k-q**2/(2*k))*z)
+        Eq *= mathx.expj((k - q ** 2 / (2 * k)) * z)
     else:
-        Eq *= mathx.expj((k**2-q**2)**0.5*z)
+        Eq *= mathx.expj((k ** 2 - q ** 2) ** 0.5 * z)
     Er = math.ifft(Eq, axis)
     return Er
 
 
-def propagate_plane_to_plane_spherical_paraxial_1d(k, r_support, Er, z, m, r_center=0, q_center=0, axis=-1):
-    """"Propagate field with spherical wavefront from plane to plane.
+def propagate_plane_to_plane_spherical_paraxial_1d(
+        k: float, r_support: float, Er: np.ndarray, z: float, m: float, r_center: float = 0., q_center: float = 0,
+        axis: int = -1) -> Tuple[np.ndarray, float]:
+    """"Propagate 1D field Er a distance z between planes with domain magnification m.
 
-    Args:
-        k:
-        r_support:
-        Er: changed!
+    The input Er is changed. k is the wavevector length, r_support the spatial support, r_center the real-space domain
+    center, q_center the transverse angular domain center, and axis the spatial axis of Er along which to work.
+
+    Sziklas-Siegman transform is used.
+
+    Returns: the propagated field and the propagated real-space domain center.
     """
-    propagator, post_factor, r_center_z = prepare_curved_paraxial_propagation_1d(k, r_support, Er, z, m, r_center, q_center, axis)
+    propagator, post_factor, r_center_z = prepare_curved_paraxial_propagation_1d(k, r_support, Er, z, m, r_center,
+                                                                                 q_center, axis)
     Ak = math.fft(Er, axis)
     Ak *= propagator
-    Er = math.ifft(Ak, axis)*post_factor
+    Er = math.ifft(Ak, axis) * post_factor
     return Er, r_center_z
 
-def propagate_plane_to_plane_spherical_paraxial_1dE(k, r_support, Eri, z, m, r_center = 0, q_center = 0):
-    """Propagate field with spherical wavefront from plane to plane.
 
-    kz is included.
+def propagate_plane_to_curved_spherical_paraxial_1d(k: float, r_support: float, Eri: Array1D, z: Array1D, m: float,
+                                                    r_center: float = 0., q_center: float = 0.) -> Array1D:
+    """Propagate 1D field Eri from plane to sampled curved surface using Sziklas-Siegman transform.
 
-    Args:
-        k:
-        rs_support:
-        Eri:
-        z (2D array): propagation distance vs (x, y)
-        m:
-        rs_center:
-        qs_center:
-
-    Returns:
-
+    kz is included. z is 1D array of propagation distances of the same size as Eri.
     """
     assert Eri.ndim == 1
     num_points = len(Eri)
     ri = sa.calc_r(r_support, num_points, r_center)
     qi = sa.calc_q(r_support, num_points, q_center)
-    roc = z/(m-1)
-    Qir = mathx.expj(-k*ri**2/(2*roc[:, None]))
+    roc = z / (m - 1)
+    Qir = mathx.expj(-k * ri ** 2 / (2 * roc[:, None]))
     T = math.make_fft_matrix(num_points)
-    P = mathx.expj((k-qi**2/(2*k*m))*z[:, None])
+    P = mathx.expj((k - qi ** 2 / (2 * k * m)) * z[:, None])
     invT = T.conj()
-    ro = ri*m
-    Qor = mathx.expj(k*ro**2/(2*(roc+z)))/m**0.5
+    ro = ri * m
+    Qor = mathx.expj(k * ro ** 2 / (2 * (roc + z))) / m ** 0.5
     # ro: i,  qi: j,  ri: k
     Ero = opt_einsum.contract('i, ij, ij, jk, ik, k->i', Qor, invT, P, T, Qir, Eri)
     return Ero
 
 
-def propagate_plane_to_waist_spherical_paraxial_1d(k, r_support, Er, z, r_center, q_center, roc, axis = -1):
+def propagate_plane_to_waist_spherical_paraxial_1d(k, r_support, Er, z, r_center, q_center, roc, axis=-1):
     num_points = Er.shape[axis]
     m_flat, z_flat, m = math.calc_curved_propagation(k, r_support, num_points, roc, z)
     if m_flat == 1:
         Er_flat = Er
         r_center_flat = r_center
     else:
-        Er_flat, r_center_flat = propagate_plane_to_plane_spherical_paraxial_1d(k, r_support, Er, -z_flat, 1/m_flat, r_center, q_center, axis)
+        Er_flat, r_center_flat = propagate_plane_to_plane_spherical_paraxial_1d(k, r_support, Er, -z_flat, 1 / m_flat,
+                                                                                r_center, q_center, axis)
     return Er_flat, z_flat, m_flat, m, r_center_flat
 
-def propagate_plane_to_plane_spherical_1d(k, r_support, Er, z, r_center = 0, q_center = 0, roc = np.inf, axis = -1):
+
+def propagate_plane_to_plane_spherical_1d(k, r_support, Er, z, r_center=0, q_center=0, roc=np.inf, axis=-1):
     num_points = Er.shape[axis]
-    Er_flat, z_flat, m_flat, m, r_center_flat = propagate_plane_to_waist_spherical_paraxial_1d(k, r_support, Er, z, r_center, q_center, roc)
-    r_support_flat = r_support/m_flat
-    z_paraxial = z/(1-(q_center/k)**2)**1.5
+    Er_flat, z_flat, m_flat, m, r_center_flat = propagate_plane_to_waist_spherical_paraxial_1d(k, r_support, Er, z,
+                                                                                               r_center, q_center, roc)
+    r_support_flat = r_support / m_flat
+    z_paraxial = z / (1 - (q_center / k) ** 2) ** 1.5
     q_flat = sa.calc_q(r_support_flat, num_points, q_center, axis)
-    extra_propagator = mathx.expj((k**2-q_flat**2)**0.5*z-(k-q_flat**2/(2*k))*z_paraxial)
+    extra_propagator = mathx.expj((k ** 2 - q_flat ** 2) ** 0.5 * z - (k - q_flat ** 2 / (2 * k)) * z_paraxial)
 
     Eq_flat = math.fft(Er_flat, axis)
     Eq_flat *= extra_propagator
     Er_flat = math.ifft(Eq_flat, axis)
 
-    Er, _ = propagate_plane_to_plane_spherical_paraxial_1d(k, r_support_flat, Er_flat, z_paraxial+z_flat, m*m_flat, r_center_flat, q_center)
+    Er, _ = propagate_plane_to_plane_spherical_paraxial_1d(k, r_support_flat, Er_flat, z_paraxial + z_flat, m * m_flat,
+                                                           r_center_flat, q_center)
 
-    rp_center = r_center+z*q_center/(k**2-q_center**2)**0.5
+    rp_center = r_center + z * q_center / (k ** 2 - q_center ** 2) ** 0.5
 
     return Er, m, rp_center
+
 
 def propagate_plane_to_plane_flat(k, rs_support, Er, z, qs_center=(0, 0), kz_mode='local_xy'):
     """Regularly (non-Sziklas-Siegman) propagate a field between two flat planes.
@@ -320,19 +341,20 @@ def propagate_plane_to_plane_flat(k, rs_support, Er, z, qs_center=(0, 0), kz_mod
         kxp = kx - qs_center[0]
         kyp = ky - qs_center[1]
         kz, gxkz, gykz, gxxkz, gyykz, gxykz = math.expand_kz(k, *qs_center)
-        propagator = mathx.expj((kz + gxkz*kxp + gykz*kyp + gxxkz*kxp**2/2 + gyykz*kyp**2/2)*z)
+        propagator = mathx.expj((kz + gxkz * kxp + gykz * kyp + gxxkz * kxp ** 2 / 2 + gyykz * kyp ** 2 / 2) * z)
         if kz_mode == 'local':
-            propagator *= mathx.expj(gxykz*kxp*kyp*z)
+            propagator *= mathx.expj(gxykz * kxp * kyp * z)
     elif kz_mode == 'exact':
         propagator = math.calc_propagator_exact(k, kx, ky, z)
     else:
-        raise ValueError('Unknown kz_mode %s.'%kz_mode)
+        raise ValueError('Unknown kz_mode %s.' % kz_mode)
     Eq *= propagator
     Er = math.ifft2(Eq)
     return Er
 
 
-def propagate_plane_to_plane_spherical(k, rs_support, Er, z, ms, rs_center=(0, 0), qs_center=(0, 0), ro_centers=None, kz_mode='local_xy'):
+def propagate_plane_to_plane_spherical(k, rs_support, Er, z, ms, rs_center=(0, 0), qs_center=(0, 0), ro_centers=None,
+                                       kz_mode='local_xy'):
     """Propagate from one plane to another using Sziklas-Siegman.
 
     Args:
@@ -357,35 +379,41 @@ def propagate_plane_to_plane_spherical(k, rs_support, Er, z, ms, rs_center=(0, 0
         zy = z
     elif kz_mode == 'local_xy':
         fx, fy, delta_kz, delta_gxkz, delta_gykz = math.calc_quadratic_kz_correction(k, *qs_center)
-        zx = fx*z
-        zy = fy*z
+        zx = fx * z
+        zy = fy * z
     else:
-        raise ValueError('Unknown kz_mode %s.'%kz_mode)
+        raise ValueError('Unknown kz_mode %s.' % kz_mode)
     x, y = sa.calc_xy(rs_support, Er.shape, rs_center)
-    roc_x = zx/(ms[0] - 1)
-    roc_y = zy/(ms[1] - 1)
+    roc_x = zx / (ms[0] - 1)
+    roc_y = zy / (ms[1] - 1)
     kx, ky = sa.calc_kxky(rs_support, Er.shape, qs_center)
-    kxp = kx - k*rs_center[0]/roc_x
-    kyp = ky - k*rs_center[1]/roc_y
-    Er = Er*math.calc_quadratic_phase_1d(-k, x - rs_center[0], roc_x)*math.calc_quadratic_phase_1d(-k, y - rs_center[1], roc_y)
+    kxp = kx - k * rs_center[0] / roc_x
+    kyp = ky - k * rs_center[1] / roc_y
+    Er = Er * math.calc_quadratic_phase_1d(-k, x - rs_center[0], roc_x) * math.calc_quadratic_phase_1d(-k,
+                                                                                                       y - rs_center[1],
+                                                                                                       roc_y)
     Eq = math.fft2(Er)
-    Eq *= math.calc_propagator_quadratic_1d(k*ms[0], kxp, zx)*math.calc_propagator_quadratic_1d(k*ms[1], kyp, zy)
+    Eq *= math.calc_propagator_quadratic_1d(k * ms[0], kxp, zx) * math.calc_propagator_quadratic_1d(k * ms[1], kyp, zy)
     # If local_xy mode, need translation correction factor.
     if kz_mode == 'local_xy':
-        Eq *= mathx.expj(delta_gxkz*kx/ms[0]*z + delta_gykz*ky/ms[1]*z)
+        Eq *= mathx.expj(delta_gxkz * kx / ms[0] * z + delta_gykz * ky / ms[1] * z)
 
-    Er = math.ifft2(Eq)*math.calc_spherical_post_factor(k, rs_support, Er.shape, z, ms, rs_center, qs_center, ro_centers, kz_mode)
+    Er = math.ifft2(Eq) * math.calc_spherical_post_factor(k, rs_support, Er.shape, z, ms, rs_center, qs_center,
+                                                          ro_centers, kz_mode)
     return Er
 
 
 def propagate_plane_to_curved_flat(k, rs_support, Eri, z, qs_center=(0, 0), kz_mode='local_xy'):
     """ """
-    invTx, gradxinvTx, invTy, gradyinvTy, Px, Py, Tx, Ty = math.calc_plane_to_curved_flat_factors(k, rs_support, Eri.shape, z, qs_center, kz_mode)
+    invTx, gradxinvTx, invTy, gradyinvTy, Px, Py, Tx, Ty = math.calc_plane_to_curved_flat_factors(k, rs_support,
+                                                                                                  Eri.shape, z,
+                                                                                                  qs_center, kz_mode)
     # xo=i, yo=j, kx=k, ky=l, xi=m, yi=n.
     Ero = opt_einsum.contract('ik, jl, ijk, ijl, km, ln, mn -> ij', invTx, invTy, Px, Py, Tx, Ty, Eri)
     gradxEo = opt_einsum.contract('ik, jl, ijk, ijl, km, ln, mn -> ij', gradxinvTx, invTy, Px, Py, Tx, Ty, Eri)
     gradyEo = opt_einsum.contract('ik, jl, ijk, ijl, km, ln, mn -> ij', invTx, gradyinvTy, Px, Py, Tx, Ty, Eri)
     return Ero, (gradxEo, gradyEo)
+
 
 def propagate_plane_to_curved_flat_arbitrary(k, rs_support, Eri, z, xo, yo, qs_center=(0, 0), kz_mode='local_xy'):
     """Propagate from uniformly sampled plane to arbitrarily sampled curved surface.
@@ -414,18 +442,21 @@ def propagate_plane_to_curved_flat_arbitrary(k, rs_support, Eri, z, xo, yo, qs_c
     return Ero, (gradxEo, gradyEo)
 
 
-def invert_plane_to_curved_flat(k, rs_support, Ero, z, qs_center=(0, 0), kz_mode='local_xy', max_iterations=None, tol=None):
+def invert_plane_to_curved_flat(k, rs_support, Ero, z, qs_center=(0, 0), kz_mode='local_xy', max_iterations=None,
+                                tol=None):
     propagator = math.prepare_plane_to_curved_flat(k, rs_support, Ero.shape, z, qs_center, kz_mode)
     Eri = propagator.invert(Ero, max_iterations, tol)
     return Eri, propagator
 
-def propagate_curved_to_plane_flat(k, rs_support, Eri, z, qs_center=(0, 0), kz_mode='local_xy', max_iterations=None, tol=None):
+
+def propagate_curved_to_plane_flat(k, rs_support, Eri, z, qs_center=(0, 0), kz_mode='local_xy', max_iterations=None,
+                                   tol=None):
     Eri, propagator = invert_plane_to_curved_flat(k, rs_support, Eri, -z, qs_center, kz_mode, max_iterations, tol)
     return Eri
 
 
-
-def propagate_plane_to_curved_spherical(k, rs_support, Eri, z, ms, rs_center=(0, 0), qs_center=(0, 0), ro_centers=None, kz_mode='local_xy'):
+def propagate_plane_to_curved_spherical(k, rs_support, Eri, z, ms, rs_center=(0, 0), qs_center=(0, 0), ro_centers=None,
+                                        kz_mode='local_xy'):
     """
     The kz term uses zx.
 
@@ -467,10 +498,11 @@ def propagate_plane_to_curved_spherical(k, rs_support, Eri, z, ms, rs_center=(0,
     """
     assert Eri.ndim == 2
     ms = sa.to_scalar_pair(ms)
-    factors = math.calc_plane_to_curved_spherical_factors(k, rs_support, Eri.shape, z, ms, rs_center, qs_center, ro_centers, kz_mode)
-    #Qo, gradxphiQo, gradyphiQo,
+    factors = math.calc_plane_to_curved_spherical_factors(k, rs_support, Eri.shape, z, ms, rs_center, qs_center,
+                                                          ro_centers, kz_mode)
+    # Qo, gradxphiQo, gradyphiQo,
     invTPx, gradxinvTPx, invTPy, gradyinvTPy, Tx, Ty, Qix, Qiy = factors
-    #(gradxphiQo, gradyphiQo, gradzphiQo), (gradxinvTx, gradyinvTy, (gradzPx, gradzPy)), Qo, invTx, invTy, Px, Py, Tx, Ty, Qix, Qiy = factors
+    # (gradxphiQo, gradyphiQo, gradzphiQo), (gradxinvTx, gradyinvTy, (gradzPx, gradzPy)), Qo, invTx, invTy, Px, Py, Tx, Ty, Qix, Qiy = factors
 
     # xo: i,  yo: j,  kx: k,  ky: l,  xi: m,  yi: n.
     Ero = opt_einsum.contract('ijk, ijl, km, ln, ijm, ijn, mn -> ij', invTPx, invTPy, Tx, Ty, Qix, Qiy, Eri)
@@ -478,7 +510,7 @@ def propagate_plane_to_curved_spherical(k, rs_support, Eri, z, ms, rs_center=(0,
     gradyEro = opt_einsum.contract('ijk, ijl, km, ln, ijm, ijn, mn -> ij', invTPx, gradyinvTPy, Tx, Ty, Qix, Qiy, Eri)
     # This one isn't correct - see (partial) discussion page 117 Dane's logbook 2. For now we can assume geometrical optics
     # applies (aproximately),  so the length of the phase gradient is k.
-    #gradzEro = 1j*gradzphiQo*Ero+opt_einsum.contract('ij, ik, jl, ijk, ijl, km, ln, ijm, ijn, mn->ij', Qo, invTx, invTy, gradzPx, Py, Tx, Ty, Qix, Qiy, Eri)+opt_einsum.contract('ij, ik, jl, ijk, ijl, km, ln, ijm, ijn, mn->ij', Qo, invTx, invTy, Px, gradzPy, Tx, Ty, Qix, Qiy, Eri)
+    # gradzEro = 1j*gradzphiQo*Ero+opt_einsum.contract('ij, ik, jl, ijk, ijl, km, ln, ijm, ijn, mn->ij', Qo, invTx, invTy, gradzPx, Py, Tx, Ty, Qix, Qiy, Eri)+opt_einsum.contract('ij, ik, jl, ijk, ijl, km, ln, ijm, ijn, mn->ij', Qo, invTx, invTy, Px, gradzPy, Tx, Ty, Qix, Qiy, Eri)
     return Ero, (gradxEro, gradyEro)
 
 
@@ -505,8 +537,9 @@ def propagate_plane_to_curved_spherical_arbitrary(k, rs_support, Eri, z, xo, yo,
     """
     assert Eri.ndim == 2
     invTPx, gradxinvTPx, invTPy, gradyinvTPy, Tx, Ty, Qix, Qiy = \
-        math.calc_plane_to_curved_spherical_arbitrary_factors(k, rs_support, Eri.shape, z, xo, yo, roc_x, roc_y, rs_center,
-                                                        qs_center, ro_centers, kz_mode)
+        math.calc_plane_to_curved_spherical_arbitrary_factors(k, rs_support, Eri.shape, z, xo, yo, roc_x, roc_y,
+                                                              rs_center,
+                                                              qs_center, ro_centers, kz_mode)
 
     # xo: i,  yo: j,  kx: k,  ky: l,  xi: m,  yi: n.
     Ero = opt_einsum.contract('ijk, ijl, km, ln, ijm, ijn, mn -> ij', invTPx, invTPy, Tx, Ty, Qix, Qiy, Eri)
@@ -541,7 +574,8 @@ def invert_plane_to_curved_spherical(k, rs_support, Ero, z, ms, rs_center=(0, 0)
     """
     ms = sa.to_scalar_pair(ms)
     num_pointss = Ero.shape
-    propagator = math.prepare_plane_to_curved_spherical(k, rs_support, num_pointss, z, ms, rs_center, qs_center, ro_centers, kz_mode)
+    propagator = math.prepare_plane_to_curved_spherical(k, rs_support, num_pointss, z, ms, rs_center, qs_center,
+                                                        ro_centers, kz_mode)
     if 0:
         # Old fixed iteration method,  based on intuition that propagation from curved surface to plane and back
         # is approximately identity. Starts to converge,  but it is unstable. Can be made stable by reducing the change
@@ -549,27 +583,30 @@ def invert_plane_to_curved_spherical(k, rs_support, Ero, z, ms, rs_center=(0, 0)
         rms_tol = 1e-6
         alpha = 0.1
 
-        Erop = np.zeros(Ero.shape, dtype = complex)
-        Eri = np.zeros(Ero.shape, dtype = complex)
+        Erop = np.zeros(Ero.shape, dtype=complex)
+        Eri = np.zeros(Ero.shape, dtype=complex)
         num_iterations = 0
         sum_sqd_Ero = mathx.sum_abs_sqd(Ero)
         while True:
-            delta_Ero = Ero-Erop
-            rms_error = (mathx.sum_abs_sqd(delta_Ero)/sum_sqd_Ero)**0.5
+            delta_Ero = Ero - Erop
+            rms_error = (mathx.sum_abs_sqd(delta_Ero) / sum_sqd_Ero) ** 0.5
             if rms_error <= 1e-6 or num_iterations >= max_iterations:
                 break
-            print('Iteration %d: RMS error %g.'%(num_iterations, rms_error))
-            Eri += propagator.apply_reverse(delta_Ero)*alpha
-            #Eri *= (sum_sqd_Ero*np.prod(ms)/mathx.sum_abs_sqd(Eri))**0.5
+            print('Iteration %d: RMS error %g.' % (num_iterations, rms_error))
+            Eri += propagator.apply_reverse(delta_Ero) * alpha
+            # Eri *= (sum_sqd_Ero*np.prod(ms)/mathx.sum_abs_sqd(Eri))**0.5
             Erop = propagator.apply(Eri)
             num_iterations += 1
-        if rms_error>rms_tol:
-            print('Warning - after %d iterations,  RMS error was %g but tolerance was %g.'%(num_iterations, rms_error, rms_tol))
+        if rms_error > rms_tol:
+            print('Warning - after %d iterations,  RMS error was %g but tolerance was %g.' % (
+                num_iterations, rms_error, rms_tol))
     else:
         Eri = propagator.invert(Ero, max_iterations, tol)
     return Eri, propagator
 
-def invert_plane_to_curved_spherical_arbitrary(k, rs_support, num_pointss, Ero, z, xo, yo, roc_xo, roc_yo, rs_center=(0, 0), qs_center=(0, 0),
+
+def invert_plane_to_curved_spherical_arbitrary(k, rs_support, num_pointss, Ero, z, xo, yo, roc_xo, roc_yo,
+                                               rs_center=(0, 0), qs_center=(0, 0),
                                                ro_centers=None, kz_mode='local_xy', invert_kwargs=None):
     """Invert propagation from a plane to a curved arbitrarily sampled surface.
 
@@ -594,18 +631,19 @@ def invert_plane_to_curved_spherical_arbitrary(k, rs_support, num_pointss, Ero, 
     """
     assert Ero.shape == z.shape
     assert xo.shape == (Ero.shape[0], 1)
-    assert yo.shape == (Ero.shape[1], )
+    assert yo.shape == (Ero.shape[1],)
     assert roc_xo.shape == z.shape
     assert roc_yo.shape == z.shape
     if invert_kwargs is None:
         invert_kwargs = {}
 
     propagator = math.prepare_plane_to_curved_spherical_arbitrary(k, rs_support, num_pointss, z, xo, yo, roc_xo, roc_yo,
-        rs_center, qs_center, ro_centers, kz_mode)
+                                                                  rs_center, qs_center, ro_centers, kz_mode)
     Eri = propagator.invert(Ero, **invert_kwargs)
     return Eri, propagator
 
-def propagate_curved_to_plane_spherical(k, rs_support, Eri, z, ms, ri_centers=(0, 0), qs_center = (0, 0),
+
+def propagate_curved_to_plane_spherical(k, rs_support, Eri, z, ms, ri_centers=(0, 0), qs_center=(0, 0),
                                         ro_centers=None, kz_mode='local_xy', max_iterations=None, tol=None):
     """
 
@@ -630,11 +668,14 @@ def propagate_curved_to_plane_spherical(k, rs_support, Eri, z, ms, ri_centers=(0
         Iri = mathx.abs_sqd(Eri)
         sumIri = Iri.sum()
         z_center = mathx.moment(z, Iri, 1, sumIri)
-        ro_centers = math.adjust_r(k, ri_centers, z, qs_center, kz_mode) # TODO should be z_center?
-    Ero, propagator = invert_plane_to_curved_spherical(k, rs_support*ms, Eri, -z, 1/ms, ro_centers, qs_center, ri_centers, kz_mode, max_iterations, tol)
+        ro_centers = math.adjust_r(k, ri_centers, z, qs_center, kz_mode)  # TODO should be z_center?
+    Ero, propagator = invert_plane_to_curved_spherical(k, rs_support * ms, Eri, -z, 1 / ms, ro_centers, qs_center,
+                                                       ri_centers, kz_mode, max_iterations, tol)
     return Ero
 
-def propagate_arbitrary_curved_to_plane_spherical(k, xi, yi, Eri, roc_xi, roc_yi, zi, ro_supports, num_pointsso, ri_centers=(0, 0), qs_center = (0, 0),
+
+def propagate_arbitrary_curved_to_plane_spherical(k, xi, yi, Eri, roc_xi, roc_yi, zi, ro_supports, num_pointsso,
+                                                  ri_centers=(0, 0), qs_center=(0, 0),
                                                   ro_centers=None, kz_mode='local_xy', invert_kwargs=None):
     """
 
@@ -658,7 +699,7 @@ def propagate_arbitrary_curved_to_plane_spherical(k, xi, yi, Eri, roc_xi, roc_yi
         Ero (array of size num_pointsso):
     """
     assert xi.shape == (Eri.shape[0], 1)
-    assert yi.shape == (Eri.shape[1], )
+    assert yi.shape == (Eri.shape[1],)
     assert Eri.ndim == 2
     assert roc_xi.shape == Eri.shape
     assert roc_yi.shape == Eri.shape
@@ -672,7 +713,8 @@ def propagate_arbitrary_curved_to_plane_spherical(k, xi, yi, Eri, roc_xi, roc_yi
     roc_x = roc_xi + zi
     roc_y = roc_yi + zi
     Ero, propagator = invert_plane_to_curved_spherical_arbitrary(k, ro_supports, num_pointsso, Eri, z, xi, yi, roc_x,
-        roc_y, ro_centers, qs_center, ri_centers, kz_mode, invert_kwargs)
+                                                                 roc_y, ro_centers, qs_center, ri_centers, kz_mode,
+                                                                 invert_kwargs)
 
     return Ero
 

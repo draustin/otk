@@ -158,10 +158,10 @@ def test_propagate_curved_paraxial_surface_1d():
     z_R = waist0**2*k/2
     num_rayleighs_mean = 5
     m = (1 + num_rayleighs_mean**2)**0.5
-    num_rayleighs = num_rayleighs_mean + np.random.randn(num_points) # Get rid of random - want deterministic.
+    num_rayleighs = num_rayleighs_mean + np.random.randn(num_points) # TODO Get rid of random - want deterministic.
     z2 = z_R*num_rayleighs
     Er1 = asbp.calc_gaussian_1d(k, r1, waist0, 0)
-    Er2 = asbp.propagate_plane_to_plane_spherical_paraxial_1dE(k, r_support, Er1, z2, m)
+    Er2 = asbp.propagate_plane_to_curved_spherical_paraxial_1d(k, r_support, Er1, z2, m)
     r2 = r1*m
     Er2_theory = asbp.calc_gaussian_1d(k, r2, waist0, z2)
     assert mathx.allclose(Er2, Er2_theory, 1e-6)

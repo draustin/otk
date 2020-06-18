@@ -16,7 +16,7 @@ from .math import calc_curved_propagation_m, adjust_r, prepare_plane_to_curved_f
     prepare_plane_to_curved_spherical_arbitrary, prepare_plane_to_curved_flat_arbitrary
 from .fsq import calc_gradxyE, calc_gradxyE_spherical, propagate_plane_to_plane_flat_1d, propagate_plane_to_plane_flat, \
     propagate_plane_to_plane_spherical_1d, propagate_plane_to_plane_spherical_paraxial_1d, \
-    propagate_plane_to_plane_spherical_paraxial_1dE, propagate_plane_to_plane_spherical, invert_plane_to_curved_flat, \
+    propagate_plane_to_curved_spherical_paraxial_1d, propagate_plane_to_plane_spherical, invert_plane_to_curved_flat, \
     propagate_plane_to_curved_flat, propagate_plane_to_curved_spherical, invert_plane_to_curved_spherical, \
     propagate_plane_to_curved_spherical_arbitrary, propagate_plane_to_curved_flat_arbitrary, \
     invert_plane_to_curved_spherical_arbitrary, propagate_arbitrary_curved_to_plane_spherical
