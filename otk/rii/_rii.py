@@ -169,6 +169,7 @@ def search(page_str: str = None, book_str: str = None, shelf_str: str = None) ->
 
 
 def lookup_index(page_str: str = None, book_str: str = None, shelf_str: str = None, check_range: bool = True) -> Callable:
+    """Lookup refractive index data returning a function of wavelength."""
     pages = search(page_str, book_str, shelf_str)
     if len(pages) != 1:
         raise ValueError(f'Found {len(pages)} matching pages.')
