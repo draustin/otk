@@ -28,3 +28,4 @@ Numeric = Union[float, np.ndarray, Sequence[float], Sequence[Sequence[float]]]
 
 # Numpy arrays of a certain number of dimensions.
 Array1D = np.ndarray
+Array2D = np.ndarray

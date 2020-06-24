@@ -11,13 +11,13 @@ Here kt is transverse component.
 """
 from .sa import calc_r, calc_q, calc_xy, calc_kxky, unroll_r, unroll_q, to_scalar_pair, calc_Eq_factor
 from .source import calc_gaussian_1d, calc_gaussian
-from .math import calc_curved_propagation_m, adjust_r, prepare_plane_to_curved_flat, prepare_plane_to_curved_spherical, \
+from .math import calc_curved_propagation_m, adjust_r, prepare_plane_to_curved_flat, prepare_plane_to_curved_sst, \
     fft, ifft, fft2, ifft2, calc_propagation_m_1d, make_ifft_arbitrary_matrix, make_fft_matrix, \
     prepare_plane_to_curved_spherical_arbitrary, prepare_plane_to_curved_flat_arbitrary
 from .fsq import calc_gradxyE, calc_gradxyE_spherical, propagate_plane_to_plane_flat_1d, propagate_plane_to_plane_flat, \
     propagate_plane_to_plane_spherical_1d, propagate_plane_to_plane_spherical_paraxial_1d, \
     propagate_plane_to_curved_spherical_paraxial_1d, propagate_plane_to_plane_spherical, invert_plane_to_curved_flat, \
-    propagate_plane_to_curved_flat, propagate_plane_to_curved_spherical, invert_plane_to_curved_spherical, \
+    propagate_plane_to_curved_flat, propagate_plane_to_curved_sst, invert_plane_to_curved_spherical, \
     propagate_plane_to_curved_spherical_arbitrary, propagate_plane_to_curved_flat_arbitrary, \
     invert_plane_to_curved_spherical_arbitrary, propagate_arbitrary_curved_to_plane_spherical
 from .profiles import NullProfileError, PlaneProfile, CurvedProfile, calc_quadratic_phase_mask

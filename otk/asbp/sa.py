@@ -1,4 +1,5 @@
 """Functions and definitions related to beam sampling axes."""
+from typing import Union, Tuple
 from collections import namedtuple
 import numpy as np
 import mathx
@@ -10,7 +11,8 @@ RQ = namedtuple('RQ', ('r', 'q'))
 def arange_centered(num: int, axis: int = -1) -> np.ndarray:
     return mathx.reshape_vec(np.arange(num)-(num-1)/2, axis)
 
-def to_scalar_pair(x):
+
+def to_scalar_pair(x: Union[float, Tuple[float, float]]) -> np.ndarray:
     """Produce pair of scalars with type checking.
 
     Returns:

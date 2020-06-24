@@ -8,7 +8,7 @@ import numpy as np
 import opt_einsum
 import mathx
 from mathx import matseq
-from ..types import Array1D
+from ..types import Array1D, Sequence2, Array2D
 from . import sa, math
 from .. import bvar
 
@@ -267,6 +267,9 @@ def propagate_plane_to_curved_spherical_paraxial_1d(k: float, r_support: float, 
     """Propagate 1D field Eri from plane to sampled curved surface using Sziklas-Siegman transform.
 
     kz is included. z is 1D array of propagation distances of the same size as Eri.
+
+    Limitations: all output points have common magnification. The output domain is simply m times the input domain i.e.
+    it doesn't track the beam according to r_center and q_center.
     """
     assert Eri.ndim == 1
     num_points = len(Eri)
@@ -455,23 +458,26 @@ def propagate_curved_to_plane_flat(k, rs_support, Eri, z, qs_center=(0, 0), kz_m
     return Eri
 
 
-def propagate_plane_to_curved_spherical(k, rs_support, Eri, z, ms, rs_center=(0, 0), qs_center=(0, 0), ro_centers=None,
-                                        kz_mode='local_xy'):
-    """
-    The kz term uses zx.
+def propagate_plane_to_curved_sst(
+        k: float, rs_support: Sequence2, Eri: Array2D, z: Array2D, ms: Sequence2, rs_center: Sequence2 = (0., 0.),
+        qs_center: Sequence2 = (0., 0.),ro_centers: Sequence2 = None,
+        kz_mode: str = 'local_xy') -> Tuple[Array2D, Tuple[Array2D, Array2D]]:
+    """Propagate 2D beam from flat to curved surface using (paraxial) Sziklas-Siegman transform.
 
-    Args:
-        k:
-        rs_support:
-        Eri: not changed
-        z (2D array): propagation distance vs (x, y)
-        m:
-        rs_center:
-        qs_center:
+    The Sziklas-Siegman transform magnifications along x and y are ms i.e. are the same for all output points.
+
+    The input beam at the planar surface is defined by its wavenumber k, its support along x and y axes rs_support,
+    its sampled amplitudes Eri, its center of support rs_center, and its center of transverse wavevector support qs_center.
+
+    The center of the final real-space support is given by ro_centers, which defaults to a calculated shift from ri_centers
+    given the propagation distance and qs_center.
+
+    kz_mode is either 'paraxial' or 'local_xy'.
 
     Returns:
+        The propagated beam, and its derivatives along x and y.
 
-
+    # Optimization
     cProfile.run('asbp.propagate_curved_paraxial_surface(k, rs_support, Er1, z2, m, rs_center, qs_center)', sort = 'cumtime')
     May 14 2018 1530 - cProfile.run sorted by cumtime gives for (2**8, 2**8) gives:
 
@@ -492,12 +498,15 @@ def propagate_plane_to_curved_spherical(k, rs_support, Eri, z, ms, rs_center=(0,
 
     Factored out x_factor and y_factor. Now 4.5 s for one off,  but expect it to be much faster for multiple calculations.
 
+    # Numerics
     Numerical instability. 2**6, 2**7. Did 20 iterations,  at which point it was clearly exploding (RMS error 10^10). Calculated
     propagator,  applied to resulting Er1,  then applied in reverse. Result was 12 times bigger i.e. eigenvalue of A^t*A
     is 12 where A is the matrix which transforms from Eri to Ero.
     """
+    assert z.ndim == 2
     assert Eri.ndim == 2
-    ms = sa.to_scalar_pair(ms)
+    ms = np.asarray(ms, float)
+    assert ms.shape == (2,)
     factors = math.calc_plane_to_curved_spherical_factors(k, rs_support, Eri.shape, z, ms, rs_center, qs_center,
                                                           ro_centers, kz_mode)
     # Qo, gradxphiQo, gradyphiQo,
@@ -574,8 +583,8 @@ def invert_plane_to_curved_spherical(k, rs_support, Ero, z, ms, rs_center=(0, 0)
     """
     ms = sa.to_scalar_pair(ms)
     num_pointss = Ero.shape
-    propagator = math.prepare_plane_to_curved_spherical(k, rs_support, num_pointss, z, ms, rs_center, qs_center,
-                                                        ro_centers, kz_mode)
+    propagator = math.prepare_plane_to_curved_sst(k, rs_support, num_pointss, z, ms, rs_center, qs_center,
+                                                  ro_centers, kz_mode)
     if 0:
         # Old fixed iteration method,  based on intuition that propagation from curved surface to plane and back
         # is approximately identity. Starts to converge,  but it is unstable. Can be made stable by reducing the change

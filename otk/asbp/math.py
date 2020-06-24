@@ -5,6 +5,7 @@ import numba
 import opt_einsum
 import pyfftw
 import mathx
+from ..types import Sequence2, Array2D
 from .. import bvar
 from . import sa
 
@@ -581,7 +582,7 @@ def prepare_plane_to_curved_flat_arbitrary(k, rs_support, num_pointss, z, xo, yo
 
 
 def calc_plane_to_curved_spherical_factors(k, rs_support, num_pointss, z, ms, ri_centers=(0, 0), qs_center=(0, 0),
-                                           ro_centers=(0, 0), kz_mode='local_xy'):
+                                           ro_centers=None, kz_mode='local_xy'):
     """Calculate factors for 2D Sziklas-Siegman propagation (paraxial) from flat to curved surface(s).
 
     The magnifications must be the same for all output points, but can be different for the x and y planes.
@@ -872,24 +873,17 @@ class MagnifyingPropagator(Propagator):
         return Eriv
 
 
-def prepare_plane_to_curved_spherical(k, rs_support, num_pointss, z, ms, rs_center=(0, 0), qs_center=(0, 0),
-                                      ro_centers=(0, 0), kz_mode='local_xy'):
-    """Prepare spherical wavefront propagator from uniformly sampled plane to curved surface.
+def prepare_plane_to_curved_sst(
+        k: float, rs_support: Sequence2, num_pointss: Sequence2, z: Array2D, ms: Sequence2, rs_center: Sequence2 = (0, 0),
+        qs_center: Sequence2 = (0., 0.), ro_centers: Sequence2 = None, kz_mode: str = 'local_xy') -> MagnifyingPropagator:
+    """Prepare Sziklas-Siegman wavefront propagator from uniformly sampled plane to curved surface.
 
-    Args:
-        k (scalar): Wavenumber.
-        rs_support (scalar or pair): Real space support.
-        num_pointss (scalar int or pair): Number of sampling points.
-        z (array of size num_pointss): Propagation for distance.
-        ms (scalar or pair): Magnification(s).
-        rs_center (pair of scalars): Center of initial real-space aperture.
-        qs_center (pair of scalars): Center of angular space aperture.
-        ro_centers (pair of scalars): Center of final real-space aperture. If not given, the shift from ri_centers is
-            inferred from the propagation distance and qs_center.
-        kz_mode (str): 'paraxial' or 'local_xy'.
+    The input domain is specified by the wavenumber k, its support along x and y rs_support, the number of sampling points
+    along x and y num_pointss, the center of support in (x, y) rs_center, the center of support in (kx, ky) qs_center.
+    The center of the output (x, y) support can be given by ro_centers; otherwise the shift from ri_centers is
+    inferred from the propagation distance and qs_center.
 
-    Returns:
-        PlaneToCurvedSphericalParaxialPropagator object
+    kz_mode can be 'local_xy' or 'paraxial'.
     """
     #744 ms for num_pointss = 256, 256.
     ms = sa.to_scalar_pair(ms)

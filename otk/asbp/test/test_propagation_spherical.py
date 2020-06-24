@@ -153,22 +153,26 @@ def test_propagate_curved_paraxial_surface_1d():
     k = 2*np.pi/860e-9
     num_points = 2**8
     waist0 = 20e-6
-    r_support = (np.pi*num_points)**0.5*waist0
-    r1 = asbp.calc_r(r_support, num_points)
+    r1_support = (np.pi*num_points)**0.5*waist0
+    r_center = 2*waist0
+    r1 = asbp.calc_r(r1_support, num_points, r_center)
     z_R = waist0**2*k/2
     num_rayleighs_mean = 5
     m = (1 + num_rayleighs_mean**2)**0.5
     num_rayleighs = num_rayleighs_mean + np.random.randn(num_points) # TODO Get rid of random - want deterministic.
     z2 = z_R*num_rayleighs
-    Er1 = asbp.calc_gaussian_1d(k, r1, waist0, 0)
-    Er2 = asbp.propagate_plane_to_curved_spherical_paraxial_1d(k, r_support, Er1, z2, m)
-    r2 = r1*m
-    Er2_theory = asbp.calc_gaussian_1d(k, r2, waist0, z2)
+    r1_beam = r_center
+    Er1 = asbp.calc_gaussian_1d(k, r1, waist0, 0, r1_beam)
+    Er2 = asbp.propagate_plane_to_curved_spherical_paraxial_1d(k, r1_support, Er1, z2, m, r_center)
+    #r2 = asbp.calc_r(r1_support*m, num_points, r_center)
+    r2 = r1 * m
+    Er2_theory = asbp.calc_gaussian_1d(k, r2, waist0, z2, r1_beam)
     assert mathx.allclose(Er2, Er2_theory, 1e-6)
     ##
     # plot=pg.plot(r1*1e6, abs(Er1), pen='b')
     # plot.plot(r2*1e6, abs(Er2), pen=pg.mkPen('r', width=2))
     # plot.plot(r2*1e6, abs(Er2_theory), pen='g')
+
 
 @pytest.mark.slow
 def test_propagate_plane_to_curved_spherical():
@@ -191,19 +195,20 @@ def test_propagate_plane_to_curved_spherical():
         kz_mode = 'local_xy' if qs_center == (0, 0) else 'paraxial'
         r2_centers = asbp.adjust_r(k, rs_center, z2_mean, qs_center, kz_mode)
         Er1 = asbp.calc_gaussian(k, x1, y1, waist0s, 0, r_offsets, q_offsets)
-        Er2, gradxyEr2 = asbp.propagate_plane_to_curved_spherical(k, rs_support, Er1, z2, m, rs_center, qs_center,
-            r2_centers, kz_mode)
+        Er2, gradxyEr2 = asbp.propagate_plane_to_curved_sst(k, rs_support, Er1, z2, (m, m), rs_center, qs_center,
+                                                            r2_centers, kz_mode)
         x2, y2 = asbp.calc_xy(r2_supports, num_pointss, r2_centers)
         Er2_theory, gradxyEr2_theory = asbp.calc_gaussian(k, x2, y2, waist0s, z2, r_offsets, q_offsets, gradr=True)
         assert mathx.allclose(Er2, Er2_theory, 1e-7)
         assert mathx.allclose(gradxyEr2, gradxyEr2_theory, 1e-6)
-        propagator = asbp.prepare_plane_to_curved_spherical(k, rs_support, Er1.shape, z2, m, rs_center, qs_center,
-            r2_centers, kz_mode)
+        propagator = asbp.prepare_plane_to_curved_sst(k, rs_support, Er1.shape, z2, m, rs_center, qs_center,
+                                                      r2_centers, kz_mode)
         Er2p = propagator.apply(Er1)
         assert mathx.allclose(Er2, Er2p, 1e-15)
     ##
     # Er2_fig = asbp.plot_abs_waves_r_q(r2_supports, Er2, r2_centers, qs_center)
     # Er2_theory_fig = asbp.plot_abs_waves_r_q(r2_supports, Er2_theory, r2_centers, qs_center)
+
 
 @pytest.mark.slow
 def test_propagate_plane_to_curved_spherical_arbitrary():
@@ -248,6 +253,7 @@ def test_propagate_plane_to_curved_spherical_arbitrary():
     # Er2_fig = asbp.plot_abs_waves_r_q(r2_supports, Er2, r2_centers, qs_center)
     # Er2_theory_fig = asbp.plot_abs_waves_r_q(r2_supports, Er2_theory, r2_centers, qs_center)
 
+
 @pytest.mark.slow
 def test_propagate_plane_to_curved_spherical_gradxy_localxy():
     """Use propagate_plane_to_curved_spherical with plane surface to allow numerical calculation of the gradient."""
@@ -268,11 +274,12 @@ def test_propagate_plane_to_curved_spherical_gradxy_localxy():
         z2 = z_R*num_rayleighs*np.ones(num_pointss)
         r2_centers = asbp.adjust_r(k, rs_center, z2_mean, qs_center, 'local_xy')
         Er1 = asbp.calc_gaussian(k, x1, y1, waist0s, 0, r_offsets, q_offsets)
-        Er2, gradxyEr2 = asbp.propagate_plane_to_curved_spherical(k, rs_support, Er1, z2, m, rs_center, qs_center,
-            r2_centers, 'local_xy')
+        Er2, gradxyEr2 = asbp.propagate_plane_to_curved_sst(k, rs_support, Er1, z2, (m, m), rs_center, qs_center,
+                                                            r2_centers, 'local_xy')
         x2, y2 = asbp.calc_xy(r2_supports, num_pointss, r2_centers)
         gradxyEr2_num = asbp.calc_gradxyE_spherical(k, r2_supports, Er2, rocs, r2_centers, qs_center)
         assert mathx.allclose(gradxyEr2, gradxyEr2_num, 1e-6)
+
 
 def test_invert_plane_to_curved_spherical():
     k = 2*np.pi/860e-9
@@ -309,6 +316,7 @@ def test_invert_plane_to_curved_spherical():
     ##
     # Er1_fig = asbp.plot_abs_waves_r_q(rs_support, Er1, rs_center, qs_center)
     # Er1_theory_fig = asbp.plot_abs_waves_r_q(rs_support, Er1_theory, rs_center, qs_center)
+
 
 @pytest.mark.slow
 def test_invert_plane_to_curved_spherical_arbitrary():
@@ -390,6 +398,7 @@ def test_invert_plane_to_curved_spherical_arbitrary():
         absEr1_diff_fig = asbp.plot_r_q_polar(r1_supports, abs(Er1) - abs(Er1_theory), r1_centers, qs_center)
         absEr1_diff_fig[0].setWindowTitle('abs Er1 diff')
 
+
 @pytest.mark.slow
 def test_curved_interface_collimate():
     lamb = 587.6e-9
@@ -407,13 +416,14 @@ def test_curved_interface_collimate():
     r1_support = m*r0_support
     x1, y1 = asbp.calc_xy(r1_support, num_points)
     sag = functions.calc_sphere_sag_xy(roc, x1, y1)
-    Er1, _ = asbp.propagate_plane_to_curved_spherical(k, r0_support, Er0, f + sag, m)
+    Er1, _ = asbp.propagate_plane_to_curved_sst(k, r0_support, Er0, f + sag, (m, m))
     Er2, propagator = asbp.invert_plane_to_curved_spherical(k*n, r1_support, Er1, -f*n + sag, 1)
     ##
     waist2 = f*lamb/(np.pi*waist0)
     Er2_theory = asbp.calc_gaussian(k, x1, y1, waist2)
     Er2_theory *= mathx.expj(np.angle(Er2[0, 0]/Er2_theory[0, 0]))
     assert mathx.allclose(Er2, Er2_theory, 1e-3)
+
 
 @pytest.mark.slow
 def test_curved_interface_collimate_offset():
@@ -443,7 +453,7 @@ def test_curved_interface_collimate_offset():
     sag = functions.calc_sphere_sag_xy(roc, x1, y1)
     xu, yu, sagu = asbp.unroll_r(r1_support, sag)
     # Propagate to curved surface.
-    Er1, _ = asbp.propagate_plane_to_curved_spherical(k, r0_support, Er0, f + sag, m, rs_center)
+    Er1, _ = asbp.propagate_plane_to_curved_sst(k, r0_support, Er0, f + sag, (m, m), rs_center)
     xu, yu, Er1u = asbp.unroll_r(r1_support, Er1)
     #
     # x2, y2=asbp.calc_xy(r1_support, num_points)
@@ -488,8 +498,8 @@ def test_propagate_plane_to_curved_spherical_inclined():
         z1 = z1m + 1e0*(x1 - r1_centers[0]) + 1e2*(y1 - r1_centers[1])**2
         x1l, y1l, z1l, _ = matseq.mult_mat_vec(np.linalg.inv(matrix), (x1, y1, z1, 1))
         Er1_theory = asbp.calc_gaussian(k, x1l, y1l, waist, z1l)
-        Er1, gradxyEr1 = asbp.propagate_plane_to_curved_spherical(k, r0_support, Er0, z1 - z0, m, r0_centers, qs_center,
-            r1_centers, 'local_xy')
+        Er1, gradxyEr1 = asbp.propagate_plane_to_curved_sst(k, r0_support, Er0, z1 - z0, (m, m), r0_centers, qs_center,
+                                                            r1_centers, 'local_xy')
         assert mathx.allclose(Er1, Er1_theory, apod_frac)
     if 0:
         ##
