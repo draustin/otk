@@ -21,8 +21,8 @@ def test_propagate_curved_paraxial_1d():
     m = asbp.calc_curved_propagation_m(k, x0_support, num_points, np.inf, z)
     assert np.isclose(m, m_gaussian)
     Er0 = asbp.calc_gaussian_1d(k, asbp.calc_r(x0_support, num_points, x0_center), waist0, 0, x_offset, q_offset)
-    Er1, x1_center = asbp.propagate_plane_to_plane_spherical_paraxial_1d(k, x0_support, Er0.copy(), z, m, x0_center,
-        q_center)
+    Er1, x1_center = asbp.propagate_plane_to_plane_sst_1d(k, x0_support, Er0.copy(), z, m, x0_center,
+                                                          q_center)
     x1_support = x0_support*m
     Er1_theory = asbp.calc_gaussian_1d(k, asbp.calc_r(x1_support, num_points, x1_center), waist0, z, x_offset, q_offset)
     assert mathx.allclose(Er1, Er1_theory, atol=1e-6)
@@ -163,7 +163,7 @@ def test_propagate_curved_paraxial_surface_1d():
     z2 = z_R*num_rayleighs
     r1_beam = r_center
     Er1 = asbp.calc_gaussian_1d(k, r1, waist0, 0, r1_beam)
-    Er2 = asbp.propagate_plane_to_curved_spherical_paraxial_1d(k, r1_support, Er1, z2, m, r_center)
+    Er2 = asbp.propagate_plane_to_curved_sst_1d(k, r1_support, Er1, z2, m, r_center)
     #r2 = asbp.calc_r(r1_support*m, num_points, r_center)
     r2 = r1 * m
     Er2_theory = asbp.calc_gaussian_1d(k, r2, waist0, z2, r1_beam)
@@ -239,8 +239,8 @@ def test_propagate_plane_to_curved_spherical_arbitrary():
         roc_y = z2/(my - 1)
 
         Er1 = asbp.calc_gaussian(k, x1, y1, waist0s, 0, r_offsets, q_offsets)
-        Er2, gradxyEr2 = asbp.propagate_plane_to_curved_spherical_arbitrary(k, rs_support, Er1, z2, xo, yo, roc_x, roc_y,
-            rs_center, qs_center, r2_centers, kz_mode)
+        Er2, gradxyEr2 = asbp.propagate_plane_to_curved_sst_arbitrary(k, rs_support, Er1, z2, xo, yo, roc_x, roc_y,
+                                                                      rs_center, qs_center, r2_centers, kz_mode)
         x2, y2 = asbp.calc_xy(r2_supports, num_pointss2, r2_centers)
         Er2_theory, gradxyEr2_theory = asbp.calc_gaussian(k, x2, y2, waist0s, z2, r_offsets, q_offsets, gradr=True)
         assert mathx.allclose(Er2, Er2_theory, 1e-7)

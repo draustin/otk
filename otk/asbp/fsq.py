@@ -27,8 +27,12 @@ def shift_r_center_1d(r_support, num_points, Er, delta_r_center, q_center, k_on_
     return Er
 
 
-def prepare_curved_paraxial_propagation_1d(k, r_support, Er, z, m, r_center=0., q_center=0., axis=-1, carrier=True):
-    """Modifies Er."""
+def prepare_plane_to_plane_sst_1d(
+        k: float, r_support: float, Er: Array1D, z: float, m: float, r_center: float = 0.,
+        q_center: float = 0., axis: int  =-1, carrier: bool = True) -> Tuple[Array1D, Array1D, float]:
+    """Calculate propagator and post-factor for Sziklas-Siegman transform propagation from plane to plane.
+
+    Modifies Er."""
     assert not (np.isclose(z, 0) ^ np.isclose(m, 1))
     if np.isclose(z, 0):
         return 1, 1, r_center
@@ -242,10 +246,10 @@ def propagate_plane_to_plane_flat_1d(k: float, r_support: float, Er: np.ndarray,
     return Er
 
 
-def propagate_plane_to_plane_spherical_paraxial_1d(
+def propagate_plane_to_plane_sst_1d(
         k: float, r_support: float, Er: np.ndarray, z: float, m: float, r_center: float = 0., q_center: float = 0,
         axis: int = -1) -> Tuple[np.ndarray, float]:
-    """"Propagate 1D field Er a distance z between planes with domain magnification m.
+    """"Propagate 1D field Er a distance z between planes using Sziklas-Siegman transform with domain magnification m.
 
     The input Er is changed. k is the wavevector length, r_support the spatial support, r_center the real-space domain
     center, q_center the transverse angular domain center, and axis the spatial axis of Er along which to work.
@@ -254,16 +258,17 @@ def propagate_plane_to_plane_spherical_paraxial_1d(
 
     Returns: the propagated field and the propagated real-space domain center.
     """
-    propagator, post_factor, r_center_z = prepare_curved_paraxial_propagation_1d(k, r_support, Er, z, m, r_center,
-                                                                                 q_center, axis)
+    # Not sure why I factored the preparation.
+    propagator, post_factor, r_center_z = prepare_plane_to_plane_sst_1d(k, r_support, Er, z, m, r_center,
+                                                                        q_center, axis)
     Ak = math.fft(Er, axis)
     Ak *= propagator
     Er = math.ifft(Ak, axis) * post_factor
     return Er, r_center_z
 
 
-def propagate_plane_to_curved_spherical_paraxial_1d(k: float, r_support: float, Eri: Array1D, z: Array1D, m: float,
-                                                    r_center: float = 0., q_center: float = 0.) -> Array1D:
+def propagate_plane_to_curved_sst_1d(k: float, r_support: float, Eri: Array1D, z: Array1D, m: float,
+                                     r_center: float = 0., q_center: float = 0.) -> Array1D:
     """Propagate 1D field Eri from plane to sampled curved surface using Sziklas-Siegman transform.
 
     kz is included. z is 1D array of propagation distances of the same size as Eri.
@@ -294,8 +299,8 @@ def propagate_plane_to_waist_spherical_paraxial_1d(k, r_support, Er, z, r_center
         Er_flat = Er
         r_center_flat = r_center
     else:
-        Er_flat, r_center_flat = propagate_plane_to_plane_spherical_paraxial_1d(k, r_support, Er, -z_flat, 1 / m_flat,
-                                                                                r_center, q_center, axis)
+        Er_flat, r_center_flat = propagate_plane_to_plane_sst_1d(k, r_support, Er, -z_flat, 1 / m_flat,
+                                                                 r_center, q_center, axis)
     return Er_flat, z_flat, m_flat, m, r_center_flat
 
 
@@ -312,8 +317,8 @@ def propagate_plane_to_plane_spherical_1d(k, r_support, Er, z, r_center=0, q_cen
     Eq_flat *= extra_propagator
     Er_flat = math.ifft(Eq_flat, axis)
 
-    Er, _ = propagate_plane_to_plane_spherical_paraxial_1d(k, r_support_flat, Er_flat, z_paraxial + z_flat, m * m_flat,
-                                                           r_center_flat, q_center)
+    Er, _ = propagate_plane_to_plane_sst_1d(k, r_support_flat, Er_flat, z_paraxial + z_flat, m * m_flat,
+                                            r_center_flat, q_center)
 
     rp_center = r_center + z * q_center / (k ** 2 - q_center ** 2) ** 0.5
 
@@ -523,32 +528,28 @@ def propagate_plane_to_curved_sst(
     return Ero, (gradxEro, gradyEro)
 
 
-def propagate_plane_to_curved_spherical_arbitrary(k, rs_support, Eri, z, xo, yo, roc_x, roc_y, rs_center=(0, 0),
-                                                  qs_center=(0, 0), ro_centers=None, kz_mode='local_xy'):
-    """Propagate from uniformly sampled plane to arbitrarily sampled curved surface.
+def propagate_plane_to_curved_sst_arbitrary(
+        k: float, rs_support: Sequence2, Eri: Array2D, z: Array2D, xo: Array1D, yo, roc_x: Array2D, roc_y: Array2D,
+        rs_center: Sequence2 = (0., 0,), qs_center: Sequence2 = (0., 0.), ro_centers: Sequence2 = None,
+        kz_mode: str = 'local_xy') -> Tuple[Array2D, Tuple[Array2D, Array2D]]:
+    """Sziklas-Siegman propagate from uniformly sampled plane to arbitrarily sampled curved surface.
 
-    Args:
-        k (scalar): Wavenumber.
-        rs_support (scalar or pair): Real space support.
-        Eri (2D array): Input field.
-        z (M*N array): Propagation for distance.
-        xo (M*1 array): Output x sample values.
-        yo (N array): Output y sample values.
-        roc_x (M*N array): Input radius of curvature along x.
-        roc_y (M*N array): Input radius of curvature along y.
-        rs_center (pair of scalars): Center of initial real-space aperture.
-        qs_center (pair of scalars): Center of angular space aperture.
-        kz_mode (str): 'paraxial' or 'local_xy'.
+    The input beam is defined by wavenumber k, support along (x, y) rs_support, sampled amplitudes Eri, (x, y) support
+    center rs_support, (kx, ky) support center qs_center.
 
-    Returns:
-        Ero (M*N array): Output field
-        gradxyEro (tuple of M*N arrays): Partial derivatives of output field w.r.t x and y.
+    The distance to the curved surface is given by z of shape (M, N), which can be different to the shape of Eri. The
+    sampled positions are (M,1) array xo and (N,) array yo. The radius of curvature for the Sziklas-Siegman transform
+    are given by (M, N)-shaped arrays, roc_x and roc_y.
+
+    The longitudinal wavevector mode is defined by kz_mode, either 'paraxial' or 'local_xy'.
+
+    The output field and its partial derivatives w.r.t. x and y are returned as (M,N)-shaped arrays.
     """
     assert Eri.ndim == 2
     invTPx, gradxinvTPx, invTPy, gradyinvTPy, Tx, Ty, Qix, Qiy = \
-        math.calc_plane_to_curved_spherical_arbitrary_factors(k, rs_support, Eri.shape, z, xo, yo, roc_x, roc_y,
-                                                              rs_center,
-                                                              qs_center, ro_centers, kz_mode)
+        math.calc_plane_to_curved_sst_arbitrary_factors(k, rs_support, Eri.shape, z, xo, yo, roc_x, roc_y,
+                                                        rs_center,
+                                                        qs_center, ro_centers, kz_mode)
 
     # xo: i,  yo: j,  kx: k,  ky: l,  xi: m,  yi: n.
     Ero = opt_einsum.contract('ijk, ijl, km, ln, ijm, ijn, mn -> ij', invTPx, invTPy, Tx, Ty, Qix, Qiy, Eri)

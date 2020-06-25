@@ -50,7 +50,7 @@ def test_misc_variance_funs():
 
         m = asbp.calc_propagation_m_1d(k, r_support, var_r0, phi_c, var_q0, z, num_points)
 
-        Er_1m, _ = asbp.propagate_plane_to_plane_spherical_paraxial_1d(k, r_support, Er_0.copy(), z, m)
+        Er_1m, _ = asbp.propagate_plane_to_plane_sst_1d(k, r_support, Er_0.copy(), z, m)
         var_r1m = mathx.mean_and_variance(r*m, abs(Er_1m)**2)[1]
         assert np.isclose(var_r1m**0.5, var_r1**0.5)
 

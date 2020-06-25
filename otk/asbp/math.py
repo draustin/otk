@@ -1,11 +1,12 @@
 import logging
+from dataclasses import dataclass
 import numpy as np
 import scipy
 import numba
 import opt_einsum
 import pyfftw
 import mathx
-from ..types import Sequence2, Array2D
+from ..types import Sequence2, Array2D, Array1D
 from .. import bvar
 from . import sa
 
@@ -722,8 +723,152 @@ def calc_plane_to_curved_spherical_factors(k, rs_support, num_pointss, z, ms, ri
     factors = QinvTPx, gradxQinvTPx, QinvTPy, gradyQinvTPy, Tx, Ty, Qix, Qiy
     return factors
 
-def calc_plane_to_curved_spherical_arbitrary_factors(k, rs_support, num_pointss, z, xo, yo, roc_x, roc_y, ri_centers=(0, 0),
-                                                     qs_center=(0, 0), ro_centers=None, kz_mode='local_xy'):
+
+@dataclass
+class PlaneToCurvedSSTArbitrary1D:
+    QinvTP: Array2D # Product of propagator, inverse DFT and quadratic output factor. Axes are (ro, q).
+    gradQinvTP: Array2D # Partial derivative of QinvTP w.r.t r.
+    T: Array2D # DFT factor. Axes are (q, ri).
+    Qi: Array2D # Input quadratic phase factor. Axes are (ro, ri).
+
+    def __post_init__(self):
+        len_ro, len_ri = self.QinvTP.shape
+        assert self.gradQinvTP.shape == (len_ro, len_ri)
+        assert self.T.shape == (len_ri, len_ri)
+        assert self.Qi.shape == (len_ro, len_ri)
+
+
+def calc_plane_to_curved_sst_arbitrary_factors_1d(
+        k: float, r_support: float, num_points: int, z: Array1D, ro: Array1D, roc: Array1D, ri_center: float = 0.,
+        q_center: float = 0., ro_center: float = None, kz_mode: str = 'local_xy') -> PlaneToCurvedSSTArbitrary1D:
+    """Calculate factors for 2D Sziklas-Siegman propagation (paraxial) from flat to curved surface(s).
+
+    The input beam is defined by
+
+    The zero-oth order phase (k_z) is (arbitrarily) included in QinvTP.
+
+    Compared to regular Sziklas-Siegman procedure, the factors are complicated by a transformation that allows nonzero
+    real and angular space centers.  See derivation page 114 Dane's logbook 2.
+
+    Possible optimizations: could probably shave 50% off by more aggressive use of numba to avoid calculation of intermediates.
+    But typically the time is spent using (tensor contract) rather than calculating the factors, so it won't bring
+    a great speedup.
+
+    TODO change local_xy to name that works in 1D as well as 2D.
+
+    Args:
+        k (scalar): Wavenumber.
+        rs_support (scalar or pair): Real space support.
+        num_pointss (scalar int or pair): Number of sampling points in input.
+        z (M*N array): Propagation for distance.
+        xo (M*1 array): Output x sample values.
+        yo (N array): Output y sample values.
+        roc_x (M*N array): Radius of curvature in x, at the input, but sampled at the output points.
+        roc_y (M*N array): Radius of curvature in y, at the input, but sampled at the output points.
+        ri_centers (pair of scalars): Center of initial real-space aperture.
+        qs_center (pair of scalars): Center of angular space aperture.
+        kz_mode (str): 'paraxial' or 'local_xy'.
+    """
+    assert np.isscalar(k)
+    rs_support = sa.to_scalar_pair(rs_support)
+    assert kz_mode in ('local_xy', 'paraxial')
+    assert np.ndim(z) == 2
+    assert np.shape(z) == np.shape(roc_x)
+    assert np.shape(z) == np.shape(roc_y)
+    assert np.shape(xo) == (np.shape(z)[0], 1)
+    assert np.shape(yo) == (np.shape(z)[1], )
+    num_pointss = sa.to_scalar_pair(num_pointss)
+    qs_center = sa.to_scalar_pair(qs_center)
+
+    if ro_centers is None:
+        z_center = np.mean(z)
+        ro_centers = adjust_r(k, ri_centers, z_center, qs_center, kz_mode)
+
+    # If local_xy mode is requested then propagation distances must be scaled. Calculate scaled propagation distances
+    # and required kz component.
+    if kz_mode == 'paraxial':
+        zx = z
+        zy = z
+        delta_kz = k
+    else:
+        fx, fy, delta_kz, delta_gxkz, delta_gykz = calc_quadratic_kz_correction(k, *qs_center)
+        zx = fx*z
+        zy = fy*z
+
+    mx = zx/roc_x + 1
+    my = zy/roc_y + 1
+
+    xi, yi = sa.calc_xy(rs_support, num_pointss, ri_centers)
+    kxi, kyi = sa.calc_kxky(rs_support, num_pointss, qs_center)  # +q_curvatures)
+
+    # Quadratic phase is centered at origin. Numerically, this requires evaluation of complex exponentials of size N^3.
+    # Significant fraction of total cost of this function, but unavoidable.
+    Qix = calc_quadratic_phase_1d(-k, xi[:, 0] - ri_centers[0], roc_x[:, :, None])
+    Qiy = calc_quadratic_phase_1d(-k, yi - ri_centers[1], roc_y[:, :, None])
+
+    Tx = make_fft_matrix(num_pointss[0])
+    if num_pointss[1] == num_pointss[0]:
+        Ty = Tx
+    else:
+        Ty = make_fft_matrix(num_pointss[1])
+
+    roc_xo = roc_x + zx
+    roc_yo = roc_y + zy
+
+    # If in local_xy mode, then the result of the Sziklas-Siegman step needs to be translated. This means that the
+    # factors which depend on xo and yo need to be translated too. (Note that the x and y factors in the inverse DFT
+    # are not translated.) We define xop and yop as the translated output coordinates.
+    if kz_mode == 'local_xy':
+        xop = xo + delta_gxkz*z
+        yop = yo + delta_gykz*z
+    else:
+        xop = xo
+        yop = yo[None, :]
+
+    # Effective kx and ky for propagation takes into account center of curvature.
+    kxip = kxi[:, 0] - k*ri_centers[0]/roc_x[:, :, None]
+    kyip = kyi - k*ri_centers[1]/roc_y[:, :, None]
+
+    r2_support_x = mx*rs_support[0]
+    r2_support_y = my*rs_support[1]
+    valid_x = abs(xo - ro_centers[0]) < r2_support_x*0.5
+    valid_y = abs(yo - ro_centers[1]) < r2_support_y*0.5
+
+    # Calculate product of propagator and inverse transform along x axis. The x axis (arbitrarily) includes delta_kz.
+    # Could combine all exponents before exponentiation? Won't help much because the time will be dominated by the propagator
+    # which is N^3 - the others are N^2.
+    phi = delta_kz*z + k*(ri_centers[0]**2/(2*roc_x) - ri_centers[0]*xop/(roc_x*mx))
+    QinvTPx = (calc_propagator_quadratic_1d(k*mx[:, :, None], kxip, zx[:, :, None])*  # Propagation phase scaled by magnification.
+               calc_quadratic_phase_1d(k, xop, roc_xo)[:, :, None]*  # Normal Sziklas-Siegman final quadratic phase.
+               mathx.expj(phi[:, :, None] + kxi[:, 0]*(xo/mx)[:, :, None])/num_pointss[0]**0.5/ # Correction phases and inverse DFT.
+               abs(mx[:, :, None])**0.5*  # Magnification correction to amplitude.
+               valid_x[:, :, None])
+
+    # Calculate product of propagator and inverse transform along x axis.
+    phi = k*(ri_centers[1]**2/(2*roc_y) - ri_centers[1]*yop/(roc_y*my))
+    QinvTPy = (calc_propagator_quadratic_1d(k*my[:, :, None], kyip, zy[:, :, None])*  # Propagation phase scaled by magnification.
+               calc_quadratic_phase_1d(k, yop, roc_yo)[:, :, None]*  # Normal Sziklas-Siegman final quadratic phase.
+               mathx.expj(phi[:, :, None] + kyi*(yo/my)[:, :, None])/num_pointss[1]**0.5/ # Correction phases and inverse DFT.
+               abs(my[:, :, None])**0.5*  # Magnification correction to amplitude.
+               valid_y[:, :, None])
+
+    # If local_xy mode, need translation correction factor. Could combine this with above to reduce number of N^3 expj
+    # calls but this would only give a marginal performance improvement.
+    if kz_mode == 'local_xy':
+        QinvTPx *= mathx.expj(delta_gxkz*kxi[:, 0]*(z/mx)[:, :, None])
+        QinvTPy *= mathx.expj(delta_gykz*kyi*(z/my)[:, :, None])
+
+    # Evaluate derivatives of the invTP factors with respect to output x and y (but constant z - not along the curved
+    # surface).
+    gradxQinvTPx = 1j*(k*(xop/roc_xo - ri_centers[0]/(roc_x*mx))[:, :, None] + kxi[:, 0]/mx[:, :, None])*QinvTPx
+    gradyQinvTPy = 1j*(k*(yop/roc_yo - ri_centers[1]/(roc_y*my))[:, :, None] + kyi/my[:, :, None])*QinvTPy
+
+    factors = QinvTPx, gradxQinvTPx, QinvTPy, gradyQinvTPy, Tx, Ty, Qix, Qiy
+    return factors
+
+
+def calc_plane_to_curved_sst_arbitrary_factors(k, rs_support, num_pointss, z, xo, yo, roc_x, roc_y, ri_centers=(0, 0),
+                                               qs_center=(0, 0), ro_centers=None, kz_mode='local_xy'):
     """Calculate factors for 2D Sziklas-Siegman propagation (paraxial) from flat to curved surface(s).
 
     The zero-oth order phase (k_z) is (arbitrarily) included in QinvTPx.
@@ -916,8 +1061,9 @@ def prepare_plane_to_curved_spherical_arbitrary(k, rs_support, num_pointss, z, x
     Returns:
         MagnifyingPropagator object.
     """
-    invTPx, gradxphiinvTPx, invTPy, gradyphiinvTpy, Tx, Ty, Qix, Qiy = calc_plane_to_curved_spherical_arbitrary_factors(k,
-        rs_support, num_pointss, z, xo, yo, roc_xo, roc_yo, rs_center, qs_center, ro_centers, kz_mode)
+    invTPx, gradxphiinvTPx, invTPy, gradyphiinvTpy, Tx, Ty, Qix, Qiy = \
+        calc_plane_to_curved_sst_arbitrary_factors(
+            k, rs_support, num_pointss, z, xo, yo, roc_xo, roc_yo, rs_center, qs_center, ro_centers, kz_mode)
     x_factor = opt_einsum.contract('ijk, km, ijm -> ijm', invTPx, Tx, Qix)
     y_factor = opt_einsum.contract('ijl, ln, ijn -> ijn', invTPy, Ty, Qiy)
     return MagnifyingPropagator(x_factor, y_factor, (roc_xo, roc_yo))

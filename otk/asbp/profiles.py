@@ -473,9 +473,9 @@ class PlaneProfile(Profile):
             n_next = self.n
         assert sa.is_scalar_pair(rs_center)
 
-        Er, gradxyE = fsq.propagate_plane_to_curved_spherical_arbitrary(self.k, self.rs_support, self.Er, z - self.z, x,
-                                                                        y, roc_x, roc_y, self.rs_center, self.qs_center,
-                                                                        rs_center, kz_mode)
+        Er, gradxyE = fsq.propagate_plane_to_curved_sst_arbitrary(self.k, self.rs_support, self.Er, z - self.z, x,
+                                                                  y, roc_x, roc_y, self.rs_center, self.qs_center,
+                                                                  rs_center, kz_mode)
 
         # Zero points where no intersection occurred.
         Er[invalid] = 0
