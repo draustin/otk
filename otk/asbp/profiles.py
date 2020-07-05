@@ -689,9 +689,9 @@ class CurvedProfile(Profile):
             rs_support = self.rs_support
 
         # mx, my = self.app.calc_ms(z + self.app.z - self.z)
-        Er = fsq.propagate_arbitrary_curved_to_plane_spherical(self.k, self.x, self.y, self.Er, roc_x, roc_y,
-                                                               z - self.z, rs_support, num_pointss, self.rs_center,
-                                                               self.qs_center, self.rs_center, kz_mode, invert_kwargs)
+        Er = fsq.propagate_curved_to_plane_sst_arbitrary(self.k, self.x, self.y, self.Er, roc_x, roc_y,
+                                                         z - self.z, rs_support, num_pointss, self.rs_center,
+                                                         self.qs_center, self.rs_center, kz_mode, invert_kwargs)
 
         gradxyE = fsq.calc_gradxyE_spherical(self.k, rs_support, Er, self.app.rocs, self.rs_center, self.qs_center)
 

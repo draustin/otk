@@ -528,6 +528,30 @@ def propagate_plane_to_curved_sst(
     return Ero, (gradxEro, gradyEro)
 
 
+def propagate_plane_to_curved_sst_arbitrary_1d(
+        k: float, r_support: float, Eri: Array1D, z: Array1D, xo: Array1D, roc: Array1D, r_center: float =0.,
+        q_center: float = 0, ro_center: float = None, kz_mode: str = 'local_xy') -> Tuple[Array1D, Array1D]:
+    """Sziklas-Siegman propagate from uniformly sampled plane to arbitrarily sampled curved surface.
+
+    The input beam is defined by wavenumber k, support along (x, y) rs_support, sampled amplitudes Eri, (x, y) support
+    center rs_support, (kx, ky) support center qs_center.
+
+    The distance to the curved surface is given by z of shape (M, N), which can be different to the shape of Eri. The
+    sampled positions are (M,1) array xo and (N,) array yo. The radius of curvature for the Sziklas-Siegman transform
+    are given by (M, N)-shaped arrays, roc_x and roc_y.
+
+    The longitudinal wavevector mode is defined by kz_mode, either 'paraxial' or 'local_xy'.
+
+    The output field and its partial derivatives w.r.t. x and y are returned as (M,N)-shaped arrays.
+    """
+    assert Eri.ndim == 1
+    M, gradM = math.calc_plane_to_curved_sst_arbitrary_factors_1d(
+        k, r_support, len(Eri), z, xo, roc, r_center, q_center, ro_center, kz_mode)
+    Ero = M @ Eri
+    gradEro = gradM @ Eri
+    return Ero, gradEro
+
+
 def propagate_plane_to_curved_sst_arbitrary(
         k: float, rs_support: Sequence2, Eri: Array2D, z: Array2D, xo: Array1D, yo, roc_x: Array2D, roc_y: Array2D,
         rs_center: Sequence2 = (0., 0,), qs_center: Sequence2 = (0., 0.), ro_centers: Sequence2 = None,
@@ -559,8 +583,8 @@ def propagate_plane_to_curved_sst_arbitrary(
     return Ero, (gradxEro, gradyEro)
 
 
-def invert_plane_to_curved_spherical(k, rs_support, Ero, z, ms, rs_center=(0, 0), qs_center=(0, 0), ro_centers=(0, 0),
-                                     kz_mode='local_xy', max_iterations=None, tol=None):
+def invert_plane_to_curved_sst(k, rs_support, Ero, z, ms, rs_center=(0, 0), qs_center=(0, 0), ro_centers=(0, 0),
+                               kz_mode='local_xy', max_iterations=None, tol=None):
     """
     kz term uses zx.
 
@@ -615,9 +639,11 @@ def invert_plane_to_curved_spherical(k, rs_support, Ero, z, ms, rs_center=(0, 0)
     return Eri, propagator
 
 
-def invert_plane_to_curved_spherical_arbitrary(k, rs_support, num_pointss, Ero, z, xo, yo, roc_xo, roc_yo,
-                                               rs_center=(0, 0), qs_center=(0, 0),
-                                               ro_centers=None, kz_mode='local_xy', invert_kwargs=None):
+# TODO yo -> Array1D
+def invert_plane_to_curved_sst_arbitrary(k: float, rs_support: Sequence2, num_pointss, Ero: Array2D, z: Array2D, xo: Array1D,
+                                         yo, roc_xo: Array2D, roc_yo: Array2D, rs_center: Sequence2=(0., 0.),
+                                         qs_center: Sequence2 = (0, 0), ro_centers: Sequence2 = None, kz_mode='local_xy',
+                                         invert_kwargs=None):
     """Invert propagation from a plane to a curved arbitrarily sampled surface.
 
     Args:
@@ -647,14 +673,14 @@ def invert_plane_to_curved_spherical_arbitrary(k, rs_support, num_pointss, Ero, 
     if invert_kwargs is None:
         invert_kwargs = {}
 
-    propagator = math.prepare_plane_to_curved_spherical_arbitrary(k, rs_support, num_pointss, z, xo, yo, roc_xo, roc_yo,
-                                                                  rs_center, qs_center, ro_centers, kz_mode)
+    propagator = math.prepare_plane_to_curved_sst_arbitrary(k, rs_support, num_pointss, z, xo, yo, roc_xo, roc_yo,
+                                                            rs_center, qs_center, ro_centers, kz_mode)
     Eri = propagator.invert(Ero, **invert_kwargs)
     return Eri, propagator
 
 
-def propagate_curved_to_plane_spherical(k, rs_support, Eri, z, ms, ri_centers=(0, 0), qs_center=(0, 0),
-                                        ro_centers=None, kz_mode='local_xy', max_iterations=None, tol=None):
+def propagate_curved_to_plane_sst(k, rs_support, Eri, z, ms, ri_centers=(0, 0), qs_center=(0, 0),
+                                  ro_centers=None, kz_mode='local_xy', max_iterations=None, tol=None):
     """
 
     Args:
@@ -679,14 +705,14 @@ def propagate_curved_to_plane_spherical(k, rs_support, Eri, z, ms, ri_centers=(0
         sumIri = Iri.sum()
         z_center = mathx.moment(z, Iri, 1, sumIri)
         ro_centers = math.adjust_r(k, ri_centers, z, qs_center, kz_mode)  # TODO should be z_center?
-    Ero, propagator = invert_plane_to_curved_spherical(k, rs_support * ms, Eri, -z, 1 / ms, ro_centers, qs_center,
-                                                       ri_centers, kz_mode, max_iterations, tol)
+    Ero, propagator = invert_plane_to_curved_sst(k, rs_support * ms, Eri, -z, 1 / ms, ro_centers, qs_center,
+                                                 ri_centers, kz_mode, max_iterations, tol)
     return Ero
 
 
-def propagate_arbitrary_curved_to_plane_spherical(k, xi, yi, Eri, roc_xi, roc_yi, zi, ro_supports, num_pointsso,
-                                                  ri_centers=(0, 0), qs_center=(0, 0),
-                                                  ro_centers=None, kz_mode='local_xy', invert_kwargs=None):
+def propagate_curved_to_plane_sst_arbitrary(k, xi, yi, Eri, roc_xi, roc_yi, zi, ro_supports, num_pointsso,
+                                            ri_centers=(0, 0), qs_center=(0, 0),
+                                            ro_centers=None, kz_mode='local_xy', invert_kwargs=None):
     """
 
     Args:
@@ -722,9 +748,9 @@ def propagate_arbitrary_curved_to_plane_spherical(k, xi, yi, Eri, roc_xi, roc_yi
     z = -zi
     roc_x = roc_xi + zi
     roc_y = roc_yi + zi
-    Ero, propagator = invert_plane_to_curved_spherical_arbitrary(k, ro_supports, num_pointsso, Eri, z, xi, yi, roc_x,
-                                                                 roc_y, ro_centers, qs_center, ri_centers, kz_mode,
-                                                                 invert_kwargs)
+    Ero, propagator = invert_plane_to_curved_sst_arbitrary(k, ro_supports, num_pointsso, Eri, z, xi, yi, roc_x,
+                                                           roc_y, ro_centers, qs_center, ri_centers, kz_mode,
+                                                           invert_kwargs)
 
     return Ero
 

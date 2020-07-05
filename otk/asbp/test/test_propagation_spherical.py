@@ -245,8 +245,8 @@ def test_propagate_plane_to_curved_spherical_arbitrary():
         Er2_theory, gradxyEr2_theory = asbp.calc_gaussian(k, x2, y2, waist0s, z2, r_offsets, q_offsets, gradr=True)
         assert mathx.allclose(Er2, Er2_theory, 1e-7)
         assert mathx.allclose(gradxyEr2, gradxyEr2_theory, 1e-6)
-        propagator = asbp.prepare_plane_to_curved_spherical_arbitrary(k, rs_support, Er1.shape, z2, xo, yo, roc_x, roc_y,
-            rs_center, qs_center, r2_centers, kz_mode)
+        propagator = asbp.prepare_plane_to_curved_sst_arbitrary(k, rs_support, Er1.shape, z2, xo, yo, roc_x, roc_y,
+                                                                rs_center, qs_center, r2_centers, kz_mode)
         Er2p = propagator.apply(Er1)
         assert mathx.allclose(Er2, Er2p, 1e-15)
     ##
@@ -309,8 +309,8 @@ def test_invert_plane_to_curved_spherical():
     Er1_theory = asbp.calc_gaussian(k, x1, y1, waist0s, 0, r_offsets, q_offsets)
     Er2 = asbp.calc_gaussian(k, x2, y2, waist0s, z2, r_offsets, q_offsets)
 
-    Er1, propagator = asbp.invert_plane_to_curved_spherical(k, rs_support, Er2, z2, m, rs_center, qs_center, r2_centers,
-        kz_mode=kz_mode, max_iterations=10, tol=1e-8)
+    Er1, propagator = asbp.invert_plane_to_curved_sst(k, rs_support, Er2, z2, m, rs_center, qs_center, r2_centers,
+                                                      kz_mode=kz_mode, max_iterations=10, tol=1e-8)
     assert mathx.allclose(Er2, propagator.apply(Er1), 1e-6)
     assert mathx.allclose(Er1, Er1_theory, 1e-7)
     ##
@@ -362,8 +362,8 @@ def test_invert_plane_to_curved_spherical_arbitrary():
         # calc_gaussian uses paraxial propagation, but the angles are small enough so local_xy agrees too. For
         # thoroughness, test both.
         for kz_mode in ('local_xy', 'paraxial'):
-            Er1, propagator = asbp.invert_plane_to_curved_spherical_arbitrary(k, r1_supports, num_pointss1, Er2, z2 - z1,
-                x2, y2, roc12_x, roc12_y, r1_centers, qs_center, r2_centers, kz_mode, invert_kwargs)
+            Er1, propagator = asbp.invert_plane_to_curved_sst_arbitrary(k, r1_supports, num_pointss1, Er2, z2 - z1,
+                                                                        x2, y2, roc12_x, roc12_y, r1_centers, qs_center, r2_centers, kz_mode, invert_kwargs)
             assert Er1.shape == num_pointss1
             Er2p = propagator.apply(Er1)
             print((mathx.sum_abs_sqd(Er2 - Er2p)/mathx.sum_abs_sqd(Er2))**0.5)
@@ -373,8 +373,8 @@ def test_invert_plane_to_curved_spherical_arbitrary():
             if trial == trials[-1]:
                 roc21_x = bvar.calc_sziklas_siegman_roc_from_waist(z_Rs[0], -z2, z1 - z2)
                 roc21_y = bvar.calc_sziklas_siegman_roc_from_waist(z_Rs[1], -z2, z1 - z2)
-                Er1 = asbp.propagate_arbitrary_curved_to_plane_spherical(k, x2, y2, Er2, roc21_x, roc21_y, z1 - z2, r1_supports,
-                    num_pointss1, r2_centers, qs_center, r1_centers, kz_mode, invert_kwargs)
+                Er1 = asbp.propagate_curved_to_plane_sst_arbitrary(k, x2, y2, Er2, roc21_x, roc21_y, z1 - z2, r1_supports,
+                                                                   num_pointss1, r2_centers, qs_center, r1_centers, kz_mode, invert_kwargs)
 
                 assert mathx.allclose(Er2, propagator.apply(Er1), 1e-4), trial_num
                 assert mathx.allclose(Er1, Er1_theory, 1e-4)
@@ -417,7 +417,7 @@ def test_curved_interface_collimate():
     x1, y1 = asbp.calc_xy(r1_support, num_points)
     sag = functions.calc_sphere_sag_xy(roc, x1, y1)
     Er1, _ = asbp.propagate_plane_to_curved_sst(k, r0_support, Er0, f + sag, (m, m))
-    Er2, propagator = asbp.invert_plane_to_curved_spherical(k*n, r1_support, Er1, -f*n + sag, 1)
+    Er2, propagator = asbp.invert_plane_to_curved_sst(k * n, r1_support, Er1, -f * n + sag, 1)
     ##
     waist2 = f*lamb/(np.pi*waist0)
     Er2_theory = asbp.calc_gaussian(k, x1, y1, waist2)
@@ -458,8 +458,8 @@ def test_curved_interface_collimate_offset():
     #
     # x2, y2=asbp.calc_xy(r1_support, num_points)
     qs_centers2 = -r_offsets/f*k
-    Er2, propagator = asbp.invert_plane_to_curved_spherical(k*n, r1_support, Er1, -f*n + sag, 1, (0, 0), qs_centers2,
-        max_iterations=10)  # -x_offset/f*k
+    Er2, propagator = asbp.invert_plane_to_curved_sst(k * n, r1_support, Er1, -f * n + sag, 1, (0, 0), qs_centers2,
+                                                      max_iterations=10)  # -x_offset/f*k
     xu, yu, Er2u = asbp.unroll_r(r1_support, Er2)
     tilt_factor = mathx.expj(-(xu*r_offsets[0] + yu*r_offsets[1])/f*k)
     ##
