@@ -1,11 +1,12 @@
 import logging
-import scipy
 from typing import Tuple
+
 import mathx
-from mathx import matseq
 import numpy as np
 import opt_einsum
 import pyqtgraph_extended as pg
+from mathx import matseq
+
 from . import sa, math, fsq, source, plotting
 from .. import bvar, v4hb, trains
 
@@ -17,9 +18,9 @@ class NullProfileError(Exception):
 
 
 def calc_quadratic_phase_mask(x, y, k_on_f):
-    m = mathx.expj(-0.5*(x**2 + y**2)*k_on_f)
-    gradxm = -m*x*k_on_f
-    gradym = -m*y*k_on_f
+    m = mathx.expj(-0.5 * (x ** 2 + y ** 2) * k_on_f)
+    gradxm = -m * x * k_on_f
+    gradym = -m * y * k_on_f
     return m, (gradxm, gradym)
 
 
@@ -30,7 +31,7 @@ class Profile:
     """
 
     def __init__(self, lamb: float, n: float, z_center: float, rs_support, Er, gradxyE, rs_center=(0, 0),
-            qs_center=(0, 0), polarizationxy=(1, 0)):
+                 qs_center=(0, 0), polarizationxy=(1, 0)):
         self.lamb = float(lamb)
         self.n = float(n)
         self.z_center = float(z_center)
@@ -46,7 +47,7 @@ class Profile:
         self.qs_center = sa.to_scalar_pair(qs_center)
 
         self.Eq = math.fft2(Er)
-        self.k = 2*np.pi*self.n/self.lamb
+        self.k = 2 * np.pi * self.n / self.lamb
 
         self.Ir = mathx.abs_sqd(Er)
         sumIr = self.Ir.sum()
@@ -57,8 +58,8 @@ class Profile:
         self.x = x
         self.y = y
         self.r_center_indices = abs(x - rs_center[0]).argmin(), abs(y - rs_center[1]).argmin()
-        self.delta_x, self.delta_y = self.rs_support/Er.shape
-        self.power = sumIr*self.delta_x*self.delta_y
+        self.delta_x, self.delta_y = self.rs_support / Er.shape
+        self.power = sumIr * self.delta_x * self.delta_y
         mean_x = mathx.moment(x, self.Ir, 1, sumIr)
         mean_y = mathx.moment(y, self.Ir, 1, sumIr)
         self.centroid_rs = mean_x, mean_y
@@ -68,23 +69,23 @@ class Profile:
 
         # Calculate phase of quadratic component at RMS distance from center. Proportional to A in Siegman IEE J. Quantum Electronics Vol. 27
         # 1991. Positive means diverging.
-        phi_cx = 0.5*((x - rs_center[0])*(self.Igradphi[0] - self.Ir*qs_center[0])).sum()/sumIr
-        phi_cy = 0.5*((y - rs_center[1])*(self.Igradphi[1] - self.Ir*qs_center[1])).sum()/sumIr
+        phi_cx = 0.5 * ((x - rs_center[0]) * (self.Igradphi[0] - self.Ir * qs_center[0])).sum() / sumIr
+        phi_cy = 0.5 * ((y - rs_center[1]) * (self.Igradphi[1] - self.Ir * qs_center[1])).sum() / sumIr
         self.phi_cs = np.asarray((phi_cx, phi_cy))
-        self.rocs = mathx.divide0(self.k*self.var_rs, 2*self.phi_cs, np.inf)
+        self.rocs = mathx.divide0(self.k * self.var_rs, 2 * self.phi_cs, np.inf)
 
         xi, yi = np.unravel_index(self.Ir.argmax(), self.Ir.shape)
         self.peak_indices = xi, yi
         self.peak_Er = self.Er[xi, yi]
         self.peak_rs = np.asarray((self.x[xi], self.y[yi]))
         self.peak_qs = np.asarray(
-            [mathx.divide0((gradxE[xi, yi]*Er[xi, yi].conj()).imag, self.Ir[xi, yi]) for gradxE in gradxyE])
+            [mathx.divide0((gradxE[xi, yi] * Er[xi, yi].conj()).imag, self.Ir[xi, yi]) for gradxE in gradxyE])
 
         self.kz_center = math.calc_kz(self.k, *self.qs_center)
 
         # Calculate 3D vectors.
         vector_center = v4hb.normalize(v4hb.stack_xyzw(*self.qs_center, self.kz_center, 0))
-        polarizationz = -(polarizationxy*vector_center[:2]).sum()/vector_center[2]
+        polarizationz = -(polarizationxy * vector_center[:2]).sum() / vector_center[2]
         origin_center = v4hb.stack_xyzw(*self.rs_center, self.z_center, 1)
         polarization = polarizationxy[0], polarizationxy[1], polarizationz, 0
         y = v4hb.cross(vector_center, polarization)
@@ -100,13 +101,14 @@ class Profile:
         rs_center = self.rs_center
         phi_cx, phi_cy = self.phi_cs
         var_x, var_y = self.var_rs
-        return mathx.expj((x - rs_center[0])**2*phi_cx/var_x)*mathx.expj((y - rs_center[1])**2*phi_cy/var_y)
+        return mathx.expj((x - rs_center[0]) ** 2 * phi_cx / var_x) * mathx.expj(
+            (y - rs_center[1]) ** 2 * phi_cy / var_y)
 
     def mask_binary(self, fr):
         """Only for binary masks as assumes that fr is constant."""
-        return self.change(Er=self.Er*fr, gradxyE=[g*fr for g in self.gradxyE])
+        return self.change(Er=self.Er * fr, gradxyE=[g * fr for g in self.gradxyE])
 
-    def mask(self, f:np.ndarray, gradxyf:tuple, n: float = None):
+    def mask(self, f: np.ndarray, gradxyf: tuple, n: float = None):
         """Return self with real-space mask applied.
 
         Args:
@@ -114,14 +116,14 @@ class Profile:
             gradxyf: Mask gradients along x and y.
             n: New refractive index (defaults to self.n).
         """
-        Er = self.Er*f
-        gradxyE = [gradE*f + self.Er*gradf for gradE, gradf in zip(self.gradxyE, gradxyf)]
+        Er = self.Er * f
+        gradxyE = [gradE * f + self.Er * gradf for gradE, gradf in zip(self.gradxyE, gradxyf)]
         Ir = mathx.abs_sqd(Er)
         Igradphi = fsq.calc_Igradphi(self.k, Er, gradxyE, Ir)
         # Mean transverse wavenumber is intensity-weighted average of transverse gradient of phase.
-        qs_center = np.asarray([component.sum() for component in Igradphi[:2]])/Ir.sum()
+        qs_center = np.asarray([component.sum() for component in Igradphi[:2]]) / Ir.sum()
 
-        return self.change(Er = Er, gradxyE=gradxyE, n=n, qs_center=qs_center)
+        return self.change(Er=Er, gradxyE=gradxyE, n=n, qs_center=qs_center)
 
     def filter(self, fq):
         """Apply a Fourier-domain filter.
@@ -135,15 +137,15 @@ class Profile:
         Returns:
             Copy of self with filter applied.
         """
-        Er = math.ifft2(math.fft2(self.Er)*fq)
+        Er = math.ifft2(math.fft2(self.Er) * fq)
         gradxyE = fsq.calc_gradxyE(self.rs_support, Er, self.qs_center)
         # return type(self)(self.lamb, self.n, self.z, self.rs_support, Er, gradxyE, self.rs_center, self.qs_center)
         return self.change(Er=Er, gradxyE=gradxyE)
 
     def recalc_gradxyE(self, gradphi):
         # See p116 Dane's logbook 2.
-        gradxE = mathx.divide0((self.gradxyE[0]*self.Er.conj()).real, self.Er.conj()) + 1j*gradphi[0]*self.Er
-        gradyE = mathx.divide0((self.gradxyE[1]*self.Er.conj()).real, self.Er.conj()) + 1j*gradphi[1]*self.Er
+        gradxE = mathx.divide0((self.gradxyE[0] * self.Er.conj()).real, self.Er.conj()) + 1j * gradphi[0] * self.Er
+        gradyE = mathx.divide0((self.gradxyE[1] * self.Er.conj()).real, self.Er.conj()) + 1j * gradphi[1] * self.Er
         return gradxE, gradyE
 
     def refract(self, normal, n, scale_Er=1, polarizationxy=(1, 0)):
@@ -158,20 +160,21 @@ class Profile:
         Returns:
 
         """
-        k = 2*np.pi/self.lamb*n
+        k = 2 * np.pi / self.lamb * n
 
-        normal = [nc*np.sign(normal[2]) for nc in normal]
+        normal = [nc * np.sign(normal[2]) for nc in normal]
         Igradphi_tangent = matseq.project_onto_plane(self.Igradphi, normal)[0]
-        Igradphi_normal = np.maximum((self.Ir*k)**2 - matseq.dot(Igradphi_tangent), 0)**0.5
-        Igradphi = [tc + nc*Igradphi_normal for tc, nc in zip(Igradphi_tangent, normal)]
+        Igradphi_normal = np.maximum((self.Ir * k) ** 2 - matseq.dot(Igradphi_tangent), 0) ** 0.5
+        Igradphi = [tc + nc * Igradphi_normal for tc, nc in zip(Igradphi_tangent, normal)]
 
         gradphi = [mathx.divide0(c, self.Ir) for c in Igradphi[:2]]
         gradxE, gradyE = self.recalc_gradxyE(gradphi)
 
         # Mean transverse wavenumber is intensity-weighted average of transverse gradient of phase.
-        qs_center = np.asarray([component.sum() for component in Igradphi[:2]])/self.Ir.sum()
+        qs_center = np.asarray([component.sum() for component in Igradphi[:2]]) / self.Ir.sum()
 
-        profile = self.change(n=n, gradxyE=(gradxE*scale_Er, gradyE*scale_Er), qs_center=qs_center, Er=self.Er*scale_Er,
+        profile = self.change(n=n, gradxyE=(gradxE * scale_Er, gradyE * scale_Er), qs_center=qs_center,
+                              Er=self.Er * scale_Er,
                               polarizationxy=polarizationxy)
         for _ in range(3):
             profile = profile.center_q()
@@ -184,9 +187,10 @@ class Profile:
     def title_str(self):
         return (
                    'num_pointss = (%d, %d), z_center = %.3f mm, power = %g, n = %g, rs_center = %.3f mm, %.3f mm, qs_center = %.3f rad/mm, %.3f rad/mm, '
-                   'ROCs = %.6g mm, %.6g mm / phi_cs = %.3fpi, %.3fpi')%(
-                   *self.Er.shape, self.z_center*1e3, self.power, self.n, *(self.rs_center*1e3), *(self.qs_center/1e3),
-                   *(self.rocs*1e3), *(self.phi_cs/np.pi))
+                   'ROCs = %.6g mm, %.6g mm / phi_cs = %.3fpi, %.3fpi') % (
+                   *self.Er.shape, self.z_center * 1e3, self.power, self.n, *(self.rs_center * 1e3),
+                   *(self.qs_center / 1e3),
+                   *(self.rocs * 1e3), *(self.phi_cs / np.pi))
 
     def clip_points(self, inside, boundary_clip_r_support_factor=1.05):
         # The x and y axes are are DFT rolled, so just find the minimum and maximum point inside the boundary.
@@ -201,7 +205,7 @@ class Profile:
         #               self.boundary_clip_num_points_factor).astype(int)
         num_pointss = sa.to_scalar_pair(num_pointss)
         # if rs_support is None:
-        rs_support = lims/(num_pointss - 1)*num_pointss
+        rs_support = lims / (num_pointss - 1) * num_pointss
         # if rs_center is None:
         # Changing the center breaks it the interpolation. Not exactly sure why.
         rs_center = self.rs_center
@@ -223,7 +227,7 @@ class Profile:
         rs_center = np.mean(support[:2]), np.mean(support[2:])
         lims = np.asarray(((support[1] - support[0]), (support[3] - support[2])))
         num_pointss = np.asarray(self.Er.shape)
-        rs_support = lims/(num_pointss - 1)*num_pointss
+        rs_support = lims / (num_pointss - 1) * num_pointss
         cropped = self.interpolate(rs_support, num_pointss, rs_center)
         return cropped
 
@@ -256,11 +260,11 @@ class PlaneProfile(Profile):
         Profile.__init__(self, lamb, n, z, rs_support, Er, gradxyE, rs_center, qs_center, polarizationxy)
         self.z = z
         # Flat beam is beam with quadratic phase removed.
-        self.Er_flat = self.Er*self.calc_quadratic_phase_factor(self.x, self.y).conj()
+        self.Er_flat = self.Er * self.calc_quadratic_phase_factor(self.x, self.y).conj()
         self.Eq_flat = math.fft2(self.Er_flat)
         Iq_flat = mathx.abs_sqd(self.Eq_flat)
         sumIq_flat = Iq_flat.sum()
-        self.qs_support = 2*np.pi*np.asarray(Er.shape)/self.rs_support
+        self.qs_support = 2 * np.pi * np.asarray(Er.shape) / self.rs_support
         kx, ky = sa.calc_kxky(rs_support, Er.shape, qs_center)
         self.kx = kx
         self.ky = ky
@@ -311,16 +315,16 @@ class PlaneProfile(Profile):
 
     def fourier_transform(self, f, rs0=(0, 0), z=None):
         if z is None:
-            z = self.z + 2*f
+            z = self.z + 2 * f
         # I *think* that there is an efficient implementation for highly curved wavefronts, analagous to
         # https://doi.org/10.1364/OE.24.025974
 
         # Derivation of normalization factor Dane's logbook 3 p81.
-        norm_fac = self.delta_x*self.delta_y*self.k/(2*np.pi*f)*np.prod(self.Er.shape)**0.5
-        Er = math.fft2(self.Er)*mathx.expj(rs0[0]*self.kx + rs0[1]*self.ky)*norm_fac
-        rs_support = self.qs_support*f/self.k
-        rs_center = self.qs_center*f/self.k
-        qs_center = (self.rs_center - rs0)*self.k/f
+        norm_fac = self.delta_x * self.delta_y * self.k / (2 * np.pi * f) * np.prod(self.Er.shape) ** 0.5
+        Er = math.fft2(self.Er) * mathx.expj(rs0[0] * self.kx + rs0[1] * self.ky) * norm_fac
+        rs_support = self.qs_support * f / self.k
+        rs_center = self.qs_center * f / self.k
+        qs_center = (self.rs_center - rs0) * self.k / f
         gradxyE = fsq.calc_gradxyE(rs_support, Er, qs_center)
         return PlaneProfile(self.lamb, self.n, z, rs_support, Er, gradxyE, rs_center, qs_center)
 
@@ -348,7 +352,7 @@ class PlaneProfile(Profile):
             Magnification.
         """
         roc = self.calc_propagation_roc(z, axis)
-        m = (z - self.z)/roc + 1
+        m = (z - self.z) / roc + 1
         # We always want positive magnification since we use it to calculate the next rs_support. I haven't proven that
         # the above always gives positive magnification. An alternative is to estimate the propagated variance using
         # var_rz = bvar.calc_propagated_variance_1d(self.k, self.var_rs[n], self.phi_cs[n], self.var_qs[n], z - self.z)[0]
@@ -385,20 +389,20 @@ class PlaneProfile(Profile):
                         r_support0, num_points0, q_center0, r1 in
                         zip(self.rs_support, self.Er.shape, self.qs_center, rs)]
         # Need to zero outside the original domain to prevent cyclic boundary conditions giving aliased copies.
-        invTx *= abs(rs[0] - self.rs_center[0])[:, None] <= self.rs_support[0]/2
-        invTy *= abs(rs[1] - self.rs_center[1])[:, None] <= self.rs_support[1]/2
+        invTx *= abs(rs[0] - self.rs_center[0])[:, None] <= self.rs_support[0] / 2
+        invTy *= abs(rs[1] - self.rs_center[1])[:, None] <= self.rs_support[1] / 2
 
         qpf0 = self.calc_quadratic_phase_factor(self.x, self.y)
-        ft_Erp0 = math.fft2(self.Er*qpf0.conj())
-        ft_gradxErp0 = math.fft2(self.gradxyE[0]*qpf0.conj())
-        ft_gradyErp0 = math.fft2(self.gradxyE[1]*qpf0.conj())
+        ft_Erp0 = math.fft2(self.Er * qpf0.conj())
+        ft_gradxErp0 = math.fft2(self.gradxyE[0] * qpf0.conj())
+        ft_gradyErp0 = math.fft2(self.gradxyE[1] * qpf0.conj())
 
         x, y = sa.calc_xy(rs_support, num_pointss, rs_center)
         qpf = self.calc_quadratic_phase_factor(x, y)
         # x=i, y=j, kx=k, ky=l
-        Er = opt_einsum.contract('ik, jl, kl -> ij', invTx, invTy, ft_Erp0)*qpf
-        gradxEr = opt_einsum.contract('ik, jl, kl -> ij', invTx, invTy, ft_gradxErp0)*qpf
-        gradyEr = opt_einsum.contract('ik, jl, kl -> ij', invTx, invTy, ft_gradyErp0)*qpf
+        Er = opt_einsum.contract('ik, jl, kl -> ij', invTx, invTy, ft_Erp0) * qpf
+        gradxEr = opt_einsum.contract('ik, jl, kl -> ij', invTx, invTy, ft_gradxErp0) * qpf
+        gradyEr = opt_einsum.contract('ik, jl, kl -> ij', invTx, invTy, ft_gradyErp0) * qpf
 
         return PlaneProfile(self.lamb, self.n, self.z, rs_support, Er, (gradxEr, gradyEr), rs_center, self.qs_center)
 
@@ -423,8 +427,8 @@ class PlaneProfile(Profile):
         Er = self.Er_flat if flat else self.Er
         Eq = math.fft2(Er)
         if not tilt:
-            Er = Er*mathx.expj(-(self.qs_center[0]*self.x + self.qs_center[1]*self.y))
-            Eq = Eq*mathx.expj(self.rs_center[0]*self.kx + self.rs_center[1]*self.ky)
+            Er = Er * mathx.expj(-(self.qs_center[0] * self.x + self.qs_center[1] * self.y))
+            Eq = Eq * mathx.expj(self.rs_center[0] * self.kx + self.rs_center[1] * self.ky)
         glw = pg.GraphicsLayoutWidget()
         glw.addLabel(self.title_str)
         glw.nextRow()
@@ -436,7 +440,7 @@ class PlaneProfile(Profile):
         return glw, plots
 
     def propagate_to_curved(self, rs_support, num_pointss, rs_center, zfun, roc_x=None, roc_y=None, kz_mode='local_xy',
-            n_next=None):
+                            n_next=None):
         """Propagate to curved surface.
 
         Compared to the propagate_to_plane method, this method supports curved focal_surfaces (nonscalar z) as well as different
@@ -496,7 +500,7 @@ class PlaneProfile(Profile):
         if n_next is None:
             n_next = self.n
 
-        rs_support = self.rs_support*ms
+        rs_support = self.rs_support * ms
         if np.isclose(z, self.z):
             # Handle special case as courtesy.
             assert np.allclose(ms, 1)
@@ -518,8 +522,8 @@ class PlaneProfile(Profile):
 
     @classmethod
     def make_gaussian(cls, lamb: float, n: float, waists: Tuple[float, float], rs_support: Tuple[float, float],
-            num_points: int, rs_waist: Tuple[float, float] = (0, 0), qs_waist: Tuple[float, float] = (0, 0),
-            z_waist: float = 0, rs_center=None, qs_center=None, z=None):
+                      num_points: int, rs_waist: Tuple[float, float] = (0, 0), qs_waist: Tuple[float, float] = (0, 0),
+                      z_waist: float = 0, rs_center=None, qs_center=None, z=None):
         """Make a PlaneProfile object sampling a paraxial Gaussian beam.
 
         Args:
@@ -539,7 +543,7 @@ class PlaneProfile(Profile):
             Profile object.
         """
         assert np.isscalar(z_waist)
-        k = 2*np.pi/lamb*n
+        k = 2 * np.pi / lamb * n
         if z is None:
             z = z_waist
         rs_waist = np.asarray(rs_waist)
@@ -547,7 +551,7 @@ class PlaneProfile(Profile):
         qs_waist = np.asarray(qs_waist)
         assert sa.is_scalar_pair(qs_waist)
         if rs_center is None:
-            rs_center = rs_waist + (np.mean(z) - z_waist)*qs_waist/k
+            rs_center = rs_waist + (np.mean(z) - z_waist) * qs_waist / k
         if qs_center is None:
             qs_center = qs_waist
 
@@ -559,7 +563,7 @@ class PlaneProfile(Profile):
 
     @classmethod
     def make_bessel(cls, lamb: float, n: float, radius: float, rs_support: Tuple[float, float],
-            num_points: int, z_waist: float = 0):
+                    num_points: int, z_waist: float = 0):
         """Make a PlaneProfile object sampling zero-order Bessel beam.
 
         The normalization is performed using analytic formulae, so it becomes identically correct in the limit
@@ -592,7 +596,7 @@ class PlaneProfile(Profile):
         """
         dx = self.x - rs_center[0]
         dy = self.y - rs_center[1]
-        rho = (dx**2 + dy**2)**0.5
+        rho = (dx ** 2 + dy ** 2) ** 0.5
         assert np.isclose(self.n, interface.n1(self.lamb))
 
         # if shape is not None:
@@ -606,7 +610,7 @@ class PlaneProfile(Profile):
             f *= aperture
             gradrf *= aperture
 
-        gradxyf = mathx.divide0(dx, rho)*gradrf, mathx.divide0(dy, rho)*gradrf
+        gradxyf = mathx.divide0(dx, rho) * gradrf, mathx.divide0(dy, rho) * gradrf
 
         return self.mask(f, gradxyf, interface.n2(self.lamb)).center_q()
 
@@ -624,7 +628,7 @@ class PlaneProfile(Profile):
 
 class CurvedProfile(Profile):
     def __init__(self, lamb, n, zfun, rs_support, Er, gradxyE, rs_center=(0, 0), qs_center=(0, 0),
-            polarizationxy=(1, 0)):
+                 polarizationxy=(1, 0)):
         z_center = zfun(*rs_center)
         Profile.__init__(self, lamb, n, z_center, rs_support, Er, gradxyE, rs_center, qs_center, polarizationxy)
         self.zfun = zfun
@@ -633,11 +637,11 @@ class CurvedProfile(Profile):
         self.z[~self.valid] = self.z[self.valid].mean()
         assert np.allclose(Er[~self.valid], 0)
         sumIr = self.Ir.sum()
-        self.mean_z = (self.z*self.Ir).sum()/sumIr
-        app_propagator = mathx.expj((self.mean_z - self.z)*mathx.divide0(self.Igradphi[2], self.Ir))
+        self.mean_z = (self.z * self.Ir).sum() / sumIr
+        app_propagator = mathx.expj((self.mean_z - self.z) * mathx.divide0(self.Igradphi[2], self.Ir))
         app_propagator[np.isnan(self.z)] = 0
-        Er_plane = Er*app_propagator
-        gradxyE_plane = tuple(c*app_propagator for c in gradxyE)
+        Er_plane = Er * app_propagator
+        gradxyE_plane = tuple(c * app_propagator for c in gradxyE)
         # Approximate plane profile.
         self.app = PlaneProfile(lamb, n, self.mean_z, rs_support, Er_plane, gradxyE_plane, rs_center, qs_center)
 
@@ -645,7 +649,7 @@ class CurvedProfile(Profile):
         return self.change(qs_center=self.app.centroid_qs_flat)
 
     def change(self, lamb=None, n=None, Er=None, gradxyE=None, rs_center=None, qs_center=None, polarizationxy=None,
-            zfun=None):
+               zfun=None):
         if lamb is None:
             lamb = self.lamb
         if n is None:
@@ -705,9 +709,9 @@ class CurvedProfile(Profile):
         z = self.zfun(appi.x, appi.y)
         # Propagate from interpolated planar profile to resampled z.
         Ir = appi.Ir
-        propagator = mathx.expj((z - appi.z)*mathx.divide0(appi.Igradphi[2], Ir))
-        Er = appi.Er*propagator
-        gradxyE = tuple(c*propagator for c in appi.gradxyE)
+        propagator = mathx.expj((z - appi.z) * mathx.divide0(appi.Igradphi[2], Ir))
+        Er = appi.Er * propagator
+        gradxyE = tuple(c * propagator for c in appi.gradxyE)
         return type(self)(self.lamb, self.n, self.zfun, appi.rs_support, Er, gradxyE, appi.rs_center, appi.qs_center)
 
     def reflect(self, normal, n, scale_Er=1, polarizationxy=(1, 0)):
@@ -723,17 +727,18 @@ class CurvedProfile(Profile):
 
         """
         Igradphi_tangent, Igradphi_normal = mathx.project_onto_plane(self.Igradphi, normal)
-        Igradphi = [tc - nc*Igradphi_normal for tc, nc in zip(Igradphi_tangent, normal)]
+        Igradphi = [tc - nc * Igradphi_normal for tc, nc in zip(Igradphi_tangent, normal)]
         gradphi = [mathx.divide0(c, self.Ir) for c in Igradphi[:2]]
         gradxE, gradyE = self.recalc_gradxyE(gradphi)
 
         # Mean transverse wavenumber is intensity-weighted average of transverse gradient of phase.
-        qs_center = np.asarray([component.sum() for component in Igradphi[:2]])/Ir.sum()
+        qs_center = np.asarray([component.sum() for component in Igradphi[:2]]) / Ir.sum()
 
         # Don't understand. What is the new coordinate system? Surely should
-        zfun = lambda x, y: 2*self.zfun(x, y) - self.zfun(*self.rs_center)
+        zfun = lambda x, y: 2 * self.zfun(x, y) - self.zfun(*self.rs_center)
 
-        profile = self.change(n=n, gradxyE=(gradxE*scale_Er, gradyE*scale_Er), qs_center=qs_center, Er=self.Er*scale_Er,
+        profile = self.change(n=n, gradxyE=(gradxE * scale_Er, gradyE * scale_Er), qs_center=qs_center,
+                              Er=self.Er * scale_Er,
                               polarizationxy=polarizationxy, zfun=zfun)
         for _ in range(3):
             profile = profile.center_q()
@@ -745,8 +750,8 @@ class CurvedProfile(Profile):
         Er = app.Er_flat if flat else app.Er
         Eq = math.fft2(Er)
         if not tilt:
-            Er = Er*mathx.expj(-(app.qs_center[0]*app.x + app.qs_center[1]*app.y))
-            Eq = Eq*mathx.expj(app.rs_center[0]*app.kx + app.rs_center[1]*app.ky)
+            Er = Er * mathx.expj(-(app.qs_center[0] * app.x + app.qs_center[1] * app.y))
+            Eq = Eq * mathx.expj(app.rs_center[0] * app.kx + app.rs_center[1] * app.ky)
 
         glw = pg.GraphicsLayoutWidget()
         glw.addLabel(self.title_str)
@@ -754,7 +759,7 @@ class CurvedProfile(Profile):
         gl = glw.addLayout()
         plot = gl.addAlignedPlot(labels={'left': 'y (mm)', 'bottom': 'x (mm)'})
         x, y, zu = sa.unroll_r(self.rs_support, self.z, self.rs_center)
-        image = plot.image((zu - self.mean_z)*1e3, rect=pg.axes_to_rect(x*1e3, y*1e3),
+        image = plot.image((zu - self.mean_z) * 1e3, rect=pg.axes_to_rect(x * 1e3, y * 1e3),
                            lut=pg.get_colormap_lut('bipolar'))
         gl.addHorizontalSpacer(10)
         gl.addColorBar(image=image, rel_row=2, label='Relative z (mm)')
@@ -772,7 +777,7 @@ class CurvedProfile(Profile):
 
     @classmethod
     def make_gaussian(cls, lamb, n, waists, rs_support, num_pointss, rs_waist=(0, 0), qs_waist=(0, 0), z_waist=0,
-            rs_center=None, qs_center=None, zfun=None):
+                      rs_center=None, qs_center=None, zfun=None):
         """Make a Profile object sampling a paraxial Gaussian beam.
 
         Args:
@@ -792,7 +797,7 @@ class CurvedProfile(Profile):
             Profile object.
         """
         assert np.isscalar(z_waist)
-        k = 2*np.pi/lamb*n
+        k = 2 * np.pi / lamb * n
         if zfun is None:
             zfun = lambda x, y: np.full(np.broadcast(x, y).shape, z_waist)
         rs_waist = np.asarray(rs_waist)

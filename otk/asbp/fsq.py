@@ -4,13 +4,15 @@ TODO rename spherical to sst for Sziklas-Siegman transform.
 """
 import logging
 from typing import Tuple
+
+import mathx
 import numpy as np
 import opt_einsum
-import mathx
 from mathx import matseq
-from ..types import Array1D, Sequence2, Array2D
+
 from . import sa, math
 from .. import bvar
+from ..types import Array1D, Sequence2, Array2D
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +31,7 @@ def shift_r_center_1d(r_support, num_points, Er, delta_r_center, q_center, k_on_
 
 def prepare_plane_to_plane_sst_1d(
         k: float, r_support: float, Er: Array1D, z: float, m: float, r_center: float = 0.,
-        q_center: float = 0., axis: int  =-1, carrier: bool = True) -> Tuple[Array1D, Array1D, float]:
+        q_center: float = 0., axis: int = -1, carrier: bool = True) -> Tuple[Array1D, Array1D, float]:
     """Calculate propagator and post-factor for Sziklas-Siegman transform propagation from plane to plane.
 
     Modifies Er."""
@@ -465,7 +467,7 @@ def propagate_curved_to_plane_flat(k, rs_support, Eri, z, qs_center=(0, 0), kz_m
 
 def propagate_plane_to_curved_sst(
         k: float, rs_support: Sequence2, Eri: Array2D, z: Array2D, ms: Sequence2, rs_center: Sequence2 = (0., 0.),
-        qs_center: Sequence2 = (0., 0.),ro_centers: Sequence2 = None,
+        qs_center: Sequence2 = (0., 0.), ro_centers: Sequence2 = None,
         kz_mode: str = 'local_xy') -> Tuple[Array2D, Tuple[Array2D, Array2D]]:
     """Propagate 2D beam from flat to curved surface using (paraxial) Sziklas-Siegman transform.
 
@@ -529,7 +531,7 @@ def propagate_plane_to_curved_sst(
 
 
 def propagate_plane_to_curved_sst_arbitrary_1d(
-        k: float, r_support: float, Eri: Array1D, z: Array1D, xo: Array1D, roc: Array1D, r_center: float =0.,
+        k: float, r_support: float, Eri: Array1D, z: Array1D, xo: Array1D, roc: Array1D, r_center: float = 0.,
         q_center: float = 0, ro_center: float = None, kz_mode: str = 'local_xy') -> Tuple[Array1D, Array1D]:
     """Sziklas-Siegman propagate from uniformly sampled plane to arbitrarily sampled curved surface.
 
@@ -640,9 +642,11 @@ def invert_plane_to_curved_sst(k, rs_support, Ero, z, ms, rs_center=(0, 0), qs_c
 
 
 # TODO yo -> Array1D
-def invert_plane_to_curved_sst_arbitrary(k: float, rs_support: Sequence2, num_pointss, Ero: Array2D, z: Array2D, xo: Array1D,
-                                         yo, roc_xo: Array2D, roc_yo: Array2D, rs_center: Sequence2=(0., 0.),
-                                         qs_center: Sequence2 = (0, 0), ro_centers: Sequence2 = None, kz_mode='local_xy',
+def invert_plane_to_curved_sst_arbitrary(k: float, rs_support: Sequence2, num_pointss, Ero: Array2D, z: Array2D,
+                                         xo: Array1D,
+                                         yo, roc_xo: Array2D, roc_yo: Array2D, rs_center: Sequence2 = (0., 0.),
+                                         qs_center: Sequence2 = (0, 0), ro_centers: Sequence2 = None,
+                                         kz_mode='local_xy',
                                          invert_kwargs=None):
     """Invert propagation from a plane to a curved arbitrarily sampled surface.
 

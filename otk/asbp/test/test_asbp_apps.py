@@ -1,4 +1,5 @@
 import pytest
+
 from otk.asbp.apps import SimpleLensPropagator
 
 

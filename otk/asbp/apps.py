@@ -1,11 +1,12 @@
-import otk.h4t
+import mathx
+import numpy as np
+import pyqtgraph_extended as pg
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
-import pyqtgraph_extended as pg
-import numpy as np
-import mathx
-from otk import rt1
+
+import otk.h4t
 from otk import asbp, ri, paraxial, asbt1
+from otk import rt1
 
 
 class SimpleLensPropagator(QtWidgets.QWidget):
@@ -191,20 +192,20 @@ class SimpleLensPropagator(QtWidgets.QWidget):
         w1 = f - h1
         w2 = f + h2
         for widget, value in ((self.f_widget, f), (self.working1_widget, w1), (self.working2_widget, w2)):
-            widget.setText('%.3f'%value)
-        self.f = f*1e-3
-        self.w1 = w1*1e-3
-        self.w2 = w2*1e-3
+            widget.setText('%.3f' % value)
+        self.f = f * 1e-3
+        self.w1 = w1 * 1e-3
+        self.w2 = w2 * 1e-3
 
     def propagate(self):
-        lamb = self.wavelength_widget.value()*1e-9
-        waist0 = self.source_diameter_widget.value()/2*1e-3
+        lamb = self.wavelength_widget.value() * 1e-9
+        waist0 = self.source_diameter_widget.value() / 2 * 1e-3
         num_points = self.num_points
-        rs_waist = np.asarray((self.source_x_widget.value()*1e-3, self.source_y_widget.value()*1e-3))
-        source_z = self.source_z_widget.value()*1e-3
-        roc1 = self.roc1_widget.value()*1e-3
-        roc2 = self.roc2_widget.value()*1e-3
-        d = self.thickness_widget.value()*1e-3
+        rs_waist = np.asarray((self.source_x_widget.value() * 1e-3, self.source_y_widget.value() * 1e-3))
+        source_z = self.source_z_widget.value() * 1e-3
+        roc1 = self.roc1_widget.value() * 1e-3
+        roc2 = self.roc2_widget.value() * 1e-3
+        d = self.thickness_widget.value() * 1e-3
         n = ri.FixedIndex(self.n_widget.value())
         # These are calculated by lens update.
         f = self.f
@@ -213,20 +214,20 @@ class SimpleLensPropagator(QtWidgets.QWidget):
 
         r0_centers = rs_waist
         q0_centers = (0, 0)
-        k = 2*np.pi/lamb
-        r0_support = waist0*self.waist0_factor  # *#(np.pi*num_points)**0.5*waist0
+        k = 2 * np.pi / lamb
+        r0_support = waist0 * self.waist0_factor  # *#(np.pi*num_points)**0.5*waist0
         x0, y0 = asbp.calc_xy(r0_support, num_points, r0_centers)
 
         # Create input beam and prepare for propagation to first surface.
         Er0 = asbp.calc_gaussian(k, x0, y0, waist0, r0s=rs_waist)
 
         profile0 = asbp.PlaneProfile(lamb, 1, source_z, r0_support, Er0, asbp.calc_gradxyE(r0_support, Er0, q0_centers),
-            r0_centers, q0_centers)
+                                     r0_centers, q0_centers)
         b0 = asbt1.Beam(profile0)
         s1 = rt1.Surface(rt1.SphericalProfile(roc1), otk.h4t.make_translation(0, 0, w1),
-                        interface=rt1.PerfectRefractor(ri.air, n))
+                         interface=rt1.PerfectRefractor(ri.air, n))
         s2 = rt1.Surface(rt1.SphericalProfile(-roc2), otk.h4t.make_translation(0, 0, w1 + d),
-                        interface=rt1.PerfectRefractor(n, ri.air))
+                         interface=rt1.PerfectRefractor(n, ri.air))
         s3 = rt1.Surface(rt1.PlanarProfile(), otk.h4t.make_translation(0, 0, w1 + d + w2))
 
         segments = asbt1.trace_surfaces(b0, (s1, s2, s3), ('transmitted', 'transmitted', None))[0]
@@ -252,15 +253,15 @@ class SimpleLensPropagator(QtWidgets.QWidget):
         self.b2_incident = b2_incident
         self.b2_plane = b2_plane
         self.b3 = b3
-        waist3 = f*lamb/(np.pi*waist0)
-        self.b3_scale = waist3/waist0
+        waist3 = f * lamb / (np.pi * waist0)
+        self.b3_scale = waist3 / waist0
 
         self.update_plots()
 
     def update_plots(self):
         def plot_r(images, beam, scale=1):
             profile = beam.profile
-            xu, yu, Eru = asbp.unroll_r(profile.rs_support, profile.Er*scale, profile.rs_center)
+            xu, yu, Eru = asbp.unroll_r(profile.rs_support, profile.Er * scale, profile.rs_center)
             tilt_mode = self.tilt_mode_widget.currentIndex()
             if not isinstance(beam.profile, asbp.PlaneProfile):
                 q_profile = profile.app
@@ -270,24 +271,24 @@ class SimpleLensPropagator(QtWidgets.QWidget):
                 q0s = q_profile.centroid_qs_flat
             else:
                 q0s = q_profile.peak_qs
-            q0s += np.asarray((self.tilt_nudge_x_widget.value(), self.tilt_nudge_y_widget.value()))/1e3*profile.k
-            Eru = Eru*mathx.expj(
-                -(q0s[0]*(xu - profile.peak_rs[0]) + q0s[1]*(yu - profile.peak_rs[1]) + np.angle(profile.peak_Er)))
+            q0s += np.asarray((self.tilt_nudge_x_widget.value(), self.tilt_nudge_y_widget.value())) / 1e3 * profile.k
+            Eru = Eru * mathx.expj(
+                -(q0s[0] * (xu - profile.peak_rs[0]) + q0s[1] * (yu - profile.peak_rs[1]) + np.angle(profile.peak_Er)))
             images[0].setImage(abs(Eru))
-            images[0].setRect(pg.axes_to_rect(xu*1e3, yu*1e3))
-            images[1].setImage(np.angle(Eru)/(2*np.pi))
-            images[1].setRect(pg.axes_to_rect(xu*1e3, yu*1e3))
+            images[0].setRect(pg.axes_to_rect(xu * 1e3, yu * 1e3))
+            images[1].setImage(np.angle(Eru) / (2 * np.pi))
+            images[1].setRect(pg.axes_to_rect(xu * 1e3, yu * 1e3))
 
         # def plot_r_waist(images, b):
         #    plot_r_(images, b.r_supports_waist, b.Er_waist, b.r_centers_waist, b.qs_center)
 
         def plot_q_(images, r_support, Eq, qs_center, rs_center):
             kxu, kyu, Equ = asbp.unroll_q(r_support, Eq, qs_center)
-            Equ = Equ*mathx.expj((rs_center[0]*kxu + rs_center[1]*kyu))
+            Equ = Equ * mathx.expj((rs_center[0] * kxu + rs_center[1] * kyu))
             images[0].setImage(abs(Equ))
-            images[0].setRect(pg.axes_to_rect(kxu/1e3, kyu/1e3))
-            images[1].setImage(np.angle(Equ)/(2*np.pi))
-            images[1].setRect(pg.axes_to_rect(kxu/1e3, kyu/1e3))
+            images[0].setRect(pg.axes_to_rect(kxu / 1e3, kyu / 1e3))
+            images[1].setImage(np.angle(Equ) / (2 * np.pi))
+            images[1].setRect(pg.axes_to_rect(kxu / 1e3, kyu / 1e3))
 
         def plot_q(images, beam, flat=False):
             profile = beam.profile

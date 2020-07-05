@@ -1,8 +1,10 @@
 from collections import namedtuple
+
+import mathx
 import numpy as np
 import pyqtgraph_extended as pg
 from PyQt5 import QtWidgets, Qt
-import mathx
+
 from . import sa, profiles, plotting
 
 scatter_kwargs = dict(pen=None, brush='g', size=4)
@@ -29,7 +31,7 @@ class ProfileWidget(QtWidgets.QWidget):
     @classmethod
     def make_absEq(cls, gl):
         plot = gl.addAlignedPlot(labels={'left': 'ky (rad/mm)', 'bottom': 'kx (rad/mm)'},
-            title='Angular space amplitude')
+                                 title='Angular space amplitude')
         image = pg.ImageItem(lut=pg.get_colormap_lut())
         plot.addItem(image)
         scatter = pg.ScatterPlotItem(**scatter_kwargs)
@@ -53,7 +55,7 @@ class ProfileWidget(QtWidgets.QWidget):
     @classmethod
     def make_wavesq(cls, gl, absEq_plot):
         plot = gl.addAlignedPlot(labels={'left': 'ky (rad/mm)', 'bottom': 'kx (rad/mm)'},
-            title='Angular space wavefront')
+                                 title='Angular space wavefront')
         image = pg.ImageItem(lut=pg.get_colormap_lut('bipolar'))
         plot.addItem(image)
         plot.setXYLink(absEq_plot)
@@ -143,12 +145,14 @@ class PlaneProfileWidget(ProfileWidget):
                 raise ValueError('Unknown mode %d.', field_index)
 
             if self.remove_tilt_check_box.isChecked():
-                Er = Er*mathx.expj(-(p.qs_center[0]*(p.x - p.rs_center[0]) + p.qs_center[1]*(p.y - p.rs_center[1])))
-                Eq = Eq*mathx.expj(p.rs_center[0]*(p.kx - p.qs_center[0]) + p.rs_center[1]*(p.ky - p.qs_center[1]))
+                Er = Er * mathx.expj(
+                    -(p.qs_center[0] * (p.x - p.rs_center[0]) + p.qs_center[1] * (p.y - p.rs_center[1])))
+                Eq = Eq * mathx.expj(
+                    p.rs_center[0] * (p.kx - p.qs_center[0]) + p.rs_center[1] * (p.ky - p.qs_center[1]))
 
             if self.remove_constant_check_box.isChecked():
-                Er = Er*mathx.expj(-np.angle(Er[p.r_center_indices]))
-                Eq = Eq*mathx.expj(-np.angle(Eq[p.q_center_indices]))
+                Er = Er * mathx.expj(-np.angle(Er[p.r_center_indices]))
+                Eq = Eq * mathx.expj(-np.angle(Eq[p.q_center_indices]))
 
             plotting.set_Er_image_item(self.images.r.abs, p.rs_support, Er, p.rs_center, 'amplitude')
             plotting.set_Er_image_item(self.images.r.phase, p.rs_support, Er, p.rs_center, 'waves')
@@ -174,18 +178,18 @@ class PlaneProfileWidget(ProfileWidget):
             vector = self.line.vector
             x = point[..., 0].ravel()
             y = point[..., 1].ravel()
-            kx = vector[..., 0].ravel()*p.k
-            ky = vector[..., 1].ravel()*p.k
+            kx = vector[..., 0].ravel() * p.k
+            ky = vector[..., 1].ravel() * p.k
 
             if field_index in (1, 2):
                 # Remove spherical wavefront from transverse wavenumbers.
-                kx -= (x - p.rs_center[0])*p.k/p.rocs[0]
-                ky -= (y - p.rs_center[1])*p.k/p.rocs[1]
+                kx -= (x - p.rs_center[0]) * p.k / p.rocs[0]
+                ky -= (y - p.rs_center[1]) * p.k / p.rocs[1]
 
-        self.scatters.r.abs.setData(x*1e3, y*1e3)
-        self.scatters.r.phase.setData(x*1e3, y*1e3)
-        self.scatters.q.abs.setData(kx/1e3, ky/1e3)
-        self.scatters.q.phase.setData(kx/1e3, ky/1e3)
+        self.scatters.r.abs.setData(x * 1e3, y * 1e3)
+        self.scatters.r.phase.setData(x * 1e3, y * 1e3)
+        self.scatters.q.abs.setData(kx / 1e3, ky / 1e3)
+        self.scatters.q.phase.setData(kx / 1e3, ky / 1e3)
 
 
 class CurvedProfileWidget(ProfileWidget):
@@ -252,7 +256,7 @@ class CurvedProfileWidget(ProfileWidget):
         if p is not None:
             # Set relative z plot.
             x, y, z = sa.unroll_r(p.rs_support, p.z, p.rs_center)
-            self.dz_image.setImage((z - p.mean_z)*1e3)
+            self.dz_image.setImage((z - p.mean_z) * 1e3)
             self.dz_image.setRect(pg.axes_to_rect(x, y, 1e3))
 
             field_index = self.field_combo_box.currentIndex()
@@ -269,13 +273,15 @@ class CurvedProfileWidget(ProfileWidget):
                 raise ValueError('Unknown mode %d.', field_index)
 
             if self.remove_tilt_check_box.isChecked():
-                Er = Er*mathx.expj(-(p.qs_center[0]*(p.x - p.rs_center[0]) + p.qs_center[1]*(p.y - p.rs_center[1])))
-                Eq = Eq*mathx.expj(
-                    p.rs_center[0]*(p.app.kx - p.app.qs_center[0]) + p.app.rs_center[1]*(p.app.ky - p.app.qs_center[1]))
+                Er = Er * mathx.expj(
+                    -(p.qs_center[0] * (p.x - p.rs_center[0]) + p.qs_center[1] * (p.y - p.rs_center[1])))
+                Eq = Eq * mathx.expj(
+                    p.rs_center[0] * (p.app.kx - p.app.qs_center[0]) + p.app.rs_center[1] * (
+                                p.app.ky - p.app.qs_center[1]))
 
             if self.remove_constant_check_box.isChecked():
-                Er = Er*mathx.expj(-np.angle(Er[p.r_center_indices]))
-                Eq = Eq*mathx.expj(-np.angle(Eq[p.app.q_center_indices]))
+                Er = Er * mathx.expj(-np.angle(Er[p.r_center_indices]))
+                Eq = Eq * mathx.expj(-np.angle(Eq[p.app.q_center_indices]))
 
             plotting.set_Er_image_item(self.images.r.abs, p.rs_support, Er, p.rs_center, 'amplitude')
             plotting.set_Er_image_item(self.images.r.phase, p.rs_support, Er, p.rs_center, 'waves')
@@ -301,17 +307,17 @@ class CurvedProfileWidget(ProfileWidget):
             vector = self.line.vector
             # Scatter plot item wants 1D arrays.
             x, y = rt1.to_xy(point.reshape((-1, 4)))
-            kx, ky = rt1.to_xy(vector.reshape((-1, 4)))*p.k
+            kx, ky = rt1.to_xy(vector.reshape((-1, 4))) * p.k
 
             if field_index in (1, 2):
                 # Remove spherical wavefront from transverse wavenumbers.
-                kx -= (x - p.rs_center[0])*p.k/p.rocs[0]
-                ky -= (y - p.rs_center[1])*p.k/p.rocs[1]
+                kx -= (x - p.rs_center[0]) * p.k / p.rocs[0]
+                ky -= (y - p.rs_center[1]) * p.k / p.rocs[1]
 
-        self.scatters.r.abs.setData(x*1e3, y*1e3)
-        self.scatters.r.phase.setData(x*1e3, y*1e3)
-        self.scatters.q.abs.setData(kx/1e3, ky/1e3)
-        self.scatters.q.phase.setData(kx/1e3, ky/1e3)
+        self.scatters.r.abs.setData(x * 1e3, y * 1e3)
+        self.scatters.r.phase.setData(x * 1e3, y * 1e3)
+        self.scatters.q.abs.setData(kx / 1e3, ky / 1e3)
+        self.scatters.q.phase.setData(kx / 1e3, ky / 1e3)
 
 
 def make_profile_widget(profile):
@@ -370,7 +376,7 @@ class MultiProfileWidget(QtWidgets.QWidget):
         hbox = QtWidgets.QHBoxLayout()
         self.setLayout(hbox)
         self.list_widget = QtWidgets.QListWidget()
-        self.list_widget.setMaximumWidth((max(len(e.string) for e in entries) + 4)*6)
+        self.list_widget.setMaximumWidth((max(len(e.string) for e in entries) + 4) * 6)
         hbox.addWidget(self.list_widget)
         for e in entries:
             QtWidgets.QListWidgetItem(e.string, self.list_widget)
