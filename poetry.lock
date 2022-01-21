@@ -1,28 +1,26 @@
 [[package]]
-category = "main"
-description = "Disable App Nap on OS X 10.9"
-marker = "sys_platform == \"darwin\""
 name = "appnope"
+version = "0.1.0"
+description = "Disable App Nap on OS X 10.9"
+category = "main"
 optional = false
 python-versions = "*"
-version = "0.1.0"
 
 [[package]]
-category = "dev"
-description = "Atomic file writes."
-marker = "sys_platform == \"win32\""
 name = "atomicwrites"
+version = "1.4.0"
+description = "Atomic file writes."
+category = "dev"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "1.4.0"
 
 [[package]]
-category = "dev"
-description = "Classes Without Boilerplate"
 name = "attrs"
+version = "19.3.0"
+description = "Classes Without Boilerplate"
+category = "dev"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "19.3.0"
 
 [package.extras]
 azure-pipelines = ["coverage", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "zope.interface", "pytest-azurepipelines"]
@@ -31,24 +29,23 @@ docs = ["sphinx", "zope.interface"]
 tests = ["coverage", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "zope.interface"]
 
 [[package]]
-category = "main"
-description = "Specifications for callback functions passed in to an API"
 name = "backcall"
+version = "0.2.0"
+description = "Specifications for callback functions passed in to an API"
+category = "main"
 optional = false
 python-versions = "*"
-version = "0.2.0"
 
 [[package]]
-category = "main"
-description = "cffi-based cairo bindings for Python"
 name = "cairocffi"
+version = "1.1.0"
+description = "cffi-based cairo bindings for Python"
+category = "main"
 optional = false
 python-versions = ">= 3.5"
-version = "1.1.0"
 
 [package.dependencies]
 cffi = ">=1.1.0"
-setuptools = ">=39.2.0"
 
 [package.extras]
 doc = ["sphinx", "sphinx-rtd-theme"]
@@ -56,72 +53,70 @@ test = ["pytest-runner", "pytest-cov", "pytest-flake8", "pytest-isort"]
 xcb = ["xcffib (>=0.3.2)"]
 
 [[package]]
-category = "main"
-description = "Foreign Function Interface for Python calling C code."
 name = "cffi"
+version = "1.14.0"
+description = "Foreign Function Interface for Python calling C code."
+category = "main"
 optional = false
 python-versions = "*"
-version = "1.14.0"
 
 [package.dependencies]
 pycparser = "*"
 
 [[package]]
-category = "main"
-description = "Universal encoding detector for Python 2 and 3"
 name = "chardet"
+version = "3.0.4"
+description = "Universal encoding detector for Python 2 and 3"
+category = "main"
 optional = false
 python-versions = "*"
-version = "3.0.4"
 
 [[package]]
-category = "main"
-description = "Cross-platform colored terminal text."
-marker = "sys_platform == \"win32\""
 name = "colorama"
+version = "0.4.3"
+description = "Cross-platform colored terminal text."
+category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
-version = "0.4.3"
 
 [[package]]
-category = "main"
-description = "Composable style cycles"
 name = "cycler"
+version = "0.10.0"
+description = "Composable style cycles"
+category = "main"
 optional = false
 python-versions = "*"
-version = "0.10.0"
 
 [package.dependencies]
 six = "*"
 
 [[package]]
-category = "main"
-description = "Decorators for Humans"
 name = "decorator"
+version = "4.4.2"
+description = "Decorators for Humans"
+category = "main"
 optional = false
 python-versions = ">=2.6, !=3.0.*, !=3.1.*"
-version = "4.4.2"
 
 [[package]]
-category = "main"
-description = "Simple vector graphics in Python"
 name = "gizeh"
+version = "0.1.11"
+description = "Simple vector graphics in Python"
+category = "main"
 optional = false
 python-versions = "*"
-version = "0.1.11"
 
 [package.dependencies]
 cairocffi = "*"
 numpy = "*"
 
 [[package]]
-category = "dev"
-description = "Read metadata from Python packages"
-marker = "python_version < \"3.8\""
 name = "importlib-metadata"
+version = "1.6.1"
+description = "Read metadata from Python packages"
+category = "dev"
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
-version = "1.6.1"
 
 [package.dependencies]
 zipp = ">=0.5"
@@ -131,24 +126,23 @@ docs = ["sphinx", "rst.linker"]
 testing = ["packaging", "pep517", "importlib-resources (>=1.3)"]
 
 [[package]]
-category = "main"
-description = "IPython: Productive Interactive Computing"
 name = "ipython"
+version = "7.16.3"
+description = "IPython: Productive Interactive Computing"
+category = "main"
 optional = false
 python-versions = ">=3.6"
-version = "7.15.0"
 
 [package.dependencies]
-appnope = "*"
+appnope = {version = "*", markers = "sys_platform == \"darwin\""}
 backcall = "*"
-colorama = "*"
+colorama = {version = "*", markers = "sys_platform == \"win32\""}
 decorator = "*"
-jedi = ">=0.10"
-pexpect = "*"
+jedi = ">=0.10,<=0.17.2"
+pexpect = {version = "*", markers = "sys_platform != \"win32\""}
 pickleshare = "*"
 prompt-toolkit = ">=2.0.0,<3.0.0 || >3.0.0,<3.0.1 || >3.0.1,<3.1.0"
 pygments = "*"
-setuptools = ">=18.5"
 traitlets = ">=4.2"
 
 [package.extras]
@@ -163,51 +157,51 @@ qtconsole = ["qtconsole"]
 test = ["nose (>=0.10.1)", "requests", "testpath", "pygments", "nbformat", "ipykernel", "numpy (>=1.14)"]
 
 [[package]]
-category = "main"
-description = "Vestigial utilities from IPython"
 name = "ipython-genutils"
+version = "0.2.0"
+description = "Vestigial utilities from IPython"
+category = "main"
 optional = false
 python-versions = "*"
-version = "0.2.0"
 
 [[package]]
-category = "main"
-description = "An autocompletion tool for Python that can be used for text editors."
 name = "jedi"
+version = "0.17.0"
+description = "An autocompletion tool for Python that can be used for text editors."
+category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
-version = "0.17.0"
 
 [package.dependencies]
 parso = ">=0.7.0"
 
 [package.extras]
-qa = ["flake8 (3.7.9)"]
+qa = ["flake8 (==3.7.9)"]
 testing = ["colorama", "docopt", "pytest (>=3.9.0,<5.0.0)"]
 
 [[package]]
-category = "main"
-description = "A fast implementation of the Cassowary constraint solver"
 name = "kiwisolver"
+version = "1.2.0"
+description = "A fast implementation of the Cassowary constraint solver"
+category = "main"
 optional = false
 python-versions = ">=3.6"
-version = "1.2.0"
 
 [[package]]
-category = "main"
-description = "lightweight wrapper around basic LLVM functionality"
 name = "llvmlite"
+version = "0.32.1"
+description = "lightweight wrapper around basic LLVM functionality"
+category = "main"
 optional = false
 python-versions = "*"
-version = "0.32.1"
 
 [[package]]
-category = "main"
-description = "Array handling and mathematics built on top of numpy and scipy."
 name = "mathx"
+version = "0.2.0"
+description = "Array handling and mathematics built on top of numpy and scipy."
+category = "main"
 optional = false
 python-versions = ">=3.6,<4.0"
-version = "0.2.0"
 
 [package.dependencies]
 numba = ">=0.49.1,<0.50.0"
@@ -215,12 +209,12 @@ numpy = ">=1.18.4,<2.0.0"
 scipy = ">=1.4.1,<2.0.0"
 
 [[package]]
-category = "main"
-description = "Python plotting package"
 name = "matplotlib"
+version = "3.2.1"
+description = "Python plotting package"
+category = "main"
 optional = false
 python-versions = ">=3.6"
-version = "3.2.1"
 
 [package.dependencies]
 cycler = ">=0.10"
@@ -230,260 +224,252 @@ pyparsing = ">=2.0.1,<2.0.4 || >2.0.4,<2.1.2 || >2.1.2,<2.1.6 || >2.1.6"
 python-dateutil = ">=2.1"
 
 [[package]]
-category = "dev"
-description = "More routines for operating on iterables, beyond itertools"
 name = "more-itertools"
+version = "8.3.0"
+description = "More routines for operating on iterables, beyond itertools"
+category = "dev"
 optional = false
 python-versions = ">=3.5"
-version = "8.3.0"
 
 [[package]]
-category = "main"
-description = "compiling Python code using LLVM"
 name = "numba"
+version = "0.49.1"
+description = "compiling Python code using LLVM"
+category = "main"
 optional = false
 python-versions = ">=3.6"
-version = "0.49.1"
 
 [package.dependencies]
 llvmlite = ">=0.31.0.dev0,<=0.33.0.dev0"
 numpy = ">=1.15"
-setuptools = "*"
 
 [[package]]
-category = "main"
-description = "NumPy is the fundamental package for array computing with Python."
 name = "numpy"
+version = "1.18.5"
+description = "NumPy is the fundamental package for array computing with Python."
+category = "main"
 optional = false
 python-versions = ">=3.5"
-version = "1.18.5"
 
 [[package]]
-category = "main"
-description = "Optimizing numpys einsum function"
 name = "opt-einsum"
+version = "3.2.1"
+description = "Optimizing numpys einsum function"
+category = "main"
 optional = false
 python-versions = ">=3.5"
-version = "3.2.1"
 
 [package.dependencies]
 numpy = ">=1.7"
 
 [package.extras]
-docs = ["sphinx (1.2.3)", "sphinxcontrib-napoleon", "sphinx-rtd-theme", "numpydoc"]
+docs = ["sphinx (==1.2.3)", "sphinxcontrib-napoleon", "sphinx-rtd-theme", "numpydoc"]
 tests = ["pytest", "pytest-cov", "pytest-pep8"]
 
 [[package]]
-category = "dev"
-description = "Core utilities for Python packages"
 name = "packaging"
+version = "20.4"
+description = "Core utilities for Python packages"
+category = "dev"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "20.4"
 
 [package.dependencies]
 pyparsing = ">=2.0.2"
 six = "*"
 
 [[package]]
-category = "main"
-description = "A Python Parser"
 name = "parso"
+version = "0.7.0"
+description = "A Python Parser"
+category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "0.7.0"
 
 [package.extras]
 testing = ["docopt", "pytest (>=3.0.7)"]
 
 [[package]]
-category = "main"
-description = "Pexpect allows easy control of interactive console applications."
-marker = "sys_platform != \"win32\""
 name = "pexpect"
+version = "4.8.0"
+description = "Pexpect allows easy control of interactive console applications."
+category = "main"
 optional = false
 python-versions = "*"
-version = "4.8.0"
 
 [package.dependencies]
 ptyprocess = ">=0.5"
 
 [[package]]
-category = "main"
-description = "Tiny 'shelve'-like database with concurrency support"
 name = "pickleshare"
+version = "0.7.5"
+description = "Tiny 'shelve'-like database with concurrency support"
+category = "main"
 optional = false
 python-versions = "*"
-version = "0.7.5"
 
 [[package]]
-category = "dev"
-description = "plugin and hook calling mechanisms for python"
 name = "pluggy"
+version = "0.13.1"
+description = "plugin and hook calling mechanisms for python"
+category = "dev"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "0.13.1"
 
 [package.dependencies]
-[package.dependencies.importlib-metadata]
-python = "<3.8"
-version = ">=0.12"
+importlib-metadata = {version = ">=0.12", markers = "python_version < \"3.8\""}
 
 [package.extras]
 dev = ["pre-commit", "tox"]
 
 [[package]]
-category = "main"
-description = "Library for building powerful interactive command lines in Python"
 name = "prompt-toolkit"
+version = "3.0.5"
+description = "Library for building powerful interactive command lines in Python"
+category = "main"
 optional = false
 python-versions = ">=3.6.1"
-version = "3.0.5"
 
 [package.dependencies]
 wcwidth = "*"
 
 [[package]]
-category = "main"
-description = "Run a subprocess in a pseudo terminal"
-marker = "sys_platform != \"win32\""
 name = "ptyprocess"
-optional = false
-python-versions = "*"
 version = "0.6.0"
-
-[[package]]
-category = "dev"
-description = "library with cross-python path, ini-parsing, io, code, log facilities"
-name = "py"
-optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "1.8.1"
-
-[[package]]
+description = "Run a subprocess in a pseudo terminal"
 category = "main"
-description = "C parser in Python"
-name = "pycparser"
-optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "2.20"
-
-[[package]]
-category = "main"
-description = "A pythonic wrapper around FFTW, the FFT library, presenting a unified interface for all the supported transforms."
-name = "pyfftw"
 optional = false
 python-versions = "*"
+
+[[package]]
+name = "py"
+version = "1.8.1"
+description = "library with cross-python path, ini-parsing, io, code, log facilities"
+category = "dev"
+optional = false
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
+
+[[package]]
+name = "pycparser"
+version = "2.20"
+description = "C parser in Python"
+category = "main"
+optional = false
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
+
+[[package]]
+name = "pyfftw"
 version = "0.12.0"
+description = "A pythonic wrapper around FFTW, the FFT library, presenting a unified interface for all the supported transforms."
+category = "main"
+optional = false
+python-versions = "*"
 
 [package.dependencies]
 numpy = ">=1.10,<2.0"
 
 [package.extras]
-dask = ["numpy (>=1.10,<2.0)", "dask (>=0.15.0)"]
+dask = ["numpy (>=1.10,<2.0)", "dask[array] (>=0.15.0)"]
 scipy = ["scipy (>=0.12.0)"]
 
 [[package]]
-category = "main"
-description = "Pygments is a syntax highlighting package written in Python."
 name = "pygments"
+version = "2.6.1"
+description = "Pygments is a syntax highlighting package written in Python."
+category = "main"
 optional = false
 python-versions = ">=3.5"
-version = "2.6.1"
 
 [[package]]
-category = "main"
-description = "Standard OpenGL bindings for Python"
 name = "pyopengl"
+version = "3.1.5"
+description = "Standard OpenGL bindings for Python"
+category = "main"
 optional = false
 python-versions = "*"
-version = "3.1.5"
 
 [[package]]
-category = "main"
-description = "Python parsing module"
 name = "pyparsing"
+version = "2.4.7"
+description = "Python parsing module"
+category = "main"
 optional = false
 python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
-version = "2.4.7"
 
 [[package]]
-category = "main"
-description = "Python bindings for the Qt cross platform application toolkit"
 name = "pyqt5"
+version = "5.15.0"
+description = "Python bindings for the Qt cross platform application toolkit"
+category = "main"
 optional = false
 python-versions = ">=3.5"
-version = "5.15.0"
 
 [package.dependencies]
 PyQt5-sip = ">=12.8,<13"
 
 [[package]]
-category = "main"
-description = "The sip module support for PyQt5"
 name = "pyqt5-sip"
+version = "12.8.0"
+description = "The sip module support for PyQt5"
+category = "main"
 optional = false
 python-versions = ">=3.5"
-version = "12.8.0"
 
 [[package]]
-category = "main"
-description = "Scientific Graphics and GUI Library for Python"
 name = "pyqtgraph"
+version = "0.11.0"
+description = "Scientific Graphics and GUI Library for Python"
+category = "main"
 optional = false
 python-versions = "*"
-version = "0.11.0"
 
 [package.dependencies]
 numpy = ">=1.8.0"
 
 [[package]]
-category = "main"
-description = "Various extensions for pyqtgraph."
 name = "pyqtgraph-extensions"
+version = "0.5.1"
+description = "Various extensions for pyqtgraph."
+category = "main"
 optional = false
 python-versions = ">=3.6,<4.0"
-version = "0.5.1"
 
 [package.dependencies]
-PyQt5 = ">=5.14.2,<6.0.0"
 mathx = ">=0.2.0,<0.3.0"
 pyopengl = ">=3.1.5,<4.0.0"
+PyQt5 = ">=5.14.2,<6.0.0"
 pyqtgraph = "0.11.0"
 
 [[package]]
-category = "dev"
-description = "pytest: simple powerful testing with Python"
 name = "pytest"
+version = "5.4.3"
+description = "pytest: simple powerful testing with Python"
+category = "dev"
 optional = false
 python-versions = ">=3.5"
-version = "5.4.3"
 
 [package.dependencies]
-atomicwrites = ">=1.0"
+atomicwrites = {version = ">=1.0", markers = "sys_platform == \"win32\""}
 attrs = ">=17.4.0"
-colorama = "*"
+colorama = {version = "*", markers = "sys_platform == \"win32\""}
+importlib-metadata = {version = ">=0.12", markers = "python_version < \"3.8\""}
 more-itertools = ">=4.0.0"
 packaging = "*"
 pluggy = ">=0.12,<1.0"
 py = ">=1.5.0"
 wcwidth = "*"
 
-[package.dependencies.importlib-metadata]
-python = "<3.8"
-version = ">=0.12"
-
 [package.extras]
-checkqa-mypy = ["mypy (v0.761)"]
+checkqa-mypy = ["mypy (==v0.761)"]
 testing = ["argcomplete", "hypothesis (>=3.56)", "mock", "nose", "requests", "xmlschema"]
 
 [[package]]
-category = "dev"
-description = "pytest support for PyQt and PySide applications"
 name = "pytest-qt"
+version = "3.3.0"
+description = "pytest support for PyQt and PySide applications"
+category = "dev"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "3.3.0"
 
 [package.dependencies]
 pytest = ">=3.0.0"
@@ -493,50 +479,50 @@ dev = ["pre-commit", "tox"]
 doc = ["sphinx", "sphinx-rtd-theme"]
 
 [[package]]
-category = "main"
-description = "Extensions to the standard Python datetime module"
 name = "python-dateutil"
+version = "2.8.1"
+description = "Extensions to the standard Python datetime module"
+category = "main"
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
-version = "2.8.1"
 
 [package.dependencies]
 six = ">=1.5"
 
 [[package]]
-category = "main"
-description = "YAML parser and emitter for Python"
 name = "pyyaml"
+version = "5.3.1"
+description = "YAML parser and emitter for Python"
+category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
-version = "5.3.1"
 
 [[package]]
-category = "main"
-description = "SciPy: Scientific Library for Python"
 name = "scipy"
+version = "1.4.1"
+description = "SciPy: Scientific Library for Python"
+category = "main"
 optional = false
 python-versions = ">=3.5"
-version = "1.4.1"
 
 [package.dependencies]
 numpy = ">=1.13.3"
 
 [[package]]
-category = "main"
-description = "Python 2 and 3 compatibility utilities"
 name = "six"
+version = "1.15.0"
+description = "Python 2 and 3 compatibility utilities"
+category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*"
-version = "1.15.0"
 
 [[package]]
-category = "main"
-description = "Traitlets Python config system"
 name = "traitlets"
+version = "4.3.3"
+description = "Traitlets Python config system"
+category = "main"
 optional = false
 python-versions = "*"
-version = "4.3.3"
 
 [package.dependencies]
 decorator = "*"
@@ -547,29 +533,29 @@ six = "*"
 test = ["pytest", "mock"]
 
 [[package]]
-category = "main"
-description = "Measures the displayed width of unicode strings in a terminal"
 name = "wcwidth"
+version = "0.2.4"
+description = "Measures the displayed width of unicode strings in a terminal"
+category = "main"
 optional = false
 python-versions = "*"
-version = "0.2.4"
 
 [[package]]
-category = "dev"
-description = "Backport of pathlib-compatible object wrapper for zip files"
-marker = "python_version < \"3.8\""
 name = "zipp"
+version = "3.1.0"
+description = "Backport of pathlib-compatible object wrapper for zip files"
+category = "dev"
 optional = false
 python-versions = ">=3.6"
-version = "3.1.0"
 
 [package.extras]
 docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
 testing = ["jaraco.itertools", "func-timeout"]
 
 [metadata]
-content-hash = "eba61f807668d63df2b2c6ef15798ac57e3fb0e503608fb1fa9b3417c021b393"
+lock-version = "1.1"
 python-versions = "^3.7"
+content-hash = "eba61f807668d63df2b2c6ef15798ac57e3fb0e503608fb1fa9b3417c021b393"
 
 [metadata.files]
 appnope = [
@@ -645,8 +631,8 @@ importlib-metadata = [
     {file = "importlib_metadata-1.6.1.tar.gz", hash = "sha256:0505dd08068cfec00f53a74a0ad927676d7757da81b7436a6eefe4c7cf75c545"},
 ]
 ipython = [
-    {file = "ipython-7.15.0-py3-none-any.whl", hash = "sha256:1b85d65632211bf5d3e6f1406f3393c8c429a47d7b947b9a87812aa5bce6595c"},
-    {file = "ipython-7.15.0.tar.gz", hash = "sha256:0ef1433879816a960cd3ae1ae1dc82c64732ca75cec8dab5a4e29783fb571d0e"},
+    {file = "ipython-7.16.3-py3-none-any.whl", hash = "sha256:c0427ed8bc33ac481faf9d3acf7e84e0010cdaada945e0badd1e2e74cc075833"},
+    {file = "ipython-7.16.3.tar.gz", hash = "sha256:5ac47dc9af66fc2f5530c12069390877ae372ac905edca75a92a6e363b5d7caa"},
 ]
 ipython-genutils = [
     {file = "ipython_genutils-0.2.0-py2.py3-none-any.whl", hash = "sha256:72dd37233799e619666c9f639a9da83c34013a73e8bbc79a7a6348d93c61fab8"},
@@ -660,16 +646,19 @@ kiwisolver = [
     {file = "kiwisolver-1.2.0-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:443c2320520eda0a5b930b2725b26f6175ca4453c61f739fef7a5847bd262f74"},
     {file = "kiwisolver-1.2.0-cp36-cp36m-manylinux1_i686.whl", hash = "sha256:efcf3397ae1e3c3a4a0a0636542bcad5adad3b1dd3e8e629d0b6e201347176c8"},
     {file = "kiwisolver-1.2.0-cp36-cp36m-manylinux1_x86_64.whl", hash = "sha256:fccefc0d36a38c57b7bd233a9b485e2f1eb71903ca7ad7adacad6c28a56d62d2"},
+    {file = "kiwisolver-1.2.0-cp36-cp36m-manylinux2014_aarch64.whl", hash = "sha256:be046da49fbc3aa9491cc7296db7e8d27bcf0c3d5d1a40259c10471b014e4e0c"},
     {file = "kiwisolver-1.2.0-cp36-none-win32.whl", hash = "sha256:60a78858580761fe611d22127868f3dc9f98871e6fdf0a15cc4203ed9ba6179b"},
     {file = "kiwisolver-1.2.0-cp36-none-win_amd64.whl", hash = "sha256:556da0a5f60f6486ec4969abbc1dd83cf9b5c2deadc8288508e55c0f5f87d29c"},
     {file = "kiwisolver-1.2.0-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:7cc095a4661bdd8a5742aaf7c10ea9fac142d76ff1770a0f84394038126d8fc7"},
     {file = "kiwisolver-1.2.0-cp37-cp37m-manylinux1_i686.whl", hash = "sha256:c955791d80e464da3b471ab41eb65cf5a40c15ce9b001fdc5bbc241170de58ec"},
     {file = "kiwisolver-1.2.0-cp37-cp37m-manylinux1_x86_64.whl", hash = "sha256:603162139684ee56bcd57acc74035fceed7dd8d732f38c0959c8bd157f913fec"},
+    {file = "kiwisolver-1.2.0-cp37-cp37m-manylinux2014_aarch64.whl", hash = "sha256:63f55f490b958b6299e4e5bdac66ac988c3d11b7fafa522800359075d4fa56d1"},
     {file = "kiwisolver-1.2.0-cp37-none-win32.whl", hash = "sha256:03662cbd3e6729f341a97dd2690b271e51a67a68322affab12a5b011344b973c"},
     {file = "kiwisolver-1.2.0-cp37-none-win_amd64.whl", hash = "sha256:4eadb361baf3069f278b055e3bb53fa189cea2fd02cb2c353b7a99ebb4477ef1"},
     {file = "kiwisolver-1.2.0-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:c31bc3c8e903d60a1ea31a754c72559398d91b5929fcb329b1c3a3d3f6e72113"},
     {file = "kiwisolver-1.2.0-cp38-cp38-manylinux1_i686.whl", hash = "sha256:d52b989dc23cdaa92582ceb4af8d5bcc94d74b2c3e64cd6785558ec6a879793e"},
     {file = "kiwisolver-1.2.0-cp38-cp38-manylinux1_x86_64.whl", hash = "sha256:e586b28354d7b6584d8973656a7954b1c69c93f708c0c07b77884f91640b7657"},
+    {file = "kiwisolver-1.2.0-cp38-cp38-manylinux2014_aarch64.whl", hash = "sha256:38d05c9ecb24eee1246391820ed7137ac42a50209c203c908154782fced90e44"},
     {file = "kiwisolver-1.2.0-cp38-none-win32.whl", hash = "sha256:d069ef4b20b1e6b19f790d00097a5d5d2c50871b66d10075dab78938dc2ee2cf"},
     {file = "kiwisolver-1.2.0-cp38-none-win_amd64.whl", hash = "sha256:18d749f3e56c0480dccd1714230da0f328e6e4accf188dd4e6884bdd06bf02dd"},
     {file = "kiwisolver-1.2.0.tar.gz", hash = "sha256:247800260cd38160c362d211dcaf4ed0f7816afb5efe56544748b21d6ad6d17f"},
@@ -859,6 +848,7 @@ pyqt5-sip = [
     {file = "PyQt5_sip-12.8.0.tar.gz", hash = "sha256:0a34b6596bdd28d52da3a51fa8d9bb0b287bcb605c2512aa3251b9028cc71f4d"},
 ]
 pyqtgraph = [
+    {file = "pyqtgraph-0.11.0-py2-none-any.whl", hash = "sha256:f3ad018f18eb1c7a745d063a1050e743960c987d640466728b385c9ac066fc08"},
     {file = "pyqtgraph-0.11.0-py3-none-any.whl", hash = "sha256:234d78f266d7c44d80e3bb735043e102d446842ef12e60f62f157f1fa5146411"},
     {file = "pyqtgraph-0.11.0.tar.gz", hash = "sha256:ca0a6715882579c46c80df18d9b260a09fce0e086521bfb6fc1f4027f938b35c"},
 ]
@@ -889,6 +879,8 @@ pyyaml = [
     {file = "PyYAML-5.3.1-cp37-cp37m-win_amd64.whl", hash = "sha256:73f099454b799e05e5ab51423c7bcf361c58d3206fa7b0d555426b1f4d9a3eaf"},
     {file = "PyYAML-5.3.1-cp38-cp38-win32.whl", hash = "sha256:06a0d7ba600ce0b2d2fe2e78453a470b5a6e000a985dd4a4e54e436cc36b0e97"},
     {file = "PyYAML-5.3.1-cp38-cp38-win_amd64.whl", hash = "sha256:95f71d2af0ff4227885f7a6605c37fd53d3a106fcab511b8860ecca9fcf400ee"},
+    {file = "PyYAML-5.3.1-cp39-cp39-win32.whl", hash = "sha256:ad9c67312c84def58f3c04504727ca879cb0013b2517c85a9a253f0cb6380c0a"},
+    {file = "PyYAML-5.3.1-cp39-cp39-win_amd64.whl", hash = "sha256:6034f55dab5fea9e53f436aa68fa3ace2634918e8b5994d82f3621c04ff5ed2e"},
     {file = "PyYAML-5.3.1.tar.gz", hash = "sha256:b8eac752c5e14d3eca0e6dd9199cd627518cb5ec06add0de9d32baeee6fe645d"},
 ]
 scipy = [
